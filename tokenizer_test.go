@@ -31,12 +31,12 @@ func TestTokenizer_NextToken(t *testing.T) {
 				src := strings.NewReader(c.in)
 				tokenizer := Init(src, &dialect.GenericDialect{})
 
-				tok, _, err := tokenizer.NextToken()
+				tok, err := tokenizer.NextToken()
 				if err != nil {
 					t.Errorf("should be no error %v", err)
 				}
 
-				if !reflect.DeepEqual(tok, c.out) {
+				if !reflect.DeepEqual(tok.Tok, c.out.Tok) || !reflect.DeepEqual(tok.Value, c.out.Value) {
 					t.Errorf("expected: %+v, but got %+v", c.out, tok)
 				}
 
