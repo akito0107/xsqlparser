@@ -7,12 +7,12 @@ import (
 
 type SQLIdent string
 
-func (s *SQLIdent) String() string {
+func (s *SQLIdent) Eval() string {
 	return string(*s)
 }
 
 type ASTNode interface {
-	String() string
+	Eval() string
 }
 
 // Identifier e.g. table name or column name
@@ -20,14 +20,14 @@ type SQLIdentifier struct {
 	Ident SQLIdent
 }
 
-func (s *SQLIdentifier) String() string {
+func (s *SQLIdentifier) Eval() string {
 	return string(s.Ident)
 }
 
 // *
 type SQLWildcard struct{}
 
-func (s SQLWildcard) String() string {
+func (s SQLWildcard) Eval() string {
 	return "*"
 }
 
@@ -36,7 +36,7 @@ type SQLQualifiedWildcard struct {
 	Idents []SQLIdent
 }
 
-func (s *SQLQualifiedWildcard) String() string {
+func (s *SQLQualifiedWildcard) Eval() string {
 	strs := make([]string, 0, len(s.Idents))
 	for _, ident := range s.Idents {
 		strs = append(strs, string(ident))
@@ -49,7 +49,7 @@ type SQLCompoundIdentifier struct {
 	Idents []SQLIdent
 }
 
-func (s *SQLCompoundIdentifier) String() string {
+func (s *SQLCompoundIdentifier) Eval() string {
 	strs := make([]string, 0, len(s.Idents))
 	for _, ident := range s.Idents {
 		strs = append(strs, string(ident))
@@ -61,16 +61,16 @@ type SQLIsNull struct {
 	X ASTNode
 }
 
-func (s *SQLIsNull) String() string {
-	return fmt.Sprintf("%s IS NULl", s.X.String())
+func (s *SQLIsNull) Eval() string {
+	return fmt.Sprintf("%s IS NULl", s.X.Eval())
 }
 
 type SQLIsNotNull struct {
 	X ASTNode
 }
 
-func (s *SQLIsNotNull) String() string {
-	return fmt.Sprintf("%s IS NOT NULL", s.X.String())
+func (s *SQLIsNotNull) Eval() string {
+	return fmt.Sprintf("%s IS NOT NULL", s.X.Eval())
 }
 
 type SQLInList struct {
@@ -79,19 +79,19 @@ type SQLInList struct {
 	Negated bool
 }
 
-func (s *SQLInList) String() string {
+func (s *SQLInList) Eval() string {
 	var n string
 	if s.Negated {
 		n = "NOT "
 	}
-	return fmt.Sprintf("%s %sIN {%s}", s.Expr.String(), n, commaSeparatedString(s.List))
+	return fmt.Sprintf("%s %sIN {%s}", s.Expr.Eval(), n, commaSeparatedString(s.List))
 }
 
 type SQLObjectName struct {
 	Idents []SQLIdent
 }
 
-func (s *SQLObjectName) String() string {
+func (s *SQLObjectName) Eval() string {
 	var strs []string
 	for _, l := range s.Idents {
 		strs = append(strs, string(l))
@@ -99,10 +99,21 @@ func (s *SQLObjectName) String() string {
 	return strings.Join(strs, ".")
 }
 
-func commaSeparatedString(list []ASTNode) string {
+func commaSeparatedString(list interface{}) string {
 	var strs []string
-	for _, l := range list {
-		strs = append(strs, l.String())
+	switch s := list.(type) {
+	case []ASTNode:
+		for _, l := range s {
+			strs = append(strs, l.Eval())
+		}
+	case []SQLSelectItem:
+		for _, l := range s {
+			strs = append(strs, l.Eval())
+		}
+	case []SQLIdent:
+		for _, l := range s {
+			strs = append(strs, l.Eval())
+		}
 	}
 	return strings.Join(strs, ", ")
 }

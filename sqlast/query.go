@@ -7,26 +7,26 @@ import (
 
 type SQLQuery struct {
 	CTEs []CTE
-	Body SQLSetExpr
+	Body *SQLSetExpr
 }
 
-func (s *SQLQuery) String() string {
+func (s *SQLQuery) Eval() string {
 	return ""
 }
 
 type CTE struct {
 	Alias SQLIdent
-	Query SQLQuery
+	Query *SQLQuery
 }
 
 type SQLSetExpr struct {
-	Select       SQLSelect
-	Query        SQLQuery
+	Select       *SQLSelect
+	Query        *SQLQuery
 	SetOperation struct {
-		Op    SQLSetOperator
+		Op    *SQLSetOperator
 		All   bool
-		Left  SQLSetExpr
-		Right SQLSetExpr
+		Left  *SQLSetExpr
+		Right *SQLSetExpr
 	}
 }
 
@@ -35,52 +35,78 @@ type SQLSetOperator struct{}
 type SQLSelect struct {
 	Distinct   bool
 	Projection []SQLSelectItem
-	Relation   *TableFactor
+	Relation   TableFactor
 	Joins      []Join
 	Selection  ASTNode
 	GroupBy    []ASTNode
 	Having     ASTNode
 }
 
-func (s *SQLSelect) String() string {
+func (s *SQLSelect) Eval() string {
+	q := "SELECT "
+	if s.Distinct {
+		q += "DISTINCT "
+	}
+	q += commaSeparatedString(s.Projection)
 
+	if s.Relation != nil {
+		q += fmt.Sprintf(" FROM %s", s.Relation.Eval())
+	}
+
+	for _, j := range s.Joins {
+		q += j.Eval()
+	}
+
+	if s.Selection != nil {
+		q += fmt.Sprintf(" WHERE %s", s.Selection.Eval())
+	}
+
+	if len(s.GroupBy) != 0 {
+		q += fmt.Sprintf(" GROUP BY %s", commaSeparatedString(s.GroupBy))
+	}
+
+	if s.Having != nil {
+		q += fmt.Sprintf(" HAVING %s", s.Having.Eval())
+	}
+
+	return q
 }
 
 /** TableFactor **/
 type TableFactor interface {
-	String() string
+	Eval() string
 }
 
 type Table struct {
-	Name      SQLObjectName
+	Name      *SQLObjectName
 	Alias     *SQLIdent
 	Args      []ASTNode
 	WithHints []ASTNode
 }
 
-func (t *Table) String() string {
-	s := t.Name.String()
+func (t *Table) Eval() string {
+	s := t.Name.Eval()
 	if len(t.Args) != 0 {
 		s = fmt.Sprintf("%s(%s)", s, commaSeparatedString(t.Args))
 	}
 	if t.Alias != nil {
-		s = fmt.Sprintf("%s AS %s", s, t.Alias.String())
+		s = fmt.Sprintf("%s AS %s", s, t.Alias.Eval())
 	}
 	if len(t.WithHints) != 0 {
-		s = fmt.Sprintf("%s WITH (%s)", commaSeparatedString(t.WithHints))
+		s = fmt.Sprintf("%s WITH (%s)", s, commaSeparatedString(t.WithHints))
 	}
 	return s
 }
 
 type Derived struct {
-	SubQuery SQLQuery
+	SubQuery *SQLQuery
 	Alias    *SQLIdent
 }
 
-func (d *Derived) String() string {
-	s := d.SubQuery.String()
+func (d *Derived) Eval() string {
+	s := d.SubQuery.Eval()
 	if d.Alias != nil {
-		s = fmt.Sprintf("%s AS %s", s, d.Alias.String())
+		s = fmt.Sprintf("%s AS %s", s, d.Alias.Eval())
 	}
 	return s
 }
@@ -89,15 +115,15 @@ func (d *Derived) String() string {
 
 /** SQLSelectItem **/
 type SQLSelectItem interface {
-	String() string
+	ASTNode
 }
 
 type UnnamedExpression struct {
 	Node ASTNode
 }
 
-func (u *UnnamedExpression) String() string {
-	return u.Node.String()
+func (u *UnnamedExpression) Eval() string {
+	return u.Node.Eval()
 }
 
 type ExpressionWithAlias struct {
@@ -105,21 +131,21 @@ type ExpressionWithAlias struct {
 	Alias SQLIdent
 }
 
-func (e *ExpressionWithAlias) String() string {
-	return fmt.Sprintf("%s AS %s", e.Expr.String(), e.Alias.String())
+func (e *ExpressionWithAlias) Eval() string {
+	return fmt.Sprintf("%s AS %s", e.Expr.Eval(), e.Alias.Eval())
 }
 
 type QualifiedWildcard struct {
 	Prefix SQLObjectName
 }
 
-func (q *QualifiedWildcard) String() string {
-	return fmt.Sprintf("%s.*", q.Prefix.String())
+func (q *QualifiedWildcard) Eval() string {
+	return fmt.Sprintf("%s.*", q.Prefix.Eval())
 }
 
 type Wildcard struct{}
 
-func (w *Wildcard) String() string {
+func (w *Wildcard) Eval() string {
 	return "*"
 }
 
@@ -131,20 +157,20 @@ type Join struct {
 	Constant JoinConstant
 }
 
-func (j *Join) String() string {
+func (j *Join) Eval() string {
 	switch j.Op {
 	case Inner:
-		return fmt.Sprintf(" %sJOIN %s %s", j.Constant.Prefix(), j.Relation.String(), j.Constant.Suffix())
+		return fmt.Sprintf(" %sJOIN %s%s", j.Constant.Prefix(), j.Relation.Eval(), j.Constant.Suffix())
 	case Cross:
-		return fmt.Sprintf(" CROSS JOIN %s", j.Relation.String())
+		return fmt.Sprintf(" CROSS JOIN%s", j.Relation.Eval())
 	case Implicit:
-		return fmt.Sprintf(", %s", j.Relation.String())
+		return fmt.Sprintf(", %s", j.Relation.Eval())
 	case LeftOuter:
-		return fmt.Sprintf("%sLEFT JOIN %s %s", j.Constant.Prefix(), j.Relation.String(), j.Constant.Suffix())
+		return fmt.Sprintf("%sLEFT JOIN %s%s", j.Constant.Prefix(), j.Relation.Eval(), j.Constant.Suffix())
 	case RightOuter:
-		return fmt.Sprintf("%sRIGHT JOIN %s %s", j.Constant.Prefix(), j.Relation.String(), j.Constant.Suffix())
+		return fmt.Sprintf("%sRIGHT JOIN %s%s", j.Constant.Prefix(), j.Relation.Eval(), j.Constant.Suffix())
 	case FullOuter:
-		return fmt.Sprintf("%sFULL JOIN %s %s", j.Constant.Prefix(), j.Relation.String(), j.Constant.Suffix())
+		return fmt.Sprintf("%sFULL JOIN %s%s", j.Constant.Prefix(), j.Relation.Eval(), j.Constant.Suffix())
 	default:
 		return ""
 	}
@@ -176,7 +202,7 @@ func (*OnJoinConstant) Prefix() string {
 }
 
 func (o *OnJoinConstant) Suffix() string {
-	return fmt.Sprintf("ON %s", o.Node.String())
+	return fmt.Sprintf(" ON %s", o.Node.Eval())
 }
 
 type UsingConstant struct {
@@ -192,7 +218,7 @@ func (u *UsingConstant) Suffix() string {
 	for _, i := range u.Idents {
 		str = append(str, string(i))
 	}
-	return fmt.Sprintf("USING(%s)", strings.Join(str, ", "))
+	return fmt.Sprintf(" USING(%s)", strings.Join(str, ", "))
 }
 
 type NaturalConstant struct {
