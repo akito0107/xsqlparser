@@ -6,12 +6,34 @@ import (
 )
 
 type SQLQuery struct {
-	CTEs []CTE
-	Body *SQLSetExpr
+	CTEs    []CTE
+	Body    SQLSetExpr
+	OrderBy []SQLOrderByExpr
+	Limit   ASTNode
 }
 
 func (s *SQLQuery) Eval() string {
-	return ""
+	var q string
+
+	ctestrs := make([]string, 0, len(s.CTEs))
+	for _, cte := range s.CTEs {
+		ctestrs = append(ctestrs, fmt.Sprintf("%s AS (%s)", cte.Alias.Eval(), cte.Query.Eval()))
+	}
+	if len(s.CTEs) != 0 {
+		q += strings.Join(ctestrs, ", ")
+	}
+
+	q += s.Body.Eval()
+
+	if len(s.OrderBy) != 0 {
+		q += fmt.Sprintf(" ORDER BY %s", commaSeparatedString(s.OrderBy))
+	}
+
+	if s.Limit != nil {
+		q += fmt.Sprintf(" LIMIT %s", s.Limit.Eval())
+	}
+
+	return q
 }
 
 type CTE struct {
@@ -19,18 +41,68 @@ type CTE struct {
 	Query *SQLQuery
 }
 
-type SQLSetExpr struct {
-	Select       *SQLSelect
-	Query        *SQLQuery
-	SetOperation struct {
-		Op    *SQLSetOperator
-		All   bool
-		Left  *SQLSetExpr
-		Right *SQLSetExpr
-	}
+/** SQLSetExpr **/
+type SQLSetExpr interface {
+	ASTNode
 }
 
-type SQLSetOperator struct{}
+type SelectExpr struct {
+	Select SQLSelect
+}
+
+func (s *SelectExpr) Eval() string {
+	return s.Select.Eval()
+}
+
+type QueryExpr struct {
+	Query SQLQuery
+}
+
+func (q *QueryExpr) Eval() string {
+	return fmt.Sprintf("(%s)", q.Query.Eval())
+}
+
+type SetOperationExpr struct {
+	Op    SQLSetOperator
+	All   bool
+	Left  SQLSetExpr
+	Right SQLSetExpr
+}
+
+func (s *SetOperationExpr) Eval() string {
+	var allStr string
+	if s.All {
+		allStr = " ALL"
+	}
+	return fmt.Sprintf("%s %s%s %s", s.Left.Eval(), s.Op.Eval(), allStr, s.Right.Eval())
+}
+
+/** SQLSetOperator **/
+type SQLSetOperator interface {
+	ASTNode
+}
+
+type UnionOperator struct{}
+
+func (UnionOperator) Eval() string {
+	return "UNION"
+}
+
+type ExceptOperator struct {
+}
+
+func (ExceptOperator) Eval() string {
+	return "EXCEPT"
+}
+
+type IntersectOperator struct {
+}
+
+func (IntersectOperator) Eval() string {
+	return "INTERSECT"
+}
+
+/** SQLSetOperator end **/
 
 type SQLSelect struct {
 	Distinct   bool
@@ -233,3 +305,18 @@ func (*NaturalConstant) Suffix() string {
 }
 
 /** JoinConstant end **/
+
+type SQLOrderByExpr struct {
+	Expr ASTNode
+	ASC  *bool
+}
+
+func (s *SQLOrderByExpr) Eval() string {
+	if s.ASC == nil {
+		return s.Expr.Eval()
+	}
+	if *s.ASC {
+		return fmt.Sprintf("%s ASC", s.Expr.Eval())
+	}
+	return fmt.Sprintf("%s DESC", s.Expr.Eval())
+}
