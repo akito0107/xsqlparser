@@ -21,7 +21,7 @@ const (
 	NotLike
 )
 
-func (s *SQLOperator) String() string {
+func (s *SQLOperator) Eval() string {
 	switch *s {
 	case Plus:
 		return "+"
