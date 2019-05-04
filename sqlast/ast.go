@@ -80,11 +80,44 @@ type SQLInList struct {
 }
 
 func (s *SQLInList) Eval() string {
-	var n string
-	if s.Negated {
-		n = "NOT "
-	}
-	return fmt.Sprintf("%s %sIN {%s}", s.Expr.Eval(), n, commaSeparatedString(s.List))
+	return fmt.Sprintf("%s %sIN {%s}", s.Expr.Eval(), negatedString(s.Negated), commaSeparatedString(s.List))
+}
+
+//[ NOT ] IN (SELECT ...)
+type SQLInSubQuery struct {
+	Expr     ASTNode
+	SubQuery *SQLQuery
+	Negated  bool
+}
+
+func (s *SQLInSubQuery) Eval() string {
+	return fmt.Sprintf("%s %sIN (%s)", s.Expr.Eval(), negatedString(s.Negated), s.SubQuery.Eval())
+}
+
+type SQLBetween struct {
+	Expr    ASTNode
+	Negated bool
+	Low     ASTNode
+	High    ASTNode
+}
+
+func (s *SQLBetween) Eval() string {
+	return fmt.Sprintf("%s %sBETWEEN %s AND %s", s.Expr.Eval(), negatedString(s.Negated), s.Low.Eval(), s.High.Eval())
+}
+
+type SQLBinaryExpr struct {
+	Left  ASTNode
+	Op    SQLOperator
+	Right ASTNode
+}
+
+func (s *SQLBinaryExpr) Eval() string {
+	return fmt.Sprintf("%s %s %s", s.Left.Eval(), s.Op.String(), s.Right.Eval())
+}
+
+type SQLCast struct {
+	Expr     ASTNode
+	DateType SQLType
 }
 
 type SQLObjectName struct {
@@ -116,4 +149,13 @@ func commaSeparatedString(list interface{}) string {
 		}
 	}
 	return strings.Join(strs, ", ")
+}
+
+func negatedString(negated bool) string {
+	var n string
+	if negated {
+		n = "NOT "
+	}
+
+	return n
 }

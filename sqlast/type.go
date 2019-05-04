@@ -2,111 +2,182 @@ package sqlast
 
 import (
 	"fmt"
-	"time"
 )
 
-type Value interface {
-	Value() interface{}
+type SQLType interface {
 	Eval() string
 }
 
-type LongValue int64
-
-func (l *LongValue) Value() interface{} {
-	return *l
+type CharType struct {
+	Size *uint8
 }
 
-func (l *LongValue) Eval() string {
-	return fmt.Sprintf("%d", *l)
+func (c *CharType) Eval() string {
+	return formatTypeWithOptionalLength("char", c.Size)
 }
 
-type DoubleValue float64
-
-func (d *DoubleValue) Value() interface{} {
-	return *d
+type VarcharType struct {
+	Size *uint8
 }
 
-func (d *DoubleValue) Eval() string {
-	return fmt.Sprintf("%f", *d)
+func (v *VarcharType) Eval() string {
+	return formatTypeWithOptionalLength("character varying", v.Size)
 }
 
-type SingleQuotedString string
-
-func (s *SingleQuotedString) Value() interface{} {
-	return *s
+type UUID struct {
 }
 
-func (s *SingleQuotedString) Eval() interface{} {
-	return fmt.Sprintf("%s", *s)
+func (*UUID) Eval() string {
+	return "uuid"
 }
 
-type NationalStringLiteral string
-
-func (n *NationalStringLiteral) Value() interface{} {
-	return *n
+type Clob struct {
+	Size uint8
 }
 
-func (n *NationalStringLiteral) Eval() string {
-	return fmt.Sprintf("N'%s'", *n)
+func (c *Clob) Eval() string {
+	return fmt.Sprintf("clob(%d)", c.Size)
 }
 
-type BooleanValue bool
-
-func (b *BooleanValue) Value() interface{} {
-	return *b
+type Binary struct {
+	Size uint8
 }
 
-func (b *BooleanValue) Eval() string {
-	return fmt.Sprintf("%t", *b)
+func (b *Binary) Eval() string {
+	return fmt.Sprintf("birany(%d)", b.Size)
 }
 
-type DateValue time.Time
-
-func (d *DateValue) Value() interface{} {
-	return *d
+type Varbinary struct {
+	Size uint8
 }
 
-func (d *DateValue) Eval() string {
-	return time.Time(*d).Format("2006-01-02")
+func (v *Varbinary) Eval() string {
+	return fmt.Sprintf("varbinary(%d)", v.Size)
 }
 
-type TimeValue time.Time
-
-func (t *TimeValue) Value() interface{} {
-	return *t
+type Blob struct {
+	Size uint8
 }
 
-func (t *TimeValue) Eval() string {
-	return time.Time(*t).Format("15:04:05")
+func (b *Blob) Eval() string {
+	return fmt.Sprintf("blob(%d)", b.Size)
 }
 
-type DateTimeValue time.Time
-
-func (d *DateTimeValue) Value() interface{} {
-	return *d
+type Decimal struct {
+	Precision *uint8
+	Scale     *uint8
 }
 
-func (d *DateTimeValue) Eval() string {
-	return time.Time(*d).Format("2006-01-02 15:04:05")
+func (d *Decimal) Eval() string {
+	if d.Scale != nil {
+		return fmt.Sprintf("numeric(%d,%d)", *d.Precision, *d.Scale)
+	}
+	return formatTypeWithOptionalLength("numeric", d.Precision)
 }
 
-// TODO
-type TimestampValue time.Time
-
-func (t *TimestampValue) Value() interface{} {
-	return *t
+type Float struct {
+	Size *uint8
 }
 
-func (t *TimestampValue) Eval() string {
-	return time.Time(*t).Format("2006-01-02 15:04:05")
+func (f *Float) Eval() string {
+	return formatTypeWithOptionalLength("float", f.Size)
 }
 
-type NullValue struct{}
-
-func (n *NullValue) Value() interface{} {
-	return nil
+type SmallInt struct {
 }
 
-func (n *NullValue) Eval() string {
-	return "NULL"
+func (s *SmallInt) Eval() string {
+	return "smallint"
+}
+
+type Int struct{}
+
+func (i *Int) Eval() string {
+	return "int"
+}
+
+type BigInt struct{}
+
+func (b *BigInt) Eval() string {
+	return "bigint"
+}
+
+type Real struct {
+}
+
+func (*Real) Eval() string {
+	return "real"
+}
+
+type Double struct{}
+
+func (*Double) Eval() string {
+	return "double"
+}
+
+type Boolean struct{}
+
+func (*Boolean) Eval() string {
+	return "boolean"
+}
+
+type Date struct{}
+
+func (*Date) Eval() string {
+	return "date"
+}
+
+type Time struct{}
+
+func (*Time) Eval() string {
+	return "time"
+}
+
+type Timestamp struct{}
+
+func (*Timestamp) Eval() string {
+	return "timestamp"
+}
+
+type Regclass struct{}
+
+func (*Regclass) Eval() string {
+	return "regclass"
+}
+
+type Text struct{}
+
+func (*Text) Eval() string {
+	return "text"
+}
+
+type Bytea struct{}
+
+func (*Bytea) Eval() string {
+	return "bytea"
+}
+
+type Array struct {
+	Ty SQLType
+}
+
+func (a *Array) Eval() string {
+	return fmt.Sprintf("%s[]", a.Ty.Eval())
+}
+
+type Custom struct {
+	Ty SQLObjectName
+}
+
+func (c *Custom) Eval() string {
+	return c.Ty.Eval()
+}
+
+func formatTypeWithOptionalLength(sqltype string, len *uint8) string {
+	s := sqltype
+	if len != nil {
+		s += fmt.Sprintf("(%d)", *len)
+	}
+
+	return s
 }
