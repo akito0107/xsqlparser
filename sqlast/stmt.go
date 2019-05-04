@@ -3,6 +3,7 @@ package sqlast
 import (
 	"fmt"
 	"log"
+	"strings"
 )
 
 type SQLStmt interface {
@@ -15,16 +16,67 @@ type SQLInsert struct {
 	Values    [][]ASTNode
 }
 
+func (s *SQLInsert) Eval() string {
+	str := fmt.Sprintf("INSERT INTO %s", s.TableName.Eval())
+	if len(s.Columns) != 0 {
+		str += fmt.Sprintf(" (%s)", commaSeparatedString(s.Columns))
+	}
+	if len(s.Values) != 0 {
+		var valuestrs []string
+		for _, v := range s.Values {
+			valuestrs = append(valuestrs, commaSeparatedString(v))
+		}
+		str += strings.Join(valuestrs, ", ")
+	}
+
+	return str
+}
+
 type SQLCopy struct {
 	TableName SQLObjectName
 	Columns   []SQLIdent
 	Values    []*string
 }
 
+func (s *SQLCopy) Eval() string {
+	str := fmt.Sprintf("COPY %s", s.TableName.Eval())
+	if len(s.Columns) != 0 {
+		str += fmt.Sprintf(" (%s)", commaSeparatedString(s.Columns))
+	}
+	str += " FROM stdin; "
+
+	if len(s.Values) != 0 {
+		var valuestrs []string
+		for _, v := range s.Values {
+			if v == nil {
+				valuestrs = append(valuestrs, "\\N")
+			} else {
+				valuestrs = append(valuestrs, *v)
+			}
+		}
+		str += fmt.Sprintf("\n%s", strings.Join(valuestrs, "\t"))
+	}
+	str += "\n\\."
+
+	return str
+}
+
 type SQLUpdate struct {
 	TableName   SQLObjectName
-	Assignments *SQLAssignment
+	Assignments []SQLAssignment
 	Selection   ASTNode
+}
+
+func (s *SQLUpdate) Eval() string {
+	str := fmt.Sprintf("UPDATE %s", s.TableName.Eval())
+	if s.Assignments != nil {
+		str += commaSeparatedString(s.Assignments)
+	}
+	if s.Selection != nil {
+		str += fmt.Sprintf(" WHERE %s", s.Selection.Eval())
+	}
+
+	return str
 }
 
 type SQLDelete struct {
@@ -32,10 +84,28 @@ type SQLDelete struct {
 	Selection ASTNode
 }
 
+func (s *SQLDelete) Eval() string {
+	str := fmt.Sprintf("DELETE FROM %s", s.TableName.Eval())
+
+	if s.Selection != nil {
+		str += fmt.Sprintf(" WHERE %s", s.Selection.Eval())
+	}
+
+	return str
+}
+
 type SQLCreateView struct {
 	Name         SQLObjectName
 	Query        SQLQuery
 	Materialized bool
+}
+
+func (s *SQLCreateView) Eval() string {
+	var modifier string
+	if s.Materialized {
+		modifier = " MATERIALIZED"
+	}
+	return fmt.Sprintf("CREATE%s VIEW %s AS %s", modifier, s.Name.Eval(), s.Query.Eval())
 }
 
 type SQLCreateTable struct {
@@ -46,8 +116,21 @@ type SQLCreateTable struct {
 	Location   *string
 }
 
+func (s *SQLCreateTable) Eval() string {
+	if s.External {
+		return fmt.Sprintf("CREATE EXETRNAL TABLE %s (%s) STORED AS %s LOCATION '%s'",
+			s.Name.Eval(), commaSeparatedString(s.Columns), s.FileFormat.Eval(), *s.Location)
+	}
+	return fmt.Sprintf("CREATE TABLE %s (%s)", s.Name.Eval(), commaSeparatedString(s.Columns))
+}
+
 type SQLAlterTable struct {
-	Name SQLObjectName
+	Name      SQLObjectName
+	Operation AlterOperation
+}
+
+func (s *SQLAlterTable) Eval() string {
+	return fmt.Sprintf("ALTER TABLE %s %s", s.Name.Eval(), s.Operation.Eval())
 }
 
 type SQLAssignment struct {

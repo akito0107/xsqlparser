@@ -213,6 +213,8 @@ func commaSeparatedString(list interface{}) string {
 		for _, l := range s {
 			strs = append(strs, l.Eval())
 		}
+	default:
+		log.Fatalf("unexpected type array %+v", list)
 	}
 	return strings.Join(strs, ", ")
 
