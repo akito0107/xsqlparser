@@ -2,6 +2,14 @@
 
 
 [[projects]]
+  branch = "master"
+  digest = "1:86d119ee8a0fb122f2d0e0fbbbd5d2f65953029248743462ee3908a21ae04247"
+  name = "github.com/andreyvit/diff"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "c7f18ee00883bfd3b00e0a2bf7607827e0148ad4"
+
+[[projects]]
   digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
   name = "github.com/pkg/errors"
   packages = ["."]
@@ -9,9 +17,20 @@
   revision = "ba968bfe8b2f7e042a574c888954fccecfa385b4"
   version = "v0.8.1"
 
+[[projects]]
+  digest = "1:d917313f309bda80d27274d53985bc65651f81a5b66b820749ac7f8ef061fd04"
+  name = "github.com/sergi/go-diff"
+  packages = ["diffmatchpatch"]
+  pruneopts = "UT"
+  revision = "1744e2970ca51c86172c8190fadad617561ed6e7"
+  version = "v1.0.0"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  input-imports = ["github.com/pkg/errors"]
+  input-imports = [
+    "github.com/andreyvit/diff",
+    "github.com/pkg/errors",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1
