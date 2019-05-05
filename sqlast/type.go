@@ -181,3 +181,7 @@ func formatTypeWithOptionalLength(sqltype string, len *uint8) string {
 
 	return s
 }
+
+func NewSize(s uint8) *uint8 {
+	return &s
+}

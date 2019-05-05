@@ -162,6 +162,9 @@ func (s *SQLFunction) Eval() string {
 	return str
 }
 
+type SELExpr struct {
+}
+
 type SQLCase struct {
 	Operand    ASTNode
 	Conditions []ASTNode
@@ -222,11 +225,19 @@ func commaSeparatedString(list interface{}) string {
 		for _, l := range s {
 			strs = append(strs, l.Eval())
 		}
-	case []SQLIdent:
+	case []*SQLAssignment:
+		for _, l := range s {
+			strs = append(strs, l.Eval())
+		}
+	case []*SQLIdent:
 		for _, l := range s {
 			strs = append(strs, l.Eval())
 		}
 	case []SQLOrderByExpr:
+		for _, l := range s {
+			strs = append(strs, l.Eval())
+		}
+	case []*SQLColumnDef:
 		for _, l := range s {
 			strs = append(strs, l.Eval())
 		}

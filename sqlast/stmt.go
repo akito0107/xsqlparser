@@ -11,8 +11,8 @@ type SQLStmt interface {
 }
 
 type SQLInsert struct {
-	TableName SQLObjectName
-	Columns   []SQLIdent
+	TableName *SQLObjectName
+	Columns   []*SQLIdent
 	Values    [][]ASTNode
 }
 
@@ -26,7 +26,7 @@ func (s *SQLInsert) Eval() string {
 		for _, v := range s.Values {
 			valuestrs = append(valuestrs, commaSeparatedString(v))
 		}
-		str += strings.Join(valuestrs, ", ")
+		str += fmt.Sprintf(" VALUES(%s)", strings.Join(valuestrs, ", "))
 	}
 
 	return str
@@ -62,13 +62,13 @@ func (s *SQLCopy) Eval() string {
 }
 
 type SQLUpdate struct {
-	TableName   SQLObjectName
-	Assignments []SQLAssignment
+	TableName   *SQLObjectName
+	Assignments []*SQLAssignment
 	Selection   ASTNode
 }
 
 func (s *SQLUpdate) Eval() string {
-	str := fmt.Sprintf("UPDATE %s", s.TableName.Eval())
+	str := fmt.Sprintf("UPDATE %s SET ", s.TableName.Eval())
 	if s.Assignments != nil {
 		str += commaSeparatedString(s.Assignments)
 	}
@@ -80,7 +80,7 @@ func (s *SQLUpdate) Eval() string {
 }
 
 type SQLDelete struct {
-	TableName SQLObjectName
+	TableName *SQLObjectName
 	Selection ASTNode
 }
 
@@ -95,8 +95,8 @@ func (s *SQLDelete) Eval() string {
 }
 
 type SQLCreateView struct {
-	Name         SQLObjectName
-	Query        SQLQuery
+	Name         *SQLObjectName
+	Query        *SQLQuery
 	Materialized bool
 }
 
@@ -109,8 +109,8 @@ func (s *SQLCreateView) Eval() string {
 }
 
 type SQLCreateTable struct {
-	Name       SQLObjectName
-	Columns    []SQLColumnDef
+	Name       *SQLObjectName
+	Columns    []*SQLColumnDef
 	External   bool
 	FileFormat *FileFormat
 	Location   *string
@@ -125,7 +125,7 @@ func (s *SQLCreateTable) Eval() string {
 }
 
 type SQLAlterTable struct {
-	Name      SQLObjectName
+	Name      *SQLObjectName
 	Operation AlterOperation
 }
 
@@ -134,16 +134,16 @@ func (s *SQLAlterTable) Eval() string {
 }
 
 type SQLAssignment struct {
-	ID    SQLIdent
+	ID    *SQLIdent
 	Value ASTNode
 }
 
 func (s *SQLAssignment) Eval() string {
-	return fmt.Sprintf("SET %s = %s", s.ID.Eval(), s.Value.Eval())
+	return fmt.Sprintf("%s = %s", s.ID.Eval(), s.Value.Eval())
 }
 
 type SQLColumnDef struct {
-	Name      SQLIdent
+	Name      *SQLIdent
 	DateType  SQLType
 	IsPrimary bool
 	IsUnique  bool

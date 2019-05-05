@@ -6,12 +6,52 @@ type AlterOperation interface {
 	ASTNode
 }
 
+type AddColumn struct {
+	Column *SQLColumnDef
+}
+
+func (a *AddColumn) Eval() string {
+	return fmt.Sprintf("ADD COLUMN %s", a.Column.Eval())
+}
+
+type RemoveColumn struct {
+	Name    *SQLIdent
+	Cascade bool
+}
+
+func (r *RemoveColumn) Eval() string {
+	var cascade string
+	if r.Cascade {
+		cascade += " CASCADE"
+	}
+	return fmt.Sprintf("DROP COLUMN %s%s", r.Name.Eval(), cascade)
+}
+
+// postgres
+type AddForeignKey struct {
+	ForeignTable   *SQLObjectName
+	ReferredColumn *SQLIdent
+}
+
+func (a *AddForeignKey) Eval() string {
+	return fmt.Sprintf("ADD FOREIGN KEY (%s) REFERENCES %s", a.ReferredColumn.Eval(), a.ForeignTable)
+}
+
 type AddConstraint struct {
 	TableKey SQLIdent
 }
 
 func (a *AddConstraint) Eval() string {
 	return fmt.Sprintf("ADD CONSTRAINT %s", a.TableKey.Eval())
+}
+
+type AlterColumn struct {
+	Expr   ASTNode
+	Column *SQLIdent
+}
+
+func (a *AlterColumn) Eval() string {
+	return fmt.Sprintf("ALTER COLUMN %s %s", a.Column.Eval(), a.Expr.Eval())
 }
 
 type RemoveConstraint struct {

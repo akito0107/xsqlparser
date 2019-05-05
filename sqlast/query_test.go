@@ -274,6 +274,51 @@ func TestSQLQuery_Eval(t *testing.T) {
 				"WHERE region IN (SELECT region FROM top_regions) " +
 				"GROUP BY region, product",
 		},
+		{
+			name: "order by and limit",
+			in: &SQLQuery{
+				Body: &SelectExpr{
+					Select: &SQLSelect{
+						Projection: []SQLSelectItem{
+							&UnnamedExpression{Node: NewSQLIdent("product")},
+							&ExpressionWithAlias{
+								Alias: NewSQLIdent("product_units"),
+								Expr: &SQLFunction{
+									Name: NewSQLObjectName("SUM"),
+									Args: []ASTNode{NewSQLIdent("quantity")},
+								},
+							},
+						},
+						Relation: &Table{
+							Name: NewSQLObjectName("orders"),
+						},
+						Selection: &SQLInSubQuery{
+							Expr: NewSQLIdent("region"),
+							SubQuery: &SQLQuery{
+								Body: &SelectExpr{
+									Select: &SQLSelect{
+										Projection: []SQLSelectItem{
+											&UnnamedExpression{Node: NewSQLIdent("region")},
+										},
+										Relation: &Table{
+											Name: NewSQLObjectName("top_regions"),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				OrderBy: []SQLOrderByExpr{
+					{Expr: NewSQLIdent("product_units")},
+				},
+				Limit: NewLongValue(100),
+			},
+			out: "SELECT product, SUM(quantity) AS product_units " +
+				"FROM orders " +
+				"WHERE region IN (SELECT region FROM top_regions) " +
+				"ORDER BY product_units LIMIT 100",
+		},
 	}
 
 	for _, c := range cases {
