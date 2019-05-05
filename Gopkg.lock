@@ -25,12 +25,24 @@
   revision = "1744e2970ca51c86172c8190fadad617561ed6e7"
   version = "v1.0.0"
 
+[[projects]]
+  branch = "master"
+  digest = "1:e02c5b5aadc210aafb308f919156d78a457d31e9c24ec1e27f72dd52e1a4f319"
+  name = "golang.org/x/xerrors"
+  packages = [
+    ".",
+    "internal",
+  ]
+  pruneopts = "UT"
+  revision = "1f06c39b43733b74392b1972507822714ced3242"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
     "github.com/andreyvit/diff",
     "github.com/pkg/errors",
+    "golang.org/x/xerrors",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

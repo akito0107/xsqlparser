@@ -19,6 +19,7 @@ const (
 	Not
 	Like
 	NotLike
+	None
 )
 
 func (s *SQLOperator) Eval() string {
