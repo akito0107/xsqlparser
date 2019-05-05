@@ -8,6 +8,11 @@ import (
 
 type SQLIdent string
 
+func NewSQLIdent(str string) *SQLIdent {
+	s := SQLIdent(str)
+	return &s
+}
+
 func (s *SQLIdent) Eval() string {
 	return string(*s)
 }
@@ -142,7 +147,7 @@ func (*SQLValue) Eval() string {
 }
 
 type SQLFunction struct {
-	Name SQLObjectName
+	Name *SQLObjectName
 	Args []ASTNode
 	Over *SQLWindowSpec
 }
@@ -184,6 +189,18 @@ func (s *SQLCase) Eval() string {
 
 type SQLObjectName struct {
 	Idents []SQLIdent
+}
+
+func NewSQLObjectName(strs ...string) *SQLObjectName {
+	idents := make([]SQLIdent, 0, len(strs))
+
+	for _, s := range strs {
+		idents = append(idents, *NewSQLIdent(s))
+	}
+
+	return &SQLObjectName{
+		Idents: idents,
+	}
 }
 
 func (s *SQLObjectName) Eval() string {

@@ -7,10 +7,15 @@ import (
 
 type Value interface {
 	Value() interface{}
-	Eval() string
+	ASTNode
 }
 
 type LongValue int64
+
+func NewLongValue(i int64) *LongValue {
+	l := LongValue(i)
+	return &l
+}
 
 func (l *LongValue) Value() interface{} {
 	return *l
@@ -22,6 +27,11 @@ func (l *LongValue) Eval() string {
 
 type DoubleValue float64
 
+func NewDoubleValue(f float64) *DoubleValue {
+	d := DoubleValue(f)
+	return &d
+}
+
 func (d *DoubleValue) Value() interface{} {
 	return *d
 }
@@ -32,15 +42,25 @@ func (d *DoubleValue) Eval() string {
 
 type SingleQuotedString string
 
+func NewSingleQuotedString(str string) *SingleQuotedString {
+	s := SingleQuotedString(str)
+	return &s
+}
+
 func (s *SingleQuotedString) Value() interface{} {
 	return *s
 }
 
-func (s *SingleQuotedString) Eval() interface{} {
-	return fmt.Sprintf("%s", *s)
+func (s *SingleQuotedString) Eval() string {
+	return fmt.Sprintf("'%s'", *s)
 }
 
 type NationalStringLiteral string
+
+func NewNationalStringLiteral(str string) *NationalStringLiteral {
+	n := NationalStringLiteral(str)
+	return &n
+}
 
 func (n *NationalStringLiteral) Value() interface{} {
 	return *n
@@ -51,6 +71,11 @@ func (n *NationalStringLiteral) Eval() string {
 }
 
 type BooleanValue bool
+
+func NewBooleanValue(b bool) *BooleanValue {
+	v := BooleanValue(b)
+	return &v
+}
 
 func (b *BooleanValue) Value() interface{} {
 	return *b
@@ -72,6 +97,11 @@ func (d *DateValue) Eval() string {
 
 type TimeValue time.Time
 
+func NewTimeValue(t time.Time) *TimeValue {
+	v := TimeValue(t)
+	return &v
+}
+
 func (t *TimeValue) Value() interface{} {
 	return *t
 }
@@ -81,6 +111,11 @@ func (t *TimeValue) Eval() string {
 }
 
 type DateTimeValue time.Time
+
+func NewDateTiemValue(t time.Time) *DateTimeValue {
+	v := DateTimeValue(t)
+	return &v
+}
 
 func (d *DateTimeValue) Value() interface{} {
 	return *d
@@ -93,6 +128,11 @@ func (d *DateTimeValue) Eval() string {
 // TODO
 type TimestampValue time.Time
 
+func NewTimestampValue(t time.Time) *TimestampValue {
+	v := TimestampValue(t)
+	return &v
+}
+
 func (t *TimestampValue) Value() interface{} {
 	return *t
 }
@@ -102,6 +142,10 @@ func (t *TimestampValue) Eval() string {
 }
 
 type NullValue struct{}
+
+func NewNullValue() *NullValue {
+	return &NullValue{}
+}
 
 func (n *NullValue) Value() interface{} {
 	return nil

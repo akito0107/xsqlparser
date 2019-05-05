@@ -15,12 +15,13 @@ type SQLQuery struct {
 func (s *SQLQuery) Eval() string {
 	var q string
 
-	ctestrs := make([]string, 0, len(s.CTEs))
-	for _, cte := range s.CTEs {
-		ctestrs = append(ctestrs, fmt.Sprintf("%s AS (%s)", cte.Alias.Eval(), cte.Query.Eval()))
-	}
 	if len(s.CTEs) != 0 {
-		q += strings.Join(ctestrs, ", ")
+		q += "WITH "
+		ctestrs := make([]string, 0, len(s.CTEs))
+		for _, cte := range s.CTEs {
+			ctestrs = append(ctestrs, fmt.Sprintf("%s AS (%s)", cte.Alias.Eval(), cte.Query.Eval()))
+		}
+		q += strings.Join(ctestrs, ", ") + " "
 	}
 
 	q += s.Body.Eval()
@@ -37,7 +38,7 @@ func (s *SQLQuery) Eval() string {
 }
 
 type CTE struct {
-	Alias SQLIdent
+	Alias *SQLIdent
 	Query *SQLQuery
 }
 
@@ -47,7 +48,7 @@ type SQLSetExpr interface {
 }
 
 type SelectExpr struct {
-	Select SQLSelect
+	Select *SQLSelect
 }
 
 func (s *SelectExpr) Eval() string {
@@ -200,7 +201,7 @@ func (u *UnnamedExpression) Eval() string {
 
 type ExpressionWithAlias struct {
 	Expr  ASTNode
-	Alias SQLIdent
+	Alias *SQLIdent
 }
 
 func (e *ExpressionWithAlias) Eval() string {
@@ -208,7 +209,7 @@ func (e *ExpressionWithAlias) Eval() string {
 }
 
 type QualifiedWildcard struct {
-	Prefix SQLObjectName
+	Prefix *SQLObjectName
 }
 
 func (q *QualifiedWildcard) Eval() string {
@@ -238,11 +239,11 @@ func (j *Join) Eval() string {
 	case Implicit:
 		return fmt.Sprintf(", %s", j.Relation.Eval())
 	case LeftOuter:
-		return fmt.Sprintf("%sLEFT JOIN %s%s", j.Constant.Prefix(), j.Relation.Eval(), j.Constant.Suffix())
+		return fmt.Sprintf(" %sLEFT JOIN %s%s", j.Constant.Prefix(), j.Relation.Eval(), j.Constant.Suffix())
 	case RightOuter:
-		return fmt.Sprintf("%sRIGHT JOIN %s%s", j.Constant.Prefix(), j.Relation.Eval(), j.Constant.Suffix())
+		return fmt.Sprintf(" %sRIGHT JOIN %s%s", j.Constant.Prefix(), j.Relation.Eval(), j.Constant.Suffix())
 	case FullOuter:
-		return fmt.Sprintf("%sFULL JOIN %s%s", j.Constant.Prefix(), j.Relation.Eval(), j.Constant.Suffix())
+		return fmt.Sprintf(" %sFULL JOIN %s%s", j.Constant.Prefix(), j.Relation.Eval(), j.Constant.Suffix())
 	default:
 		return ""
 	}
