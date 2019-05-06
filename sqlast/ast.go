@@ -26,6 +26,12 @@ type SQLIdentifier struct {
 	Ident *SQLIdent
 }
 
+func NewSQLIdentifier(ident *SQLIdent) *SQLIdentifier {
+	return &SQLIdentifier{
+		Ident: ident,
+	}
+}
+
 func (s *SQLIdentifier) Eval() string {
 	return string(*s.Ident)
 }

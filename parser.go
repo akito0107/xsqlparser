@@ -12,27 +12,22 @@ import (
 )
 
 type Parser struct {
-	Dialect dialect.Dialect
-	src     io.Reader
-	tokens  []*TokenSet
-	index   uint
+	tokens []*TokenSet
+	index  uint
 }
 
-func NewParser(src io.Reader, dialect dialect.Dialect) *Parser {
-	return &Parser{Dialect: dialect, src: src}
-}
-
-func (p *Parser) ParseSQL() ([]sqlast.SQLStmt, error) {
-	tokenizer := NewTokenizer(p.src, p.Dialect)
+func NewParser(src io.Reader, dialect dialect.Dialect) (*Parser, error) {
+	tokenizer := NewTokenizer(src, dialect)
 	set, err := tokenizer.Tokenize()
 	if err != nil {
 		return nil, errors.Errorf("tokenize err %w", err)
 	}
-	p.tokens = set
-	p.index = 0
 
+	return &Parser{tokens: set, index: 0}, nil
+}
+
+func (p *Parser) ParseSQL() ([]sqlast.SQLStmt, error) {
 	var stmts []sqlast.SQLStmt
-
 	var expectingDelimiter bool
 
 	for {
@@ -163,6 +158,7 @@ func (p *Parser) parseQueryBody(precedence uint8) (sqlast.SQLSetExpr, error) {
 		if precedence >= nextPrecedence {
 			break
 		}
+		p.nextToken()
 		all, _ := p.parseKeyword("ALL")
 		right, err := p.parseQueryBody(nextPrecedence)
 		if err != nil {
@@ -181,6 +177,9 @@ func (p *Parser) parseQueryBody(precedence uint8) (sqlast.SQLSetExpr, error) {
 }
 
 func (p *Parser) parseSetOperator(token *TokenSet) sqlast.SQLSetOperator {
+	if token == nil {
+		return nil
+	}
 	if token.Tok != SQLKeyword {
 		return nil
 	}
@@ -303,18 +302,21 @@ func (p *Parser) parseOptionalAlias(reservedKeywords map[string]struct{}) *sqlas
 	afterAs, _ := p.parseKeyword("AS")
 	maybeAlias, _ := p.nextToken()
 
-	switch maybeAlias.Tok {
-	case SQLKeyword:
+	if maybeAlias == nil {
+		return nil
+	}
+
+	if maybeAlias.Tok == SQLKeyword {
+
 		word := maybeAlias.Value.(*SQLWord)
 		if afterAs || !containsStr(reservedKeywords, word.Keyword) {
 			return word.AsSQLIdent()
 		}
-	default:
-		if afterAs {
-			log.Fatalf("expected an identifier after AS")
-		}
-		p.prevToken()
 	}
+	if afterAs {
+		log.Fatalf("expected an identifier after AS")
+	}
+	p.prevToken()
 	return nil
 }
 
@@ -1399,17 +1401,19 @@ func (p *Parser) parseListOfIds(separator Token) ([]*sqlast.SQLIdent, error) {
 
 	for {
 		tok, _ := p.nextToken()
+		if tok == nil {
+			break
+		}
 		if tok.Tok == SQLKeyword {
 			expectIdentifier = false
 			word := tok.Value.(*SQLWord)
 			idents = append(idents, word.AsSQLIdent())
+			continue
 		} else if tok.Tok == separator && !expectIdentifier {
 			expectIdentifier = true
 			continue
 		}
-		if tok != nil {
-			p.prevToken()
-		}
+		p.prevToken()
 		break
 	}
 
@@ -1546,7 +1550,7 @@ func (p *Parser) tokenAt(n uint) *TokenSet {
 func (p *Parser) tilNonWhitespace() (uint, error) {
 	idx := p.index
 	for {
-		if idx > uint(len(p.tokens)) {
+		if idx >= uint(len(p.tokens)) {
 			return 0, TokenAlreadyConsumed
 		}
 		tok := p.tokens[idx]
