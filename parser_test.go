@@ -17,8 +17,10 @@ func TestParser_ParseStatement(t *testing.T) {
 			name string
 			in   string
 			out  sqlast.SQLStmt
+			skip bool
 		}{
 			{
+				skip: true,
 				name: "simple select",
 				in:   "SELECT test FROM test_table",
 				out: &sqlast.SQLQuery{
@@ -34,10 +36,35 @@ func TestParser_ParseStatement(t *testing.T) {
 					},
 				},
 			},
+			{
+				name: "where",
+				in:   "SELECT test FROM test_table WHERE test_table.column1 = 'test'",
+				out: &sqlast.SQLQuery{
+					Body: &sqlast.SQLSelect{
+						Projection: []sqlast.SQLSelectItem{
+							&sqlast.UnnamedExpression{
+								Node: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("test")),
+							},
+						},
+						Relation: &sqlast.Table{
+							Name: sqlast.NewSQLObjectName("test_table"),
+						},
+						Selection: &sqlast.SQLBinaryExpr{
+							Left:  sqlast.NewSQLObjectName("test_table", "column1"),
+							Op:    sqlast.Eq,
+							Right: sqlast.NewSingleQuotedString("test"),
+						},
+					},
+				},
+			},
 		}
 
 		for _, c := range cases {
+
 			t.Run(c.name, func(t *testing.T) {
+				if c.skip {
+					t.Skip()
+				}
 				parser, err := NewParser(bytes.NewBufferString(c.in), &dialect.GenericSQLDialect{})
 				if err != nil {
 					t.Fatal(err)

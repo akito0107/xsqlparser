@@ -142,7 +142,7 @@ func (p *Parser) parseQueryBody(precedence uint8) (sqlast.SQLSetExpr, error) {
 	} else {
 		log.Fatal("expect SELECT or subquery in the query body")
 	}
-
+BODY_LOOP:
 	for {
 		nextToken, _ := p.peekToken()
 		op := p.parseSetOperator(nextToken)
@@ -153,7 +153,7 @@ func (p *Parser) parseQueryBody(precedence uint8) (sqlast.SQLSetExpr, error) {
 		case *sqlast.IntersectOperator:
 			nextPrecedence = 20
 		default:
-			break
+			break BODY_LOOP
 		}
 		if precedence >= nextPrecedence {
 			break
@@ -324,6 +324,7 @@ func (p *Parser) parseJoins() ([]*sqlast.Join, error) {
 	var joins []*sqlast.Join
 	var natural bool
 
+JOIN_LOOP:
 	for {
 		tok, _ := p.peekToken()
 
@@ -333,6 +334,7 @@ func (p *Parser) parseJoins() ([]*sqlast.Join, error) {
 
 		switch tok.Tok {
 		case Comma:
+			p.nextToken()
 			relation, err := p.parseTableFactor()
 			if err != nil {
 				return nil, errors.Errorf("parseTableFactor failed %w", err)
@@ -459,6 +461,8 @@ func (p *Parser) parseJoins() ([]*sqlast.Join, error) {
 				Op:       sqlast.FullOuter,
 				Constant: constraint,
 			}
+		default:
+			break JOIN_LOOP
 		}
 		joins = append(joins, join)
 	}
@@ -1404,7 +1408,7 @@ func (p *Parser) parseListOfIds(separator Token) ([]*sqlast.SQLIdent, error) {
 		if tok == nil {
 			break
 		}
-		if tok.Tok == SQLKeyword {
+		if tok.Tok == SQLKeyword && expectIdentifier {
 			expectIdentifier = false
 			word := tok.Value.(*SQLWord)
 			idents = append(idents, word.AsSQLIdent())
