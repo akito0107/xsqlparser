@@ -106,14 +106,79 @@ func (p *Parser) parseSelect() (*sqlast.SQLSelect, error) {
 	if err != nil {
 		return nil, errors.Errorf("parseKeyword failed %w", err)
 	}
+	projection, err := p.parseSelectList()
+	if err != nil {
+		return nil, errors.Errorf("parseSelectList failed %w", err)
+	}
+	var relation sqlast.TableFactor
+	var joins []sqlast.ASTNode
+
+	if ok, _ := p.parseKeyword("FROM"); ok {
+		t, err := p.parseTableFactor()
+		if err != nil {
+			return nil, errors.Errorf("parseTableFactor failed %w", err)
+		}
+		relation = t
+	}
 }
 
 func (p *Parser) parseSelectList() ([]sqlast.SQLSelectItem, error) {
 	var projections []sqlast.SQLSelectItem
 
 	for {
+		expr, err := p.parseExpr()
+		if err != nil {
+			return nil, errors.Errorf("parseExpr failed %w", err)
+		}
+		if w, ok := expr.(*sqlast.Wildcard); ok {
+			projections = append(projections, w)
+		} else if q, ok := expr.(*sqlast.QualifiedWildcard); ok {
+			projections = append(projections, q)
+		} else {
+			alias := p.parseOptionalAlias(dialect.ReservedForColumnAlias)
 
+			if alias != nil {
+				projections = append(projections, &sqlast.ExpressionWithAlias{
+					Expr:  expr,
+					Alias: alias,
+				})
+			} else {
+				projections = append(projections, &sqlast.UnnamedExpression{
+					Node: expr,
+				})
+			}
+		}
+
+		if t, _ := p.peekToken(); t.Tok == Comma {
+			p.nextToken()
+		} else {
+			break
+		}
 	}
+	return projections, nil
+}
+
+// TODO add tests
+func (p *Parser) parseOptionalAlias(reservedKeywords map[string]struct{}) *sqlast.SQLIdent {
+	afterAs, _ := p.parseKeyword("AS")
+	maybeAlias, _ := p.nextToken()
+
+	switch maybeAlias.Tok {
+	case SQLKeyword:
+		word := maybeAlias.Value.(*SQLWord)
+		if afterAs || !containsStr(reservedKeywords, word.Keyword) {
+			return word.AsSQLIdent()
+		}
+	default:
+		if afterAs {
+			log.Fatalf("expected an identifier after AS, got %s")
+		}
+		p.prevToken()
+	}
+	return nil
+}
+
+func (p *Parser) parseJoins() ([]*sqlast.Join, error) {
 
 }
 
@@ -141,6 +206,57 @@ func (p *Parser) parseCTEList() ([]*sqlast.CTE, error) {
 		}
 	}
 	return ctes, nil
+}
+
+func (p *Parser) parseTableFactor() (sqlast.TableFactor, error) {
+	if ok, _ := p.consumeToken(LParen); ok {
+		subquery, err := p.parseQuery()
+		if err != nil {
+			return nil, errors.Errorf("parseQuery failed %w", err)
+		}
+		p.expectToken(RParen)
+		alias := p.parseOptionalAlias(dialect.ReservedForTableAlias)
+		return &sqlast.Derived{
+			SubQuery: subquery,
+			Alias:    alias,
+		}, nil
+	}
+
+	name, err := p.parseObjectName()
+	if err != nil {
+		return nil, errors.Errorf("parseObjectName failed %w", err)
+	}
+	var args []sqlast.ASTNode
+	if ok, _ := p.consumeToken(LParen); ok {
+		a, err := p.parseOptionalArgs()
+		if err != nil {
+			return nil, errors.Errorf("parseOptionalArgs failed %w", err)
+		}
+		args = a
+	}
+	alias := p.parseOptionalAlias(dialect.ReservedForTableAlias)
+
+	var withHints []sqlast.ASTNode
+	if ok, _ := p.parseKeyword("WITH"); ok {
+		if ok, _ := p.consumeToken(LParen); ok {
+			h, err := p.parseExprList()
+			if err != nil {
+				return nil, errors.Errorf("parseExprList failed %w", err)
+			}
+			withHints = h
+			p.expectToken(RParen)
+		} else {
+			p.prevToken()
+		}
+	}
+
+	return &sqlast.Table{
+		Name:      name,
+		Args:      args,
+		Alias:     alias,
+		WithHints: withHints,
+	}, nil
+
 }
 
 func (p *Parser) expectToken(expected Token) {
@@ -1156,4 +1272,9 @@ func (p *Parser) parseKeyword(expected string) (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+func containsStr(strmap map[string]struct{}, t string) bool {
+	_, ok := strmap[t]
+	return ok
 }

@@ -1,6 +1,8 @@
 package dialect
 
 var Keywords map[string]struct{}
+var ReservedForTableAlias map[string]struct{}
+var ReservedForColumnAlias map[string]struct{}
 
 func init() {
 	Keywords = make(map[string]struct{})
@@ -350,6 +352,36 @@ func init() {
 	Keywords[WITHOUT] = struct{}{}
 	Keywords[YEAR] = struct{}{}
 	Keywords[ZONE] = struct{}{}
+
+	ReservedForTableAlias = make(map[string]struct{})
+	ReservedForTableAlias[WITH] = struct{}{}
+	ReservedForTableAlias[SELECT] = struct{}{}
+	ReservedForTableAlias[WHERE] = struct{}{}
+	ReservedForTableAlias[GROUP] = struct{}{}
+	ReservedForTableAlias[ORDER] = struct{}{}
+	ReservedForTableAlias[UNION] = struct{}{}
+	ReservedForTableAlias[EXCEPT] = struct{}{}
+	ReservedForTableAlias[INTERSECT] = struct{}{}
+	ReservedForTableAlias[ON] = struct{}{}
+	ReservedForTableAlias[JOIN] = struct{}{}
+	ReservedForTableAlias[INNER] = struct{}{}
+	ReservedForTableAlias[CROSS] = struct{}{}
+	ReservedForTableAlias[FULL] = struct{}{}
+	ReservedForTableAlias[LEFT] = struct{}{}
+	ReservedForTableAlias[RIGHT] = struct{}{}
+	ReservedForTableAlias[NATURAL] = struct{}{}
+	ReservedForTableAlias[USING] = struct{}{}
+
+	ReservedForColumnAlias = make(map[string]struct{})
+	ReservedForColumnAlias[WITH] = struct{}{}
+	ReservedForColumnAlias[SELECT] = struct{}{}
+	ReservedForColumnAlias[WHERE] = struct{}{}
+	ReservedForColumnAlias[GROUP] = struct{}{}
+	ReservedForColumnAlias[ORDER] = struct{}{}
+	ReservedForColumnAlias[UNION] = struct{}{}
+	ReservedForColumnAlias[EXCEPT] = struct{}{}
+	ReservedForColumnAlias[INTERSECT] = struct{}{}
+	ReservedForColumnAlias[FROM] = struct{}{}
 }
 
 const (
