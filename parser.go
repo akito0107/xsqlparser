@@ -311,7 +311,7 @@ func (p *Parser) parseOptionalAlias(reservedKeywords map[string]struct{}) *sqlas
 		}
 	default:
 		if afterAs {
-			log.Fatalf("expected an identifier after AS, got %s")
+			log.Fatalf("expected an identifier after AS")
 		}
 		p.prevToken()
 	}
@@ -829,10 +829,7 @@ func (p *Parser) parseBetween(expr sqlast.ASTNode, negated bool) (sqlast.ASTNode
 }
 
 func (p *Parser) getNextPrecedence() (uint, error) {
-	tok, err := p.peekToken()
-	if err != nil {
-		return -1, errors.Errorf("peekToken failed %w", err)
-	}
+	tok, _ := p.peekToken()
 	return p.getPrecedence(tok), nil
 }
 
@@ -1417,7 +1414,7 @@ func (p *Parser) parseListOfIds(separator Token) ([]*sqlast.SQLIdent, error) {
 	}
 
 	if expectIdentifier {
-		return nil, errors.Errorf("expect identifier %v", p.peekToken())
+		return nil, errors.Errorf("expect identifier")
 	}
 
 	return idents, nil

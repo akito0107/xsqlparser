@@ -247,7 +247,7 @@ func commaSeparatedString(list interface{}) string {
 		for _, l := range s {
 			strs = append(strs, l.Eval())
 		}
-	case []SQLOrderByExpr:
+	case []*SQLOrderByExpr:
 		for _, l := range s {
 			strs = append(strs, l.Eval())
 		}

@@ -34,7 +34,7 @@ type AddForeignKey struct {
 }
 
 func (a *AddForeignKey) Eval() string {
-	return fmt.Sprintf("ADD FOREIGN KEY (%s) REFERENCES %s", a.ReferredColumn.Eval(), a.ForeignTable)
+	return fmt.Sprintf("ADD FOREIGN KEY (%s) REFERENCES %s", a.ReferredColumn.Eval(), a.ForeignTable.Eval())
 }
 
 type AddConstraint struct {

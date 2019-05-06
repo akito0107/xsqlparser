@@ -17,15 +17,11 @@ func TestSQLSelect_Eval(t *testing.T) {
 			in: &SQLSelect{
 				Projection: []SQLSelectItem{
 					&UnnamedExpression{
-						Node: &SQLObjectName{
-							Idents: []SQLIdent{"test"},
-						},
+						Node: NewSQLObjectName("test"),
 					},
 				},
 				Relation: &Table{
-					Name: &SQLObjectName{
-						Idents: []SQLIdent{"test_table"},
-					},
+					Name: NewSQLObjectName("test_table"),
 				},
 			},
 			out: "SELECT test FROM test_table",
@@ -35,22 +31,16 @@ func TestSQLSelect_Eval(t *testing.T) {
 			in: &SQLSelect{
 				Projection: []SQLSelectItem{
 					&UnnamedExpression{
-						Node: &SQLObjectName{
-							Idents: []SQLIdent{"test"},
-						},
+						Node: NewSQLObjectName("test"),
 					},
 				},
 				Relation: &Table{
-					Name: &SQLObjectName{
-						Idents: []SQLIdent{"test_table"},
-					},
+					Name: NewSQLObjectName("test_table"),
 				},
-				Joins: []Join{
+				Joins: []*Join{
 					{
 						Relation: &Table{
-							Name: &SQLObjectName{
-								Idents: []SQLIdent{"test_table2"},
-							},
+							Name: NewSQLObjectName("test_table2"),
 						},
 						Op:       Inner,
 						Constant: &NaturalConstant{},
@@ -64,20 +54,14 @@ func TestSQLSelect_Eval(t *testing.T) {
 			in: &SQLSelect{
 				Projection: []SQLSelectItem{
 					&UnnamedExpression{
-						Node: &SQLObjectName{
-							Idents: []SQLIdent{"test"},
-						},
+						Node: NewSQLObjectName("test"),
 					},
 				},
 				Relation: &Table{
-					Name: &SQLObjectName{
-						Idents: []SQLIdent{"test_table"},
-					},
+					Name: NewSQLObjectName("test_table"),
 				},
 				Selection: &SQLBinaryExpr{
-					Left: &SQLObjectName{
-						Idents: []SQLIdent{"test_table", "column1"},
-					},
+					Left:  NewSQLObjectName("test_table", "column1"),
 					Op:    Eq,
 					Right: NewSingleQuotedString("test"),
 				},
@@ -90,38 +74,28 @@ func TestSQLSelect_Eval(t *testing.T) {
 				Projection: []SQLSelectItem{
 					&ExpressionWithAlias{
 						Expr: &SQLFunction{
-							Name: &SQLObjectName{
-								Idents: []SQLIdent{"COUNT"},
-							},
-							Args: []ASTNode{&SQLObjectName{Idents: []SQLIdent{"t1", "id"}}},
+							Name: NewSQLObjectName("COUNT"),
+							Args: []ASTNode{NewSQLObjectName("t1", "id")},
 						},
 						Alias: NewSQLIdent("c"),
 					},
 				},
 				Relation: &Table{
-					Name: &SQLObjectName{
-						Idents: []SQLIdent{"test_table"},
-					},
+					Name:  NewSQLObjectName("test_table"),
 					Alias: NewSQLIdent("t1"),
 				},
-				Joins: []Join{
+				Joins: []*Join{
 					{
 						Relation: &Table{
-							Name: &SQLObjectName{
-								Idents: []SQLIdent{"test_table2"},
-							},
+							Name:  NewSQLObjectName("test_table2"),
 							Alias: NewSQLIdent("t2"),
 						},
 						Op: LeftOuter,
 						Constant: &OnJoinConstant{
 							Node: &SQLBinaryExpr{
-								Left: &SQLObjectName{
-									Idents: []SQLIdent{"t1", "id"},
-								},
-								Op: Eq,
-								Right: &SQLObjectName{
-									Idents: []SQLIdent{"t2", "test_table_id"},
-								},
+								Left:  NewSQLObjectName("t1", "id"),
+								Op:    Eq,
+								Right: NewSQLObjectName("t2", "test_table_id"),
 							},
 						},
 					},
@@ -135,22 +109,16 @@ func TestSQLSelect_Eval(t *testing.T) {
 				Projection: []SQLSelectItem{
 					&UnnamedExpression{
 						Node: &SQLFunction{
-							Name: &SQLObjectName{
-								Idents: []SQLIdent{"COUNT"},
-							},
-							Args: []ASTNode{&SQLObjectName{Idents: []SQLIdent{"customer_id"}}},
+							Name: NewSQLObjectName("COUNT"),
+							Args: []ASTNode{NewSQLObjectName("customer_id")},
 						},
 					},
 					&QualifiedWildcard{
-						Prefix: &SQLObjectName{
-							Idents: []SQLIdent{"country"},
-						},
+						Prefix: NewSQLObjectName("country"),
 					},
 				},
 				Relation: &Table{
-					Name: &SQLObjectName{
-						Idents: []SQLIdent{"customers"},
-					},
+					Name: NewSQLObjectName("customers"),
 				},
 				GroupBy: []ASTNode{NewSQLIdent("country")},
 			},
@@ -161,23 +129,19 @@ func TestSQLSelect_Eval(t *testing.T) {
 			in: &SQLSelect{
 				Projection: []SQLSelectItem{
 					&SQLFunction{
-						Name: &SQLObjectName{
-							Idents: []SQLIdent{"COUNT"},
-						},
-						Args: []ASTNode{&SQLObjectName{Idents: []SQLIdent{"customer_id"}}},
+						Name: NewSQLObjectName("COUNT"),
+						Args: []ASTNode{NewSQLObjectName("customer_id")},
 					},
 					NewSQLIdent("country"),
 				},
 				Relation: &Table{
-					Name: &SQLObjectName{
-						Idents: []SQLIdent{"customers"},
-					},
+					Name: NewSQLObjectName("customers"),
 				},
 				GroupBy: []ASTNode{NewSQLIdent("country")},
 				Having: &SQLBinaryExpr{
 					Op: Gt,
 					Left: &SQLFunction{
-						Name: &SQLObjectName{Idents: []SQLIdent{"COUNT"}},
+						Name: NewSQLObjectName("COUNT"),
 						Args: []ASTNode{NewSQLIdent("customer_id")},
 					},
 					Right: NewLongValue(3),
@@ -209,7 +173,7 @@ func TestSQLQuery_Eval(t *testing.T) {
 			// from https://www.postgresql.jp/document/9.3/html/queries-with.html
 			name: "with cte",
 			in: &SQLQuery{
-				CTEs: []CTE{
+				CTEs: []*CTE{
 					{
 						Alias: NewSQLIdent("regional_sales"),
 						Query: &SQLQuery{
@@ -309,7 +273,7 @@ func TestSQLQuery_Eval(t *testing.T) {
 						},
 					},
 				},
-				OrderBy: []SQLOrderByExpr{
+				OrderBy: []*SQLOrderByExpr{
 					{Expr: NewSQLIdent("product_units")},
 				},
 				Limit: NewLongValue(100),
