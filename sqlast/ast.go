@@ -127,7 +127,7 @@ type SQLCast struct {
 }
 
 func (s *SQLCast) Eval() string {
-	panic("implement me")
+	return fmt.Sprintf("CAST(%s AS %s)", s.Expr.Eval(), s.DateType.Eval())
 }
 
 type SQLNested struct {
@@ -135,15 +135,24 @@ type SQLNested struct {
 }
 
 func (s *SQLNested) Eval() string {
-	panic("implement me")
+	return fmt.Sprintf("(%s)", s.AST.Eval())
+}
+
+type SQLUnary struct {
+	Operator SQLOperator
+	Expr     ASTNode
+}
+
+func (s *SQLUnary) Eval() string {
+	return fmt.Sprintf("%s %s", s.Operator.Eval(), s.Expr.Eval())
 }
 
 type SQLValue struct {
 	Value Value
 }
 
-func (*SQLValue) Eval() string {
-	panic("implement me")
+func (s *SQLValue) Eval() string {
+	return s.Value.Eval()
 }
 
 type SQLFunction struct {
@@ -160,9 +169,6 @@ func (s *SQLFunction) Eval() string {
 	}
 
 	return str
-}
-
-type SELExpr struct {
 }
 
 type SQLCase struct {
@@ -191,14 +197,14 @@ func (s *SQLCase) Eval() string {
 }
 
 type SQLObjectName struct {
-	Idents []SQLIdent
+	Idents []*SQLIdent
 }
 
 func NewSQLObjectName(strs ...string) *SQLObjectName {
-	idents := make([]SQLIdent, 0, len(strs))
+	idents := make([]*SQLIdent, 0, len(strs))
 
 	for _, s := range strs {
-		idents = append(idents, *NewSQLIdent(s))
+		idents = append(idents, NewSQLIdent(s))
 	}
 
 	return &SQLObjectName{
@@ -209,7 +215,7 @@ func NewSQLObjectName(strs ...string) *SQLObjectName {
 func (s *SQLObjectName) Eval() string {
 	var strs []string
 	for _, l := range s.Idents {
-		strs = append(strs, string(l))
+		strs = append(strs, string(*l))
 	}
 	return strings.Join(strs, ".")
 }

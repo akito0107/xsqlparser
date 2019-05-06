@@ -9,6 +9,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/akito0107/xsqlparser/dialect"
+	"github.com/akito0107/xsqlparser/sqlast"
 )
 
 type Token int
@@ -92,6 +93,10 @@ func (s *SQLWord) String() string {
 		return fmt.Sprintf("%q", s.Value)
 	}
 	return ""
+}
+
+func (s *SQLWord) AsSQLIdent() *sqlast.SQLIdent {
+	return sqlast.NewSQLIdent(s.String())
 }
 
 func matchingEndQuote(quoteStyle rune) rune {

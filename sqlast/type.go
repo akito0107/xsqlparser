@@ -166,7 +166,7 @@ func (a *Array) Eval() string {
 }
 
 type Custom struct {
-	Ty SQLObjectName
+	Ty *SQLObjectName
 }
 
 func (c *Custom) Eval() string {
