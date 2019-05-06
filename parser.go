@@ -72,6 +72,8 @@ func (p *Parser) ParseStatement() (sqlast.SQLStmt, error) {
 
 	switch word.Keyword {
 	case "SELECT", "WITH":
+		p.prevToken()
+		return p.parseQuery()
 	case "CREATE":
 	case "DELETE":
 	case "INSERT":
@@ -94,11 +96,106 @@ func (p *Parser) parseQuery() (*sqlast.SQLQuery, error) {
 		ctes = cts
 	}
 
-	panic("unimplemented")
+	body, err := p.parseQueryBody(0)
+	if err != nil {
+		return nil, errors.Errorf("parseQueryBody failed %w", err)
+	}
+
+	var orderBy []*sqlast.SQLOrderByExpr
+	if ok, _ := p.parseKeywords("ORDER", "BY"); ok {
+		o, err := p.parseOrderByExprList()
+		if err != nil {
+			return nil, errors.Errorf("parseOrderByExprList failed %w", err)
+		}
+		orderBy = o
+	}
+
+	var limit sqlast.ASTNode
+	if ok, _ := p.parseKeyword("LIMMIT"); ok {
+		l, err := p.parseLimit()
+		if err != nil {
+			return nil, errors.Errorf("parseLimit failed %w", err)
+		}
+		limit = l
+	}
+
+	return &sqlast.SQLQuery{
+		CTEs:    ctes,
+		Body:    body,
+		Limit:   limit,
+		OrderBy: orderBy,
+	}, nil
 }
 
-func (p *Parser) parseQueryBody() (sqlast.SQLSetExpr, error) {
-	panic("unimplemented")
+func (p *Parser) parseQueryBody(precedence uint8) (sqlast.SQLSetExpr, error) {
+	var expr sqlast.ASTNode
+	if ok, _ := p.parseKeyword("SELECT"); ok {
+		s, err := p.parseSelect()
+		if err != nil {
+			return nil, errors.Errorf("parseSelect failed %w", err)
+		}
+		expr = s
+	} else if ok, _ := p.consumeToken(LParen); ok {
+		subquery, err := p.parseQuery()
+		if err != nil {
+			return nil, errors.Errorf("parseQuery failed %w", err)
+		}
+		p.expectToken(RParen)
+		expr = &sqlast.QueryExpr{
+			Query: subquery,
+		}
+	} else {
+		log.Fatal("expect SELECT or subquery in the query body")
+	}
+
+	for {
+		nextToken, _ := p.peekToken()
+		op := p.parseSetOperator(nextToken)
+		var nextPrecedence uint8
+		switch op.(type) {
+		case *sqlast.UnionOperator, *sqlast.ExceptOperator:
+			nextPrecedence = 10
+		case *sqlast.IntersectOperator:
+			nextPrecedence = 20
+		default:
+			break
+		}
+		if precedence >= nextPrecedence {
+			break
+		}
+		all, _ := p.parseKeyword("ALL")
+		right, err := p.parseQueryBody(nextPrecedence)
+		if err != nil {
+			return nil, errors.Errorf("parseQueryBody failed %w", err)
+		}
+
+		expr = &sqlast.SetOperationExpr{
+			Left:  expr,
+			Right: right,
+			Op:    op,
+			All:   all,
+		}
+	}
+
+	return expr, nil
+}
+
+func (p *Parser) parseSetOperator(token *TokenSet) sqlast.SQLSetOperator {
+	if token.Tok != SQLKeyword {
+		return nil
+	}
+	word := token.Value.(*SQLWord)
+	switch word.Keyword {
+	case "UNION":
+		return &sqlast.UnionOperator{}
+	case "EXCEPT":
+		return &sqlast.ExceptOperator{}
+	case "INTERSECT":
+		return &sqlast.IntersectOperator{}
+	}
+
+	return nil
+
 }
 
 func (p *Parser) parseSelect() (*sqlast.SQLSelect, error) {
@@ -469,6 +566,19 @@ func (p *Parser) parseTableFactor() (sqlast.TableFactor, error) {
 		WithHints: withHints,
 	}, nil
 
+}
+
+func (p *Parser) parseLimit() (sqlast.ASTNode, error) {
+	if ok, _ := p.parseKeyword("ALL"); ok {
+		return nil, nil
+	}
+
+	i, err := p.parseLiteralInt()
+	if err != nil {
+		return nil, errors.Errorf("parseLiteralInt failed %w", err)
+	}
+
+	return sqlast.NewLongValue(int64(i)), nil
 }
 
 func (p *Parser) expectToken(expected Token) {

@@ -6,9 +6,9 @@ import (
 )
 
 type SQLQuery struct {
-	CTEs    []CTE
+	CTEs    []*CTE
 	Body    SQLSetExpr
-	OrderBy []SQLOrderByExpr
+	OrderBy []*SQLOrderByExpr
 	Limit   ASTNode
 }
 
@@ -56,7 +56,7 @@ func (s *SelectExpr) Eval() string {
 }
 
 type QueryExpr struct {
-	Query SQLQuery
+	Query *SQLQuery
 }
 
 func (q *QueryExpr) Eval() string {
