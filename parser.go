@@ -216,8 +216,14 @@ func (p *Parser) parseSubexpr(precedence uint) (sqlast.ASTNode, error) {
 		if precedence >= nextPrecedence {
 			break
 		}
-
+		ex, err := p.parseInfix(expr, nextPrecedence)
+		if err != nil {
+			return nil, errors.Errorf("parseInfix failed %w", err)
+		}
+		expr = ex
 	}
+
+	return expr, nil
 }
 
 func (p *Parser) parseInfix(expr sqlast.ASTNode, precedence uint) (sqlast.ASTNode, error) {
@@ -462,10 +468,285 @@ func (p *Parser) parsePrefix() (sqlast.ASTNode, error) {
 			if err != nil {
 				return nil, errors.Errorf("parseSubexpr failed %w", err)
 			}
-			return &sqlast.SQLUn
+			return &sqlast.SQLUnary{
+				Operator: sqlast.Not,
+				Expr:     expr,
+			}, nil
+		default:
+			t, _ := p.peekToken()
+			if t.Tok != LParen && t.Tok != RParen {
+				return &sqlast.SQLIdentifier{
+					Ident: word.AsSQLIdent(),
+				}, nil
+			}
+			idParts := []*sqlast.SQLIdent{word.AsSQLIdent()}
+			endWithWildcard := false
+
+			for {
+				if ok, _ := p.consumeToken(Period); !ok {
+					break
+				}
+				n, err := p.nextToken()
+				if err != nil {
+					return nil, errors.Errorf("nextToken failed %w", err)
+				}
+
+				if n.Tok == SQLKeyword {
+					w := n.Value.(*SQLWord)
+					idParts = append(idParts, w.AsSQLIdent())
+					continue
+				}
+				if n.Tok == Mult {
+					endWithWildcard = true
+					break
+				}
+
+				return nil, errors.Errorf("an identifier or '*' after '.'")
+			}
+
+			if endWithWildcard {
+				return &sqlast.SQLQualifiedWildcard{
+					Idents: idParts,
+				}, nil
+			}
+
+			if ok, _ := p.consumeToken(LParen); ok {
+				p.prevToken()
+				name := &sqlast.SQLObjectName{
+					Idents: idParts,
+				}
+				f, err := p.parseFunction(name)
+				if err != nil {
+					return nil, errors.Errorf("parseFuncton failed %w", err)
+				}
+				return f, nil
+			}
+
+			return &sqlast.SQLCompoundIdentifier{
+				Idents: idParts,
+			}, nil
+		}
+	case Mult:
+		return &sqlast.SQLWildcard{}, nil
+	case Plus:
+		precedence := p.getPrecedence(tok)
+		expr, err := p.parseSubexpr(precedence)
+		if err != nil {
+			return nil, errors.Errorf("parseSubexpr failed %w", err)
+		}
+		return &sqlast.SQLUnary{
+			Operator: sqlast.Plus,
+			Expr:     expr,
+		}, nil
+	case Minus:
+		precedence := p.getPrecedence(tok)
+		expr, err := p.parseSubexpr(precedence)
+		if err != nil {
+			return nil, errors.Errorf("parseSubexpr failed %w", err)
+		}
+		return &sqlast.SQLUnary{
+			Operator: sqlast.Minus,
+			Expr:     expr,
+		}, nil
+	case Number, SingleQuotedString, NationalStringLiteral:
+		p.prevToken()
+		v, err := p.parseSQLValue()
+		if err != nil {
+			return nil, errors.Errorf("parseSQLValue failed", err)
+		}
+		return v, nil
+	case LParen:
+		sok, _ := p.parseKeyword("SELECT")
+		wok, _ := p.parseKeyword("WITH")
+
+		var ast sqlast.ASTNode
+
+		if sok || wok {
+			p.prevToken()
+			expr, err := p.parseQuery()
+			if err != nil {
+				return nil, errors.Errorf("parseQuery failed %w", err)
+			}
+			ast = &sqlast.SQLSubquery{
+				Query: expr,
+			}
+		} else {
+			expr, err := p.parseQuery()
+			if err != nil {
+				return nil, errors.Errorf("parseQuery failed %w", err)
+			}
+			ast = &sqlast.SQLNested{
+				AST: expr,
+			}
+		}
+		p.expectToken(RParen)
+		return ast, nil
+	}
+	log.Fatal("prefix parser expected a keyword but hit EOF")
+	return nil, nil
+}
+
+func (p *Parser) parseFunction(name *sqlast.SQLObjectName) (sqlast.ASTNode, error) {
+	p.expectToken(LParen)
+	args, err := p.parseOptionalArgs()
+	if err != nil {
+		return nil, errors.Errorf("parseOptionalArgs %w", err)
+	}
+	var over *sqlast.SQLWindowSpec
+	if ok, _ := p.parseKeyword("OVER"); ok {
+		p.expectToken(LParen)
+
+		var partitionBy []sqlast.ASTNode
+		if ok, _ := p.parseKeywords("PARTITION", "BY"); ok {
+			el, err := p.parseExprList()
+			if err != nil {
+				return nil, errors.Errorf("parseExprList failed %w", err)
+			}
+			partitionBy = el
 		}
 
+		var orderBy []*sqlast.SQLOrderByExpr
+		if ok, _ := p.parseKeywords("ORDER", "BY"); ok {
+			el, err := p.parseOrderByExprList()
+			if err != nil {
+				return nil, errors.Errorf("parseOrderByExprList %w", err)
+			}
+			orderBy = el
+		}
+
+		windowFrame, err := p.parseWindowFrame()
+		if err != nil {
+			return nil, errors.Errorf("parseWindowFrame failed %w", err)
+		}
+
+		over = &sqlast.SQLWindowSpec{
+			PartitionBy:  partitionBy,
+			OrderBy:      orderBy,
+			WindowsFrame: windowFrame,
+		}
 	}
+
+	return &sqlast.SQLFunction{
+		Name: name,
+		Args: args,
+		Over: over,
+	}, nil
+}
+
+func (p *Parser) parseOptionalArgs() ([]sqlast.ASTNode, error) {
+	if ok, _ := p.consumeToken(RParen); ok {
+		var args []sqlast.ASTNode
+		return args, nil
+	} else {
+		as, err := p.parseExprList()
+		if err != nil {
+			return nil, errors.Errorf("parseExprList %w", err)
+		}
+		p.expectToken(RParen)
+		return as, nil
+	}
+}
+
+func (p *Parser) parseOrderByExprList() ([]*sqlast.SQLOrderByExpr, error) {
+	var exprList []*sqlast.SQLOrderByExpr
+
+	for {
+		expr, err := p.parseExpr()
+		if err != nil {
+			return nil, errors.Errorf("parseExpr failed %w", err)
+		}
+		var asc *bool
+
+		if ok, _ := p.parseKeyword("ASC"); ok {
+			b := true
+			asc = &b
+		} else if ok, _ := p.parseKeyword("DESC"); ok {
+			b := false
+			asc = &b
+		}
+
+		exprList = append(exprList, &sqlast.SQLOrderByExpr{
+			Expr: expr,
+			ASC:  asc,
+		})
+
+		if t, _ := p.peekToken(); t.Tok == Comma {
+			p.nextToken()
+		} else {
+			break
+		}
+	}
+
+	return exprList, nil
+}
+
+func (p *Parser) parseWindowFrame() (*sqlast.SQLWindowFrame, error) {
+	var windowFrame *sqlast.SQLWindowFrame
+	t, _ := p.peekToken()
+	if t.Tok == SQLKeyword {
+		w := t.Value.(*SQLWord)
+		var units sqlast.SQLWindowFrameUnits
+		units = units.FromStr(w.Keyword)
+		p.nextToken()
+
+		if ok, _ := p.parseKeyword("BETWEEN"); ok {
+			startBound, err := p.parseWindowFrameBound()
+			if err != nil {
+				return nil, errors.Errorf("parseWindowFrameBound %w", err)
+			}
+			p.expectKeyword("AND")
+			endBound, err := p.parseWindowFrameBound()
+			if err != nil {
+				return nil, errors.Errorf("parseWindowFrameBound %w", err)
+			}
+
+			windowFrame = &sqlast.SQLWindowFrame{
+				StartBound: startBound,
+				EndBound:   endBound,
+				Units:      units,
+			}
+		} else {
+			startBound, err := p.parseWindowFrameBound()
+			if err != nil {
+				return nil, errors.Errorf("parseWindowFrameBound %w", err)
+			}
+			windowFrame = &sqlast.SQLWindowFrame{
+				StartBound: startBound,
+				Units:      units,
+			}
+		}
+	}
+
+	p.expectToken(RParen)
+	return windowFrame, nil
+}
+
+func (p *Parser) parseWindowFrameBound() (sqlast.SQLWindowFrameBound, error) {
+	if ok, _ := p.parseKeywords("CURRENT", "ROW"); ok {
+		return &sqlast.CurrentRow{}, nil
+	}
+
+	var rows *uint64
+	if ok, _ := p.parseKeyword("UNBOUNDED"); !ok {
+		i, err := p.parseLiteralInt()
+		if err != nil {
+			return nil, errors.Errorf("parseLiteralInt failed %w", err)
+		}
+		if i < 0 {
+			return nil, errors.Errorf("the number of rows must ne non-negative, got %d", i)
+		}
+		ui := uint64(i)
+		rows = &ui
+	}
+
+	if ok, _ := p.parseKeyword("PRECEDING"); ok {
+		return &sqlast.Preceding{Bound: rows}, nil
+	}
+	if ok, _ := p.parseKeyword("FOLLOWING"); ok {
+		return &sqlast.Following{Bound: rows}, nil
+	}
+	log.Fatal("expected PRECEDING or FOLLOWING")
+	return nil, nil
 }
 
 func (p *Parser) parseObjectName() (*sqlast.SQLObjectName, error) {
@@ -476,7 +757,6 @@ func (p *Parser) parseObjectName() (*sqlast.SQLObjectName, error) {
 	return &sqlast.SQLObjectName{
 		Idents: idents,
 	}, nil
-
 }
 
 func (p *Parser) parseSQLValue() (sqlast.ASTNode, error) {

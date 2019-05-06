@@ -23,11 +23,11 @@ type ASTNode interface {
 
 // Identifier e.g. table name or column name
 type SQLIdentifier struct {
-	Ident SQLIdent
+	Ident *SQLIdent
 }
 
 func (s *SQLIdentifier) Eval() string {
-	return string(s.Ident)
+	return string(*s.Ident)
 }
 
 // *
@@ -39,26 +39,26 @@ func (s SQLWildcard) Eval() string {
 
 // table.*, schema.table.*
 type SQLQualifiedWildcard struct {
-	Idents []SQLIdent
+	Idents []*SQLIdent
 }
 
 func (s *SQLQualifiedWildcard) Eval() string {
 	strs := make([]string, 0, len(s.Idents))
 	for _, ident := range s.Idents {
-		strs = append(strs, string(ident))
+		strs = append(strs, string(*ident))
 	}
 	return fmt.Sprintf("%s.*", strings.Join(strs, "."))
 }
 
 // table.column / schema.table.column
 type SQLCompoundIdentifier struct {
-	Idents []SQLIdent
+	Idents []*SQLIdent
 }
 
 func (s *SQLCompoundIdentifier) Eval() string {
 	strs := make([]string, 0, len(s.Idents))
 	for _, ident := range s.Idents {
-		strs = append(strs, string(ident))
+		strs = append(strs, string(*ident))
 	}
 	return strings.Join(strs, ".")
 }
@@ -196,6 +196,14 @@ func (s *SQLCase) Eval() string {
 	return str
 }
 
+type SQLSubquery struct {
+	Query *SQLQuery
+}
+
+func (s *SQLSubquery) Eval() string {
+	return fmt.Sprintf("(%s)", s.Query.Eval())
+}
+
 type SQLObjectName struct {
 	Idents []*SQLIdent
 }
@@ -265,7 +273,7 @@ func negatedString(negated bool) string {
 
 type SQLWindowSpec struct {
 	PartitionBy  []ASTNode
-	OrderBy      []SQLOrderByExpr
+	OrderBy      []*SQLOrderByExpr
 	WindowsFrame *SQLWindowFrame
 }
 
@@ -350,17 +358,17 @@ func (*UnboundedFollowing) Eval() string {
 }
 
 type Preceding struct {
-	Bound uint64
+	Bound *uint64
 }
 
 func (p *Preceding) Eval() string {
-	return fmt.Sprintf("%d PRECEDING", p.Bound)
+	return fmt.Sprintf("%d PRECEDING", *p.Bound)
 }
 
 type Following struct {
-	Bound uint64
+	Bound *uint64
 }
 
 func (f *Following) Eval() string {
-	return fmt.Sprintf("%d FOLLOWING", f.Bound)
+	return fmt.Sprintf("%d FOLLOWING", *f.Bound)
 }
