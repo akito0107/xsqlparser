@@ -111,7 +111,7 @@ func (p *Parser) parseSelect() (*sqlast.SQLSelect, error) {
 		return nil, errors.Errorf("parseSelectList failed %w", err)
 	}
 	var relation sqlast.TableFactor
-	var joins []sqlast.ASTNode
+	var joins []*sqlast.Join
 
 	if ok, _ := p.parseKeyword("FROM"); ok {
 		t, err := p.parseTableFactor()
@@ -119,7 +119,50 @@ func (p *Parser) parseSelect() (*sqlast.SQLSelect, error) {
 			return nil, errors.Errorf("parseTableFactor failed %w", err)
 		}
 		relation = t
+		j, err := p.parseJoins()
+		if err != nil {
+			return nil, errors.Errorf("parseJoins failed %w", err)
+		}
+		joins = j
 	}
+
+	var selection sqlast.ASTNode
+	if ok, _ := p.parseKeyword("WHERE"); ok {
+		s, err := p.parseExpr()
+		if err != nil {
+			return nil, errors.Errorf("parseExpr failed %w", err)
+		}
+		selection = s
+	}
+
+	var groupBy []sqlast.ASTNode
+	if ok, _ := p.parseKeywords("GROUP", "BY"); ok {
+		g, err := p.parseExprList()
+		if err != nil {
+			return nil, errors.Errorf("parseExprList failed %w", err)
+		}
+		groupBy = g
+	}
+
+	var having sqlast.ASTNode
+	if ok, _ := p.parseKeyword("HAVING"); ok {
+		h, err := p.parseExpr()
+		if err != nil {
+			return nil, errors.Errorf("parseExpr failed %w", err)
+		}
+		having = h
+	}
+
+	return &sqlast.SQLSelect{
+		Distinct:   distinct,
+		Projection: projection,
+		Selection:  selection,
+		Relation:   relation,
+		Joins:      joins,
+		GroupBy:    groupBy,
+		Having:     having,
+	}, nil
+
 }
 
 func (p *Parser) parseSelectList() ([]sqlast.SQLSelectItem, error) {
@@ -179,7 +222,176 @@ func (p *Parser) parseOptionalAlias(reservedKeywords map[string]struct{}) *sqlas
 }
 
 func (p *Parser) parseJoins() ([]*sqlast.Join, error) {
+	var joins []*sqlast.Join
+	var natural bool
 
+	for {
+		tok, _ := p.peekToken()
+
+		if tok == nil {
+			return joins, nil
+		}
+
+		switch tok.Tok {
+		case Comma:
+			relation, err := p.parseTableFactor()
+			if err != nil {
+				return nil, errors.Errorf("parseTableFactor failed %w", err)
+			}
+			join := &sqlast.Join{
+				Relation: relation,
+				Op:       sqlast.Implicit,
+			}
+			joins = append(joins, join)
+			continue
+		case SQLKeyword:
+			word := tok.Value.(*SQLWord)
+
+			switch word.Keyword {
+			case "CROSS":
+				p.nextToken()
+				p.expectKeyword("JOIN")
+				relation, err := p.parseTableFactor()
+				if err != nil {
+					return nil, errors.Errorf("parseTableFactor failed %w", err)
+				}
+				join := &sqlast.Join{
+					Relation: relation,
+					Op:       sqlast.Cross,
+				}
+				joins = append(joins, join)
+				continue
+			case "NATURAL":
+				p.nextToken()
+				natural = true
+			}
+		default:
+			natural = false
+		}
+
+		t, _ := p.peekToken()
+		if t.Tok != SQLKeyword {
+			break
+		}
+
+		word := t.Value.(*SQLWord)
+
+		var join *sqlast.Join
+		switch word.Keyword {
+		case "INNER":
+			p.nextToken()
+			p.expectKeyword("JOIN")
+			relation, err := p.parseTableFactor()
+			if err != nil {
+				return nil, errors.Errorf("parseTableFactor failed %w", err)
+			}
+			constraint, err := p.parseJoinConstraint(natural)
+			if err != nil {
+				return nil, errors.Errorf("parseJoinConstraint failed %w", err)
+			}
+			join = &sqlast.Join{
+				Op:       sqlast.Inner,
+				Relation: relation,
+				Constant: constraint,
+			}
+		case "JOIN":
+			p.nextToken()
+			relation, err := p.parseTableFactor()
+			if err != nil {
+				return nil, errors.Errorf("parseTableFactor failed %w", err)
+			}
+			constraint, err := p.parseJoinConstraint(natural)
+			if err != nil {
+				return nil, errors.Errorf("parseJoinConstraint failed %w", err)
+			}
+			join = &sqlast.Join{
+				Op:       sqlast.Inner,
+				Relation: relation,
+				Constant: constraint,
+			}
+		case "LEFT":
+			p.nextToken()
+			p.expectKeyword("OUTER")
+			p.expectKeyword("JOIN")
+			relation, err := p.parseTableFactor()
+			if err != nil {
+				return nil, errors.Errorf("parseTableFactor failed %w", err)
+			}
+			constraint, err := p.parseJoinConstraint(natural)
+			if err != nil {
+				return nil, errors.Errorf("parseJoinConstraint failed %w", err)
+			}
+			join = &sqlast.Join{
+				Relation: relation,
+				Op:       sqlast.LeftOuter,
+				Constant: constraint,
+			}
+		case "RIGHT":
+			p.nextToken()
+			p.expectKeyword("OUTER")
+			p.expectKeyword("JOIN")
+			relation, err := p.parseTableFactor()
+			if err != nil {
+				return nil, errors.Errorf("parseTableFactor failed %w", err)
+			}
+			constraint, err := p.parseJoinConstraint(natural)
+			if err != nil {
+				return nil, errors.Errorf("parseJoinConstraint failed %w", err)
+			}
+			join = &sqlast.Join{
+				Relation: relation,
+				Op:       sqlast.RightOuter,
+				Constant: constraint,
+			}
+		case "FULL":
+			p.nextToken()
+			p.expectKeyword("OUTER")
+			p.expectKeyword("JOIN")
+			relation, err := p.parseTableFactor()
+			if err != nil {
+				return nil, errors.Errorf("parseTableFactor failed %w", err)
+			}
+			constraint, err := p.parseJoinConstraint(natural)
+			if err != nil {
+				return nil, errors.Errorf("parseJoinConstraint failed %w", err)
+			}
+			join = &sqlast.Join{
+				Relation: relation,
+				Op:       sqlast.FullOuter,
+				Constant: constraint,
+			}
+		}
+		joins = append(joins, join)
+	}
+
+	return joins, nil
+}
+
+func (p *Parser) parseJoinConstraint(natural bool) (sqlast.JoinConstant, error) {
+	if natural {
+		return &sqlast.NaturalConstant{}, nil
+	} else if ok, _ := p.parseKeyword("ON"); ok {
+		constraint, err := p.parseExpr()
+		if err != nil {
+			return nil, errors.Errorf("parseExpr failed %w", err)
+		}
+		return &sqlast.OnJoinConstant{
+			Node: constraint,
+		}, nil
+	} else if ok, _ := p.parseKeyword("USING"); ok {
+		p.expectToken(LParen)
+		attrs, err := p.parseColumnNames()
+		if err != nil {
+			return nil, errors.Errorf("parseColumnNames failed %w", err)
+		}
+		p.expectToken(RParen)
+		return &sqlast.UsingConstant{
+			Idents: attrs,
+		}, nil
+	}
+
+	log.Fatal("OR, or USING after JOIN")
+	return nil, nil
 }
 
 func (p *Parser) parseCTEList() ([]*sqlast.CTE, error) {
@@ -312,6 +524,10 @@ func (p *Parser) parseExprList() ([]sqlast.ASTNode, error) {
 	}
 
 	return exprList, nil
+}
+
+func (p *Parser) parseColumnNames() ([]*sqlast.SQLIdent, error) {
+	return p.parseListOfIds(Comma)
 }
 
 func (p *Parser) parseExpr() (sqlast.ASTNode, error) {

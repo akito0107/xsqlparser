@@ -109,7 +109,7 @@ type SQLSelect struct {
 	Distinct   bool
 	Projection []SQLSelectItem
 	Relation   TableFactor
-	Joins      []Join
+	Joins      []*Join
 	Selection  ASTNode
 	GroupBy    []ASTNode
 	Having     ASTNode
@@ -279,7 +279,7 @@ func (o *OnJoinConstant) Suffix() string {
 }
 
 type UsingConstant struct {
-	Idents []SQLIdent
+	Idents []*SQLIdent
 }
 
 func (*UsingConstant) Prefix() string {
@@ -289,7 +289,7 @@ func (*UsingConstant) Prefix() string {
 func (u *UsingConstant) Suffix() string {
 	var str []string
 	for _, i := range u.Idents {
-		str = append(str, string(i))
+		str = append(str, string(*i))
 	}
 	return fmt.Sprintf(" USING(%s)", strings.Join(str, ", "))
 }
