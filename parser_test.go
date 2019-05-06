@@ -20,7 +20,6 @@ func TestParser_ParseStatement(t *testing.T) {
 			skip bool
 		}{
 			{
-				skip: true,
 				name: "simple select",
 				in:   "SELECT test FROM test_table",
 				out: &sqlast.SQLQuery{
@@ -50,12 +49,217 @@ func TestParser_ParseStatement(t *testing.T) {
 							Name: sqlast.NewSQLObjectName("test_table"),
 						},
 						Selection: &sqlast.SQLBinaryExpr{
-							Left:  sqlast.NewSQLObjectName("test_table", "column1"),
+							Left: &sqlast.SQLCompoundIdentifier{
+								Idents: []*sqlast.SQLIdent{sqlast.NewSQLIdent("test_table"), sqlast.NewSQLIdent("column1")},
+							},
 							Op:    sqlast.Eq,
 							Right: sqlast.NewSingleQuotedString("test"),
 						},
 					},
 				},
+			},
+			{
+				name: "count and join",
+				in:   "SELECT COUNT(t1.id) AS c FROM test_table AS t1 LEFT OUTER JOIN test_table2 AS t2 ON t1.id = t2.test_table_id",
+				out: &sqlast.SQLQuery{
+					Body: &sqlast.SQLSelect{
+						Projection: []sqlast.SQLSelectItem{
+							&sqlast.ExpressionWithAlias{
+								Expr: &sqlast.SQLFunction{
+									Name: sqlast.NewSQLObjectName("COUNT"),
+									Args: []sqlast.ASTNode{&sqlast.SQLCompoundIdentifier{
+										Idents: []*sqlast.SQLIdent{sqlast.NewSQLIdent("t1"), sqlast.NewSQLIdent("id")},
+									}},
+								},
+								Alias: sqlast.NewSQLIdent("c"),
+							},
+						},
+						Relation: &sqlast.Table{
+							Name:  sqlast.NewSQLObjectName("test_table"),
+							Alias: sqlast.NewSQLIdent("t1"),
+						},
+						Joins: []*sqlast.Join{
+							{
+								Relation: &sqlast.Table{
+									Name:  sqlast.NewSQLObjectName("test_table2"),
+									Alias: sqlast.NewSQLIdent("t2"),
+								},
+								Op: sqlast.LeftOuter,
+								Constant: &sqlast.OnJoinConstant{
+									Node: &sqlast.SQLBinaryExpr{
+										Left: &sqlast.SQLCompoundIdentifier{
+											Idents: []*sqlast.SQLIdent{sqlast.NewSQLIdent("t1"), sqlast.NewSQLIdent("id")},
+										},
+										Op: sqlast.Eq,
+										Right: &sqlast.SQLCompoundIdentifier{
+											Idents: []*sqlast.SQLIdent{sqlast.NewSQLIdent("t2"), sqlast.NewSQLIdent("test_table_id")},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				name: "group by",
+				in:   "SELECT COUNT(customer_id), country.* FROM customers GROUP BY country",
+				out: &sqlast.SQLQuery{
+					Body: &sqlast.SQLSelect{
+						Projection: []sqlast.SQLSelectItem{
+							&sqlast.UnnamedExpression{
+								Node: &sqlast.SQLFunction{
+									Name: sqlast.NewSQLObjectName("COUNT"),
+									Args: []sqlast.ASTNode{sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("customer_id"))},
+								},
+							},
+							&sqlast.QualifiedWildcard{
+								Prefix: sqlast.NewSQLObjectName("country"),
+							},
+						},
+						Relation: &sqlast.Table{
+							Name: sqlast.NewSQLObjectName("customers"),
+						},
+						GroupBy: []sqlast.ASTNode{sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("country"))},
+					},
+				},
+			},
+			{
+				name: "having",
+				in:   "SELECT COUNT(customer_id), country FROM customers GROUP BY country HAVING COUNT(customer_id) > 3",
+				out: &sqlast.SQLQuery{
+					Body: &sqlast.SQLSelect{
+						Projection: []sqlast.SQLSelectItem{
+							&sqlast.UnnamedExpression{
+								Node: &sqlast.SQLFunction{
+									Name: sqlast.NewSQLObjectName("COUNT"),
+									Args: []sqlast.ASTNode{sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("customer_id"))},
+								},
+							},
+							&sqlast.UnnamedExpression{
+								Node: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("country")),
+							},
+						},
+						Relation: &sqlast.Table{
+							Name: sqlast.NewSQLObjectName("customers"),
+						},
+						GroupBy: []sqlast.ASTNode{sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("country"))},
+						Having: &sqlast.SQLBinaryExpr{
+							Op: sqlast.Gt,
+							Left: &sqlast.SQLFunction{
+								Name: sqlast.NewSQLObjectName("COUNT"),
+								Args: []sqlast.ASTNode{sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("customer_id"))},
+							},
+							Right: sqlast.NewLongValue(3),
+						},
+					},
+				},
+			},
+			{
+				name: "order by and limit",
+				out: &sqlast.SQLQuery{
+					Body: &sqlast.SQLSelect{
+						Projection: []sqlast.SQLSelectItem{
+							&sqlast.UnnamedExpression{Node: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("product"))},
+							&sqlast.ExpressionWithAlias{
+								Alias: sqlast.NewSQLIdent("product_units"),
+								Expr: &sqlast.SQLFunction{
+									Name: sqlast.NewSQLObjectName("SUM"),
+									Args: []sqlast.ASTNode{sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("quantity"))},
+								},
+							},
+						},
+						Relation: &sqlast.Table{
+							Name: sqlast.NewSQLObjectName("orders"),
+						},
+						Selection: &sqlast.SQLInSubQuery{
+							Expr: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("region")),
+							SubQuery: &sqlast.SQLQuery{
+								Body: &sqlast.SQLSelect{
+									Projection: []sqlast.SQLSelectItem{
+										&sqlast.UnnamedExpression{Node: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("region"))},
+									},
+									Relation: &sqlast.Table{
+										Name: sqlast.NewSQLObjectName("top_regions"),
+									},
+								},
+							},
+						},
+					},
+					OrderBy: []*sqlast.SQLOrderByExpr{
+						{Expr: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("product_units"))},
+					},
+					Limit: sqlast.NewLongValue(100),
+				},
+				in: "SELECT product, SUM(quantity) AS product_units " +
+					"FROM orders " +
+					"WHERE region IN (SELECT region FROM top_regions) " +
+					"ORDER BY product_units LIMIT 100",
+			},
+			{
+				// from https://www.postgresql.jp/document/9.3/html/queries-with.html
+				name: "with cte",
+				out: &sqlast.SQLQuery{
+					CTEs: []*sqlast.CTE{
+						{
+							Alias: sqlast.NewSQLIdent("regional_sales"),
+							Query: &sqlast.SQLQuery{
+								Body: &sqlast.SQLSelect{
+									Projection: []sqlast.SQLSelectItem{
+										&sqlast.UnnamedExpression{Node: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("region"))},
+										&sqlast.ExpressionWithAlias{
+											Alias: sqlast.NewSQLIdent("total_sales"),
+											Expr: &sqlast.SQLFunction{
+												Name: sqlast.NewSQLObjectName("SUM"),
+												Args: []sqlast.ASTNode{sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("amount"))},
+											},
+										},
+									},
+									Relation: &sqlast.Table{
+										Name: sqlast.NewSQLObjectName("orders"),
+									},
+									GroupBy: []sqlast.ASTNode{sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("region"))},
+								},
+							},
+						},
+					},
+					Body: &sqlast.SQLSelect{
+						Projection: []sqlast.SQLSelectItem{
+							&sqlast.UnnamedExpression{Node: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("product"))},
+							&sqlast.ExpressionWithAlias{
+								Alias: sqlast.NewSQLIdent("product_units"),
+								Expr: &sqlast.SQLFunction{
+									Name: sqlast.NewSQLObjectName("SUM"),
+									Args: []sqlast.ASTNode{sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("quantity"))},
+								},
+							},
+						},
+						Relation: &sqlast.Table{
+							Name: sqlast.NewSQLObjectName("orders"),
+						},
+						Selection: &sqlast.SQLInSubQuery{
+							Expr: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("region")),
+							SubQuery: &sqlast.SQLQuery{
+								Body: &sqlast.SQLSelect{
+									Projection: []sqlast.SQLSelectItem{
+										&sqlast.UnnamedExpression{Node: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("region"))},
+									},
+									Relation: &sqlast.Table{
+										Name: sqlast.NewSQLObjectName("top_regions"),
+									},
+								},
+							},
+						},
+						GroupBy: []sqlast.ASTNode{sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("region")), sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("product"))},
+					},
+				},
+				in: "WITH regional_sales AS (" +
+					"SELECT region, SUM(amount) AS total_sales " +
+					"FROM orders GROUP BY region) " +
+					"SELECT product, SUM(quantity) AS product_units " +
+					"FROM orders " +
+					"WHERE region IN (SELECT region FROM top_regions) " +
+					"GROUP BY region, product",
 			},
 		}
 

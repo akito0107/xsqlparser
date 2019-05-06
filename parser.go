@@ -106,7 +106,7 @@ func (p *Parser) parseQuery() (*sqlast.SQLQuery, error) {
 	}
 
 	var limit sqlast.ASTNode
-	if ok, _ := p.parseKeyword("LIMMIT"); ok {
+	if ok, _ := p.parseKeyword("LIMIT"); ok {
 		l, err := p.parseLimit()
 		if err != nil {
 			return nil, errors.Errorf("parseLimit failed %w", err)
@@ -271,8 +271,12 @@ func (p *Parser) parseSelectList() ([]sqlast.SQLSelectItem, error) {
 		}
 		if w, ok := expr.(*sqlast.Wildcard); ok {
 			projections = append(projections, w)
-		} else if q, ok := expr.(*sqlast.QualifiedWildcard); ok {
-			projections = append(projections, q)
+		} else if q, ok := expr.(*sqlast.SQLQualifiedWildcard); ok {
+			projections = append(projections, &sqlast.QualifiedWildcard{
+				Prefix: &sqlast.SQLObjectName{
+					Idents: q.Idents,
+				},
+			})
 		} else {
 			alias := p.parseOptionalAlias(dialect.ReservedForColumnAlias)
 
@@ -632,7 +636,7 @@ func (p *Parser) parseExprList() ([]sqlast.ASTNode, error) {
 			return nil, errors.Errorf("parseExpr failed %w", err)
 		}
 		exprList = append(exprList, expr)
-		if tok, _ := p.peekToken(); tok.Tok == Comma {
+		if tok, _ := p.peekToken(); tok != nil && tok.Tok == Comma {
 			p.nextToken()
 		} else {
 			break
@@ -836,6 +840,9 @@ func (p *Parser) parseBetween(expr sqlast.ASTNode, negated bool) (sqlast.ASTNode
 
 func (p *Parser) getNextPrecedence() (uint, error) {
 	tok, _ := p.peekToken()
+	if tok == nil {
+		return 0, nil
+	}
 	return p.getPrecedence(tok), nil
 }
 
@@ -919,7 +926,7 @@ func (p *Parser) parsePrefix() (sqlast.ASTNode, error) {
 			}, nil
 		default:
 			t, _ := p.peekToken()
-			if t.Tok != LParen && t.Tok != RParen {
+			if t == nil || (t.Tok != LParen && t.Tok != Period) {
 				return &sqlast.SQLIdentifier{
 					Ident: word.AsSQLIdent(),
 				}, nil

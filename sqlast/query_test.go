@@ -17,7 +17,7 @@ func TestSQLSelect_Eval(t *testing.T) {
 			in: &SQLSelect{
 				Projection: []SQLSelectItem{
 					&UnnamedExpression{
-						Node: NewSQLObjectName("test"),
+						Node: NewSQLIdentifier(NewSQLIdent("test")),
 					},
 				},
 				Relation: &Table{
@@ -54,14 +54,16 @@ func TestSQLSelect_Eval(t *testing.T) {
 			in: &SQLSelect{
 				Projection: []SQLSelectItem{
 					&UnnamedExpression{
-						Node: NewSQLObjectName("test"),
+						Node: NewSQLIdentifier(NewSQLIdent("test")),
 					},
 				},
 				Relation: &Table{
 					Name: NewSQLObjectName("test_table"),
 				},
 				Selection: &SQLBinaryExpr{
-					Left:  NewSQLObjectName("test_table", "column1"),
+					Left: &SQLCompoundIdentifier{
+						Idents: []*SQLIdent{NewSQLIdent("test_table"), NewSQLIdent("column1")},
+					},
 					Op:    Eq,
 					Right: NewSingleQuotedString("test"),
 				},
@@ -75,7 +77,9 @@ func TestSQLSelect_Eval(t *testing.T) {
 					&ExpressionWithAlias{
 						Expr: &SQLFunction{
 							Name: NewSQLObjectName("COUNT"),
-							Args: []ASTNode{NewSQLObjectName("t1", "id")},
+							Args: []ASTNode{&SQLCompoundIdentifier{
+								Idents: []*SQLIdent{NewSQLIdent("t1"), NewSQLIdent("id")},
+							}},
 						},
 						Alias: NewSQLIdent("c"),
 					},
@@ -93,9 +97,13 @@ func TestSQLSelect_Eval(t *testing.T) {
 						Op: LeftOuter,
 						Constant: &OnJoinConstant{
 							Node: &SQLBinaryExpr{
-								Left:  NewSQLObjectName("t1", "id"),
-								Op:    Eq,
-								Right: NewSQLObjectName("t2", "test_table_id"),
+								Left: &SQLCompoundIdentifier{
+									Idents: []*SQLIdent{NewSQLIdent("t1"), NewSQLIdent("id")},
+								},
+								Op: Eq,
+								Right: &SQLCompoundIdentifier{
+									Idents: []*SQLIdent{NewSQLIdent("t2"), NewSQLIdent("test_table_id")},
+								},
 							},
 						},
 					},
@@ -110,7 +118,7 @@ func TestSQLSelect_Eval(t *testing.T) {
 					&UnnamedExpression{
 						Node: &SQLFunction{
 							Name: NewSQLObjectName("COUNT"),
-							Args: []ASTNode{NewSQLObjectName("customer_id")},
+							Args: []ASTNode{NewSQLIdentifier(NewSQLIdent("customer_id"))},
 						},
 					},
 					&QualifiedWildcard{
@@ -120,7 +128,7 @@ func TestSQLSelect_Eval(t *testing.T) {
 				Relation: &Table{
 					Name: NewSQLObjectName("customers"),
 				},
-				GroupBy: []ASTNode{NewSQLIdent("country")},
+				GroupBy: []ASTNode{NewSQLIdentifier(NewSQLIdent("country"))},
 			},
 			out: "SELECT COUNT(customer_id), country.* FROM customers GROUP BY country",
 		},
@@ -128,21 +136,25 @@ func TestSQLSelect_Eval(t *testing.T) {
 			name: "having",
 			in: &SQLSelect{
 				Projection: []SQLSelectItem{
-					&SQLFunction{
-						Name: NewSQLObjectName("COUNT"),
-						Args: []ASTNode{NewSQLObjectName("customer_id")},
+					&UnnamedExpression{
+						Node: &SQLFunction{
+							Name: NewSQLObjectName("COUNT"),
+							Args: []ASTNode{NewSQLIdentifier(NewSQLIdent("customer_id"))},
+						},
 					},
-					NewSQLIdent("country"),
+					&UnnamedExpression{
+						Node: NewSQLIdentifier(NewSQLIdent("country")),
+					},
 				},
 				Relation: &Table{
 					Name: NewSQLObjectName("customers"),
 				},
-				GroupBy: []ASTNode{NewSQLIdent("country")},
+				GroupBy: []ASTNode{NewSQLIdentifier(NewSQLIdent("country"))},
 				Having: &SQLBinaryExpr{
 					Op: Gt,
 					Left: &SQLFunction{
 						Name: NewSQLObjectName("COUNT"),
-						Args: []ASTNode{NewSQLIdent("customer_id")},
+						Args: []ASTNode{NewSQLIdentifier(NewSQLIdent("customer_id"))},
 					},
 					Right: NewLongValue(3),
 				},
@@ -179,55 +191,51 @@ func TestSQLQuery_Eval(t *testing.T) {
 						Query: &SQLQuery{
 							Body: &SQLSelect{
 								Projection: []SQLSelectItem{
-									&UnnamedExpression{Node: NewSQLIdent("region")},
+									&UnnamedExpression{Node: NewSQLIdentifier(NewSQLIdent("region"))},
 									&ExpressionWithAlias{
 										Alias: NewSQLIdent("total_sales"),
 										Expr: &SQLFunction{
 											Name: NewSQLObjectName("SUM"),
-											Args: []ASTNode{NewSQLIdent("amount")},
+											Args: []ASTNode{NewSQLIdentifier(NewSQLIdent("amount"))},
 										},
 									},
 								},
 								Relation: &Table{
 									Name: NewSQLObjectName("orders"),
 								},
-								GroupBy: []ASTNode{NewSQLIdent("region")},
+								GroupBy: []ASTNode{NewSQLIdentifier(NewSQLIdent("region"))},
 							},
 						},
 					},
 				},
-				Body: &SelectExpr{
-					Select: &SQLSelect{
-						Projection: []SQLSelectItem{
-							&UnnamedExpression{Node: NewSQLIdent("product")},
-							&ExpressionWithAlias{
-								Alias: NewSQLIdent("product_units"),
-								Expr: &SQLFunction{
-									Name: NewSQLObjectName("SUM"),
-									Args: []ASTNode{NewSQLIdent("quantity")},
-								},
+				Body: &SQLSelect{
+					Projection: []SQLSelectItem{
+						&UnnamedExpression{Node: NewSQLIdentifier(NewSQLIdent("product"))},
+						&ExpressionWithAlias{
+							Alias: NewSQLIdent("product_units"),
+							Expr: &SQLFunction{
+								Name: NewSQLObjectName("SUM"),
+								Args: []ASTNode{NewSQLIdentifier(NewSQLIdent("quantity"))},
 							},
 						},
-						Relation: &Table{
-							Name: NewSQLObjectName("orders"),
-						},
-						Selection: &SQLInSubQuery{
-							Expr: NewSQLIdent("region"),
-							SubQuery: &SQLQuery{
-								Body: &SelectExpr{
-									Select: &SQLSelect{
-										Projection: []SQLSelectItem{
-											&UnnamedExpression{Node: NewSQLIdent("region")},
-										},
-										Relation: &Table{
-											Name: NewSQLObjectName("top_regions"),
-										},
-									},
-								},
-							},
-						},
-						GroupBy: []ASTNode{NewSQLIdent("region"), NewSQLIdent("product")},
 					},
+					Relation: &Table{
+						Name: NewSQLObjectName("orders"),
+					},
+					Selection: &SQLInSubQuery{
+						Expr: NewSQLIdentifier(NewSQLIdent("region")),
+						SubQuery: &SQLQuery{
+							Body: &SQLSelect{
+								Projection: []SQLSelectItem{
+									&UnnamedExpression{Node: NewSQLIdentifier(NewSQLIdent("region"))},
+								},
+								Relation: &Table{
+									Name: NewSQLObjectName("top_regions"),
+								},
+							},
+						},
+					},
+					GroupBy: []ASTNode{NewSQLIdentifier(NewSQLIdent("region")), NewSQLIdentifier(NewSQLIdent("product"))},
 				},
 			},
 			out: "WITH regional_sales AS (" +
@@ -241,40 +249,36 @@ func TestSQLQuery_Eval(t *testing.T) {
 		{
 			name: "order by and limit",
 			in: &SQLQuery{
-				Body: &SelectExpr{
-					Select: &SQLSelect{
-						Projection: []SQLSelectItem{
-							&UnnamedExpression{Node: NewSQLIdent("product")},
-							&ExpressionWithAlias{
-								Alias: NewSQLIdent("product_units"),
-								Expr: &SQLFunction{
-									Name: NewSQLObjectName("SUM"),
-									Args: []ASTNode{NewSQLIdent("quantity")},
-								},
+				Body: &SQLSelect{
+					Projection: []SQLSelectItem{
+						&UnnamedExpression{Node: NewSQLIdentifier(NewSQLIdent("product"))},
+						&ExpressionWithAlias{
+							Alias: NewSQLIdent("product_units"),
+							Expr: &SQLFunction{
+								Name: NewSQLObjectName("SUM"),
+								Args: []ASTNode{NewSQLIdentifier(NewSQLIdent("quantity"))},
 							},
 						},
-						Relation: &Table{
-							Name: NewSQLObjectName("orders"),
-						},
-						Selection: &SQLInSubQuery{
-							Expr: NewSQLIdent("region"),
-							SubQuery: &SQLQuery{
-								Body: &SelectExpr{
-									Select: &SQLSelect{
-										Projection: []SQLSelectItem{
-											&UnnamedExpression{Node: NewSQLIdent("region")},
-										},
-										Relation: &Table{
-											Name: NewSQLObjectName("top_regions"),
-										},
-									},
+					},
+					Relation: &Table{
+						Name: NewSQLObjectName("orders"),
+					},
+					Selection: &SQLInSubQuery{
+						Expr: NewSQLIdentifier(NewSQLIdent("region")),
+						SubQuery: &SQLQuery{
+							Body: &SQLSelect{
+								Projection: []SQLSelectItem{
+									&UnnamedExpression{Node: NewSQLIdentifier(NewSQLIdent("region"))},
+								},
+								Relation: &Table{
+									Name: NewSQLObjectName("top_regions"),
 								},
 							},
 						},
 					},
 				},
 				OrderBy: []*SQLOrderByExpr{
-					{Expr: NewSQLIdent("product_units")},
+					{Expr: NewSQLIdentifier(NewSQLIdent("product_units"))},
 				},
 				Limit: NewLongValue(100),
 			},

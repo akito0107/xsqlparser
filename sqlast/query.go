@@ -208,6 +208,7 @@ func (e *ExpressionWithAlias) Eval() string {
 	return fmt.Sprintf("%s AS %s", e.Expr.Eval(), e.Alias.Eval())
 }
 
+// schema.*
 type QualifiedWildcard struct {
 	Prefix *SQLObjectName
 }
