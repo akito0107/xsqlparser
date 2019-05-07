@@ -416,7 +416,7 @@ JOIN_LOOP:
 			}
 		case "LEFT":
 			p.nextToken()
-			p.expectKeyword("OUTER")
+			p.parseKeyword("OUTER")
 			p.expectKeyword("JOIN")
 			relation, err := p.parseTableFactor()
 			if err != nil {
@@ -433,7 +433,7 @@ JOIN_LOOP:
 			}
 		case "RIGHT":
 			p.nextToken()
-			p.expectKeyword("OUTER")
+			p.parseKeyword("OUTER")
 			p.expectKeyword("JOIN")
 			relation, err := p.parseTableFactor()
 			if err != nil {
@@ -450,7 +450,7 @@ JOIN_LOOP:
 			}
 		case "FULL":
 			p.nextToken()
-			p.expectKeyword("OUTER")
+			p.parseKeyword("OUTER")
 			p.expectKeyword("JOIN")
 			relation, err := p.parseTableFactor()
 			if err != nil {
@@ -1023,7 +1023,7 @@ func (p *Parser) parsePrefix() (sqlast.ASTNode, error) {
 				Query: expr,
 			}
 		} else {
-			expr, err := p.parseQuery()
+			expr, err := p.parseExpr()
 			if err != nil {
 				return nil, errors.Errorf("parseQuery failed %w", err)
 			}
@@ -1122,7 +1122,7 @@ func (p *Parser) parseOrderByExprList() ([]*sqlast.SQLOrderByExpr, error) {
 			ASC:  asc,
 		})
 
-		if t, _ := p.peekToken(); t.Tok == Comma {
+		if t, _ := p.peekToken(); t != nil && t.Tok == Comma {
 			p.nextToken()
 		} else {
 			break

@@ -60,7 +60,7 @@ func TestParser_ParseStatement(t *testing.T) {
 			},
 			{
 				name: "count and join",
-				in:   "SELECT COUNT(t1.id) AS c FROM test_table AS t1 LEFT OUTER JOIN test_table2 AS t2 ON t1.id = t2.test_table_id",
+				in:   "SELECT COUNT(t1.id) AS c FROM test_table AS t1 LEFT JOIN test_table2 AS t2 ON t1.id = t2.test_table_id",
 				out: &sqlast.SQLQuery{
 					Body: &sqlast.SQLSelect{
 						Projection: []sqlast.SQLSelectItem{
