@@ -1430,6 +1430,8 @@ func (p *Parser) parseDataType() (sqlast.SQLType, error) {
 		return &sqlast.Double{}, nil
 	case "SMALLINT":
 		return &sqlast.SmallInt{}, nil
+	case "INTEGER", "INT":
+		return &sqlast.Int{}, nil
 	case "BIGINT":
 		return &sqlast.BigInt{}, nil
 	case "VARCHAR":
@@ -1459,12 +1461,16 @@ func (p *Parser) parseDataType() (sqlast.SQLType, error) {
 		wok, _ := p.parseKeyword("WITH")
 		ook, _ := p.parseKeyword("WITHOUT")
 		if wok || ook {
-			if ok, _ := p.parseKeyword("TIME"); !ok {
-				return nil, errors.New("expect TIME keyword")
-			}
-			if ok, _ := p.parseKeyword("ZONE"); !ok {
-				return nil, errors.New("expect ZONE keyword")
-			}
+			p.expectKeyword("TIME")
+			p.expectKeyword("ZONE")
+		}
+		return &sqlast.Timestamp{}, nil
+	case "TIME":
+		wok, _ := p.parseKeyword("WITH")
+		ook, _ := p.parseKeyword("WITHOUT")
+		if wok || ook {
+			p.expectKeyword("TIME")
+			p.expectKeyword("ZONE")
 		}
 		return &sqlast.Time{}, nil
 	case "REGCLASS":

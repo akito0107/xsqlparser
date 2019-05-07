@@ -284,4 +284,92 @@ func TestParser_ParseStatement(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("create", func(t *testing.T) {
+		cases := []struct {
+			name string
+			in   string
+			out  sqlast.SQLStmt
+			skip bool
+		}{
+			{
+				name: "create table",
+				in: "CREATE TABLE persons (" +
+					"person_id UUID PRIMARY KEY NOT NULL, " +
+					"first_name varchar(255) UNIQUE, " +
+					"last_name character varying(255) NOT NULL, " +
+					"created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL)",
+				out: &sqlast.SQLCreateTable{
+					Name: sqlast.NewSQLObjectName("persons"),
+					Columns: []*sqlast.SQLColumnDef{
+						{
+							Name:      sqlast.NewSQLIdent("person_id"),
+							DateType:  &sqlast.UUID{},
+							IsPrimary: true,
+						},
+						{
+							Name: sqlast.NewSQLIdent("first_name"),
+							DateType: &sqlast.VarcharType{
+								Size: sqlast.NewSize(255),
+							},
+							AllowNull: true,
+							IsUnique:  true,
+						},
+						{
+							Name: sqlast.NewSQLIdent("last_name"),
+							DateType: &sqlast.VarcharType{
+								Size: sqlast.NewSize(255),
+							},
+						},
+						{
+							Name:     sqlast.NewSQLIdent("created_at"),
+							DateType: &sqlast.Timestamp{},
+							Default:  sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("CURRENT_TIMESTAMP")),
+						},
+					},
+				},
+			},
+			{
+				name: "create view",
+				in:   "CREATE VIEW comedies AS SELECT * FROM films WHERE kind = 'Comedy'",
+				out: &sqlast.SQLCreateView{
+					Name: sqlast.NewSQLObjectName("comedies"),
+					Query: &sqlast.SQLQuery{
+						Body: &sqlast.SQLSelect{
+							Projection: []sqlast.SQLSelectItem{&sqlast.UnnamedExpression{Node: &sqlast.SQLWildcard{}}},
+							Relation: &sqlast.Table{
+								Name: sqlast.NewSQLObjectName("films"),
+							},
+							Selection: &sqlast.SQLBinaryExpr{
+								Op:    sqlast.Eq,
+								Left:  sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("kind")),
+								Right: sqlast.NewSingleQuotedString("Comedy"),
+							},
+						},
+					},
+				},
+			},
+		}
+
+		for _, c := range cases {
+
+			t.Run(c.name, func(t *testing.T) {
+				if c.skip {
+					t.Skip()
+				}
+				parser, err := NewParser(bytes.NewBufferString(c.in), &dialect.GenericSQLDialect{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				ast, err := parser.ParseStatement()
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if diff := cmp.Diff(c.out, ast); diff != "" {
+					t.Errorf("diff %s", diff)
+				}
+			})
+		}
+	})
 }
