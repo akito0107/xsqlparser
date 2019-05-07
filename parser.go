@@ -70,12 +70,13 @@ func (p *Parser) ParseStatement() (sqlast.SQLStmt, error) {
 		p.prevToken()
 		return p.parseQuery()
 	case "CREATE":
+		return p.parseCreate()
 	case "DELETE":
 	case "INSERT":
 	case "ALTER":
 	case "COPY":
 	default:
-		return nil, errors.Errorf("unexpected keyword %s", word.Keyword)
+		return nil, errors.Errorf("unexpected (or unsupported) keyword %s", word.Keyword)
 	}
 	return nil, errors.New("unreachable")
 }
@@ -299,6 +300,150 @@ func (p *Parser) parseSelectList() ([]sqlast.SQLSelectItem, error) {
 		}
 	}
 	return projections, nil
+}
+
+func (p *Parser) parseCreate() (sqlast.SQLStmt, error) {
+
+	if ok, _ := p.parseKeyword("TABLE"); ok {
+		return p.parseCreateTable()
+	}
+
+	mok, _ := p.parseKeyword("MATERIALIZED")
+	vok, _ := p.parseKeyword("VIEW")
+
+	if mok || vok {
+		p.prevToken()
+		return p.parseCreateView()
+	}
+
+	log.Fatal("TABLE or VIEW after create")
+
+	return nil, nil
+}
+
+func (p *Parser) parseCreateTable() (sqlast.SQLStmt, error) {
+	name, err := p.parseObjectName()
+	if err != nil {
+		return nil, errors.Errorf("parseObjectName failed %w", err)
+	}
+
+	columns, err := p.parseColumns()
+	if err != nil {
+		return nil, errors.Errorf("parseColumns failed %w", err)
+	}
+
+	return &sqlast.SQLCreateTable{
+		Name:     name,
+		Columns:  columns,
+		External: false,
+	}, nil
+}
+
+func (p *Parser) parseCreateView() (sqlast.SQLStmt, error) {
+	materialized, _ := p.parseKeyword("MATERIALIZED")
+	p.expectKeyword("VIEW")
+	name, err := p.parseObjectName()
+	if err != nil {
+		return nil, errors.Errorf("parseObjectName failed %w", err)
+	}
+	p.expectKeyword("AS")
+	q, err := p.parseQuery()
+	if err != nil {
+		return nil, errors.Errorf("parseQuery failed %w", err)
+	}
+
+	return &sqlast.SQLCreateView{
+		Materialized: materialized,
+		Name:         name,
+		Query:        q,
+	}, nil
+
+}
+
+func (p *Parser) parseColumns() ([]*sqlast.SQLColumnDef, error) {
+	var columns []*sqlast.SQLColumnDef
+	if ok, _ := p.consumeToken(LParen); !ok {
+		return columns, nil
+	}
+
+	for {
+		tok, _ := p.nextToken()
+		if tok == nil || tok.Tok != SQLKeyword {
+			return nil, errors.Errorf("parse error after column def")
+		}
+
+		columnName := tok.Value.(*SQLWord)
+
+		dataType, err := p.parseDataType()
+		if err != nil {
+			return nil, errors.Errorf("parseDataType failed %w", err)
+		}
+		isPrimary, _ := p.parseKeywords("PRIMARY", "KEY")
+		isUnique, _ := p.parseKeyword("UNIQUE")
+
+		var def sqlast.ASTNode
+		if ok, _ := p.parseKeyword("DEFAULT"); ok {
+			def, err = p.parseDefaultExpr(0)
+			if err != nil {
+				return nil, errors.Errorf("parseDefaultExpr failed %w", err)
+			}
+		}
+
+		var allowNull bool
+		if ok, _ := p.parseKeywords("NOT", "NULL"); ok {
+			allowNull = false
+		} else {
+			p.parseKeyword("NULL")
+			allowNull = true
+		}
+
+		columns = append(columns, &sqlast.SQLColumnDef{
+			Name:      columnName.AsSQLIdent(),
+			DateType:  dataType,
+			IsPrimary: isPrimary,
+			IsUnique:  isUnique,
+			Default:   def,
+			AllowNull: allowNull,
+		})
+
+		t, _ := p.nextToken()
+		if t == nil || (t.Tok != Comma && t.Tok != RParen) {
+			log.Fatal("Expected ',' or ')' after column definition")
+		} else if t.Tok == RParen {
+			break
+		}
+	}
+
+	return columns, nil
+}
+
+func (p *Parser) parseDefaultExpr(precedence uint) (sqlast.ASTNode, error) {
+	expr, err := p.parsePrefix()
+	if err != nil {
+		return nil, errors.Errorf("parsePrefix failed %w", err)
+	}
+	for {
+		tok, _ := p.peekToken()
+		if tok != nil && tok.Tok == SQLKeyword {
+			w := tok.Value.(*SQLWord)
+			if w.Keyword == "NOT" || w.Keyword == "NULL" {
+				break
+			}
+		}
+
+		nextPrecedence, err := p.getNextPrecedence()
+		if err != nil {
+			return nil, errors.Errorf("getNextPrecedence failed %w", err)
+		}
+		if precedence >= nextPrecedence {
+			break
+		}
+		expr, err = p.parseInfix(expr, nextPrecedence)
+		if err != nil {
+			return nil, errors.Errorf("parseInfix failed %w")
+		}
+	}
+	return expr, nil
 }
 
 // TODO add tests
