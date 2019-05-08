@@ -1,12 +1,14 @@
 # xsqlparser
 
+[![Build Status](https://dev.azure.com/akito01070362/xsqlparser/_apis/build/status/akito0107.xsqlparser?branchName=master)](https://dev.azure.com/akito01070362/xsqlparser/_build/latest?definitionId=2&branchName=master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/akito0107/xsqlparser)](https://goreportcard.com/report/github.com/akito0107/xsqlparesr)
+
 __[WORK IN PROGRESS] currently only supports very limited queries. DO NOT USE IN PRODUCTION.__
 
 sql parser for golang.
 
 This repo is ported of [sqlparser-rs](https://github.com/andygrove/sqlparser-rs) in Go.
 
-[![Go Report Card](https://goreportcard.com/badge/github.com/akito0107/xsqlparser)](https://goreportcard.com/report/github.com/akito0107/xsqlparesr)
 
 ## Getting Started
 
