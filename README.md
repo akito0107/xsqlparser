@@ -4,7 +4,9 @@ __[WORK IN PROGRESS] currently only supports very limited queries. DO NOT USE IN
 
 sql parser for golang.
 
-This repo is ported of [sqlparser-rs](https://github.com/andygrove/sqlparser-rs) to Go.
+This repo is ported of [sqlparser-rs](https://github.com/andygrove/sqlparser-rs) in Go.
+
+[![Go Report Card](https://goreportcard.com/badge/github.com/akito0107/xsqlparser)](https://goreportcard.com/report/github.com/akito0107/xsqlparesr)
 
 ## Getting Started
 
@@ -88,9 +90,9 @@ got:
 
 - complicated select
 ```go
-str := "SELECT product, SUM(quantity) AS product_units, account.* " +
-	"FROM orders LEFT JOIN " +
-	"WHERE region IN (SELECT region FROM top_regions) " +
+str := "SELECT orders.product, SUM(orders.quantity) AS product_units, accounts.* " +
+	"FROM orders LEFT JOIN accounts ON orders.account_id = accounts.id " +
+	"WHERE orders.region IN (SELECT region FROM top_regions) " +
 	"ORDER BY product_units LIMIT 100"
 
 parser, err := xsqlparser.NewParser(bytes.NewBufferString(str), &dialect.GenericSQLDialect{})
@@ -107,14 +109,17 @@ pp.Println(stmt)
 
 got:
 ```
-&sqlast.SQLQuery{
+{
   CTEs: []*sqlast.CTE{},
   Body: &sqlast.SQLSelect{
     Distinct:   false,
     Projection: []sqlast.SQLSelectItem{
       &sqlast.UnnamedExpression{
-        Node: &sqlast.SQLIdentifier{
-          Ident: &"product",
+        Node: &sqlast.SQLCompoundIdentifier{
+          Idents: []*sqlast.SQLIdent{
+            &"orders",
+            &"product",
+          },
         },
       },
       &sqlast.ExpressionWithAlias{
@@ -125,13 +130,23 @@ got:
             },
           },
           Args: []sqlast.ASTNode{
-            &sqlast.SQLIdentifier{
-              Ident: &"quantity",
+            &sqlast.SQLCompoundIdentifier{
+              Idents: []*sqlast.SQLIdent{
+                &"orders",
+                &"quantity",
+              },
             },
           },
           Over: (*sqlast.SQLWindowSpec)(nil),
         },
         Alias: &"product_units",
+      },
+      &sqlast.QualifiedWildcard{
+        Prefix: &sqlast.SQLObjectName{
+          Idents: []*sqlast.SQLIdent{
+            &"accounts",
+          },
+        },
       },
     },
     Relation: &sqlast.Table{
@@ -144,10 +159,44 @@ got:
       Args:      []sqlast.ASTNode{},
       WithHints: []sqlast.ASTNode{},
     },
-    Joins:     []*sqlast.Join{},
+    Joins: []*sqlast.Join{
+      &sqlast.Join{
+        Relation: &sqlast.Table{
+          Name: &sqlast.SQLObjectName{
+            Idents: []*sqlast.SQLIdent{
+              &"accounts",
+            },
+          },
+          Alias:     (*sqlast.SQLIdent)(nil),
+          Args:      []sqlast.ASTNode{},
+          WithHints: []sqlast.ASTNode{},
+        },
+        Op:       1,
+        Constant: &sqlast.OnJoinConstant{
+          Node: &sqlast.SQLBinaryExpr{
+            Left: &sqlast.SQLCompoundIdentifier{
+              Idents: []*sqlast.SQLIdent{
+                &"orders",
+                &"account_id",
+              },
+            },
+            Op:    9,
+            Right: &sqlast.SQLCompoundIdentifier{
+              Idents: []*sqlast.SQLIdent{
+                &"accounts",
+                &"id",
+              },
+            },
+          },
+        },
+      },
+    },
     Selection: &sqlast.SQLInSubQuery{
-      Expr: &sqlast.SQLIdentifier{
-        Ident: &"region",
+      Expr: &sqlast.SQLCompoundIdentifier{
+        Idents: []*sqlast.SQLIdent{
+          &"orders",
+          &"region",
+        },
       },
       SubQuery: &sqlast.SQLQuery{
         CTEs: []*sqlast.CTE{},

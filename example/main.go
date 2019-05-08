@@ -33,9 +33,9 @@ func simpleSelect() {
 }
 
 func complicatedSelect() {
-	str := "SELECT product, SUM(quantity) AS product_units, account.* " +
-		"FROM orders LEFT JOIN " +
-		"WHERE region IN (SELECT region FROM top_regions) " +
+	str := "SELECT orders.product, SUM(orders.quantity) AS product_units, accounts.* " +
+		"FROM orders LEFT JOIN accounts ON orders.account_id = accounts.id " +
+		"WHERE orders.region IN (SELECT region FROM top_regions) " +
 		"ORDER BY product_units LIMIT 100"
 
 	parser, err := xsqlparser.NewParser(bytes.NewBufferString(str), &dialect.GenericSQLDialect{})
