@@ -287,6 +287,67 @@ func TestSQLQuery_Eval(t *testing.T) {
 				"WHERE region IN (SELECT region FROM top_regions) " +
 				"ORDER BY product_units LIMIT 100",
 		},
+		{
+			name: "exists",
+			in: &SQLQuery{
+				Body: &SQLSelect{
+					Projection: []SQLSelectItem{
+						&UnnamedExpression{
+							Node: &SQLWildcard{},
+						},
+					},
+					Relation: &Table{
+						Name: NewSQLObjectName("user"),
+					},
+					Selection: &SQLExists{
+						Negated: true,
+						Query: &SQLQuery{
+							Body: &SQLSelect{
+								Projection: []SQLSelectItem{
+									&UnnamedExpression{
+										Node: &SQLWildcard{},
+									},
+								},
+								Relation: &Table{
+									Name: NewSQLObjectName("user_sub"),
+								},
+								Selection: &SQLBinaryExpr{
+									Op: And,
+									Left: &SQLBinaryExpr{
+										Op: Eq,
+										Left: &SQLCompoundIdentifier{
+											Idents: []*SQLIdent{
+												NewSQLIdent("user"),
+												NewSQLIdent("id"),
+											},
+										},
+										Right: &SQLCompoundIdentifier{
+											Idents: []*SQLIdent{
+												NewSQLIdent("user_sub"),
+												NewSQLIdent("id"),
+											},
+										},
+									},
+									Right: &SQLBinaryExpr{
+										Op: Eq,
+										Left: &SQLCompoundIdentifier{
+											Idents: []*SQLIdent{
+												NewSQLIdent("user_sub"),
+												NewSQLIdent("job"),
+											},
+										},
+										Right: NewSingleQuotedString("job"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			out: "SELECT * FROM user WHERE NOT EXISTS (" +
+				"SELECT * FROM user_sub WHERE user.id = user_sub.id AND user_sub.job = 'job'" +
+				")",
+		},
 	}
 
 	for _, c := range cases {

@@ -202,6 +202,15 @@ func (s *SQLCase) Eval() string {
 	return str
 }
 
+type SQLExists struct {
+	Negated bool
+	Query   *SQLQuery
+}
+
+func (s *SQLExists) Eval() string {
+	return fmt.Sprintf("%sEXISTS (%s)", negatedString(s.Negated), s.Query.Eval())
+}
+
 type SQLSubquery struct {
 	Query *SQLQuery
 }

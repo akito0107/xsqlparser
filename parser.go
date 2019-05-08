@@ -1271,7 +1271,22 @@ func (p *Parser) parsePrefix() (sqlast.ASTNode, error) {
 				return nil, errors.Errorf("parseCastExpression failed %w", err)
 			}
 			return ast, nil
+		case "EXISTS":
+			ast, err := p.parseExistsExpression(false)
+			if err != nil {
+				return nil, errors.Errorf("parseExistsExpression %w", err)
+			}
+			return ast, nil
 		case "NOT":
+			if ok, _ := p.parseKeyword("EXISTS"); ok {
+				ast, err := p.parseExistsExpression(true)
+				if err != nil {
+					return nil, errors.Errorf("parseExistsExpression %w", err)
+				}
+
+				return ast, nil
+			}
+
 			ts := &TokenSet{
 				Tok:   SQLKeyword,
 				Value: MakeKeyword("NOT", 0),
@@ -1869,6 +1884,20 @@ func (p *Parser) parseCastExpression() (sqlast.ASTNode, error) {
 	return &sqlast.SQLCast{
 		Expr:     expr,
 		DateType: dataType,
+	}, nil
+}
+
+func (p *Parser) parseExistsExpression(negated bool) (sqlast.ASTNode, error) {
+	p.expectToken(LParen)
+	expr, err := p.parseQuery()
+	if err != nil {
+		return nil, errors.Errorf("parseQuery failed %w", err)
+	}
+	p.expectToken(RParen)
+
+	return &sqlast.SQLExists{
+		Negated: negated,
+		Query:   expr,
 	}, nil
 }
 

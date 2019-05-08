@@ -261,6 +261,67 @@ func TestParser_ParseStatement(t *testing.T) {
 					"WHERE region IN (SELECT region FROM top_regions) " +
 					"GROUP BY region, product",
 			},
+			{
+				name: "exists",
+				in: "SELECT * FROM user WHERE NOT EXISTS (" +
+					"SELECT * FROM user_sub WHERE user.id = user_sub.id AND user_sub.job = 'job'" +
+					");",
+				out: &sqlast.SQLQuery{
+					Body: &sqlast.SQLSelect{
+						Projection: []sqlast.SQLSelectItem{
+							&sqlast.UnnamedExpression{
+								Node: &sqlast.SQLWildcard{},
+							},
+						},
+						Relation: &sqlast.Table{
+							Name: sqlast.NewSQLObjectName("user"),
+						},
+						Selection: &sqlast.SQLExists{
+							Negated: true,
+							Query: &sqlast.SQLQuery{
+								Body: &sqlast.SQLSelect{
+									Projection: []sqlast.SQLSelectItem{
+										&sqlast.UnnamedExpression{
+											Node: &sqlast.SQLWildcard{},
+										},
+									},
+									Relation: &sqlast.Table{
+										Name: sqlast.NewSQLObjectName("user_sub"),
+									},
+									Selection: &sqlast.SQLBinaryExpr{
+										Op: sqlast.And,
+										Left: &sqlast.SQLBinaryExpr{
+											Op: sqlast.Eq,
+											Left: &sqlast.SQLCompoundIdentifier{
+												Idents: []*sqlast.SQLIdent{
+													sqlast.NewSQLIdent("user"),
+													sqlast.NewSQLIdent("id"),
+												},
+											},
+											Right: &sqlast.SQLCompoundIdentifier{
+												Idents: []*sqlast.SQLIdent{
+													sqlast.NewSQLIdent("user_sub"),
+													sqlast.NewSQLIdent("id"),
+												},
+											},
+										},
+										Right: &sqlast.SQLBinaryExpr{
+											Op: sqlast.Eq,
+											Left: &sqlast.SQLCompoundIdentifier{
+												Idents: []*sqlast.SQLIdent{
+													sqlast.NewSQLIdent("user_sub"),
+													sqlast.NewSQLIdent("job"),
+												},
+											},
+											Right: sqlast.NewSingleQuotedString("job"),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		}
 
 		for _, c := range cases {
