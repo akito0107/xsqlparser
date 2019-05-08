@@ -440,6 +440,29 @@ func TestParser_ParseStatement(t *testing.T) {
 					},
 				},
 			},
+			{
+				name: "multi record case",
+				in: "INSERT INTO customers (customer_name, contract_name) VALUES" +
+					"('Cardinal', 'Tom B. Erichsen')," +
+					"('Cardinal', 'Tom B. Erichsen')",
+				out: &sqlast.SQLInsert{
+					TableName: sqlast.NewSQLObjectName("customers"),
+					Columns: []*sqlast.SQLIdent{
+						sqlast.NewSQLIdent("customer_name"),
+						sqlast.NewSQLIdent("contract_name"),
+					},
+					Values: [][]sqlast.ASTNode{
+						{
+							sqlast.NewSingleQuotedString("Cardinal"),
+							sqlast.NewSingleQuotedString("Tom B. Erichsen"),
+						},
+						{
+							sqlast.NewSingleQuotedString("Cardinal"),
+							sqlast.NewSingleQuotedString("Tom B. Erichsen"),
+						},
+					},
+				},
+			},
 		}
 
 		for _, c := range cases {

@@ -458,15 +458,25 @@ func (p *Parser) parseInsert() (sqlast.SQLStmt, error) {
 	}
 
 	p.expectKeyword("VALUES")
-	p.expectToken(LParen)
-	values, err := p.parseExprList()
+	var values [][]sqlast.ASTNode
 
-	p.expectToken(RParen)
+	for {
+		p.expectToken(LParen)
+		v, err := p.parseExprList()
+		if err != nil {
+			return nil, errors.Errorf("parseExprList failed %w", err)
+		}
+		values = append(values, v)
+		p.expectToken(RParen)
+		if ok, _ := p.consumeToken(Comma); !ok {
+			break
+		}
+	}
 
 	return &sqlast.SQLInsert{
 		TableName: tableName,
 		Columns:   columns,
-		Values:    [][]sqlast.ASTNode{values},
+		Values:    values,
 	}, nil
 }
 
