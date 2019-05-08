@@ -72,6 +72,7 @@ func (p *Parser) ParseStatement() (sqlast.SQLStmt, error) {
 	case "CREATE":
 		return p.parseCreate()
 	case "DELETE":
+		return p.parseDelete()
 	case "INSERT":
 	case "ALTER":
 	case "COPY":
@@ -415,6 +416,28 @@ func (p *Parser) parseColumns() ([]*sqlast.SQLColumnDef, error) {
 	}
 
 	return columns, nil
+}
+
+func (p *Parser) parseDelete() (sqlast.SQLStmt, error) {
+	p.expectKeyword("FROM")
+	tableName, err := p.parseObjectName()
+	if err != nil {
+		return nil, errors.Errorf("parseObjectName failed %w", err)
+	}
+
+	var selection sqlast.ASTNode
+	if ok, _ := p.parseKeyword("WHERE"); ok {
+		selection, err = p.parseExpr()
+		if err != nil {
+			return nil, errors.Errorf("parseExpr failed %w", err)
+		}
+	}
+
+	return &sqlast.SQLDelete{
+		TableName: tableName,
+		Selection: selection,
+	}, nil
+
 }
 
 func (p *Parser) parseDefaultExpr(precedence uint) (sqlast.ASTNode, error) {

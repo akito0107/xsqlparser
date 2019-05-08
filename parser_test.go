@@ -372,4 +372,47 @@ func TestParser_ParseStatement(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("delete", func(t *testing.T) {
+		cases := []struct {
+			name string
+			in   string
+			out  sqlast.SQLStmt
+			skip bool
+		}{
+			{
+				in:   "DELETE FROM customers WHERE customer_id = 1",
+				name: "simple case",
+				out: &sqlast.SQLDelete{
+					TableName: sqlast.NewSQLObjectName("customers"),
+					Selection: &sqlast.SQLBinaryExpr{
+						Op:    sqlast.Eq,
+						Left:  sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("customer_id")),
+						Right: sqlast.NewLongValue(1),
+					},
+				},
+			},
+		}
+
+		for _, c := range cases {
+
+			t.Run(c.name, func(t *testing.T) {
+				if c.skip {
+					t.Skip()
+				}
+				parser, err := NewParser(bytes.NewBufferString(c.in), &dialect.GenericSQLDialect{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				ast, err := parser.ParseStatement()
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if diff := cmp.Diff(c.out, ast); diff != "" {
+					t.Errorf("diff %s", diff)
+				}
+			})
+		}
+	})
 }
