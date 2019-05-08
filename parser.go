@@ -78,6 +78,7 @@ func (p *Parser) ParseStatement() (sqlast.SQLStmt, error) {
 	case "ALTER":
 		return p.parseAlter()
 	case "UPDATE":
+		return p.parseUpdate()
 	default:
 		return nil, errors.Errorf("unexpected (or unsupported) keyword %s", word.Keyword)
 	}
@@ -439,6 +440,65 @@ func (p *Parser) parseDelete() (sqlast.SQLStmt, error) {
 		TableName: tableName,
 		Selection: selection,
 	}, nil
+}
+
+func (p *Parser) parseUpdate() (sqlast.SQLStmt, error) {
+	tableName, err := p.parseObjectName()
+	if err != nil {
+		return nil, errors.Errorf("parseObjectName failed %w", err)
+	}
+	p.expectKeyword("SET")
+
+	assignments, err := p.parseAssignments()
+	if err != nil {
+		return nil, errors.Errorf("parseAssignments failed %w", err)
+	}
+
+	var selection sqlast.ASTNode
+	if ok, _ := p.parseKeyword("WHERE"); ok {
+		selection, err = p.parseExpr()
+		if err != nil {
+			return nil, errors.Errorf("parseExpr failed %w", err)
+		}
+	}
+
+	return &sqlast.SQLUpdate{
+		TableName:   tableName,
+		Assignments: assignments,
+		Selection:   selection,
+	}, nil
+
+}
+
+func (p *Parser) parseAssignments() ([]*sqlast.SQLAssignment, error) {
+	var assignments []*sqlast.SQLAssignment
+
+	for {
+		tok, _ := p.nextToken()
+		if tok.Tok != SQLKeyword {
+			return nil, errors.Errorf("should be sqlkeyword but %v", tok)
+		}
+
+		word := tok.Value.(*SQLWord)
+
+		p.expectToken(Eq)
+
+		val, err := p.parseExpr()
+		if err != nil {
+			return nil, errors.Errorf("parseExpr failed %w", err)
+		}
+
+		assignments = append(assignments, &sqlast.SQLAssignment{
+			ID:    word.AsSQLIdent(),
+			Value: val,
+		})
+
+		if ok, _ := p.consumeToken(Comma); !ok {
+			break
+		}
+	}
+
+	return assignments, nil
 }
 
 func (p *Parser) parseInsert() (sqlast.SQLStmt, error) {
