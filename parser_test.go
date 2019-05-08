@@ -415,4 +415,52 @@ func TestParser_ParseStatement(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("insert", func(t *testing.T) {
+		cases := []struct {
+			name string
+			in   string
+			out  sqlast.SQLStmt
+			skip bool
+		}{
+			{
+				in:   "INSERT INTO customers (customer_name, contract_name) VALUES('Cardinal', 'Tom B. Erichsen')",
+				name: "simple case",
+				out: &sqlast.SQLInsert{
+					TableName: sqlast.NewSQLObjectName("customers"),
+					Columns: []*sqlast.SQLIdent{
+						sqlast.NewSQLIdent("customer_name"),
+						sqlast.NewSQLIdent("contract_name"),
+					},
+					Values: [][]sqlast.ASTNode{
+						{
+							sqlast.NewSingleQuotedString("Cardinal"),
+							sqlast.NewSingleQuotedString("Tom B. Erichsen"),
+						},
+					},
+				},
+			},
+		}
+
+		for _, c := range cases {
+
+			t.Run(c.name, func(t *testing.T) {
+				if c.skip {
+					t.Skip()
+				}
+				parser, err := NewParser(bytes.NewBufferString(c.in), &dialect.GenericSQLDialect{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				ast, err := parser.ParseStatement()
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if diff := cmp.Diff(c.out, ast); diff != "" {
+					t.Errorf("diff %s", diff)
+				}
+			})
+		}
+	})
 }
