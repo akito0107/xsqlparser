@@ -1,4 +1,4 @@
-package astprinter
+package main
 
 import (
 	"flag"

@@ -141,6 +141,10 @@ type TokenPos struct {
 	Col  int
 }
 
+func (t *TokenPos) String() string {
+	return fmt.Sprintf("{Line: %d Col: %d}", t.Line, t.Col)
+}
+
 type Tokenizer struct {
 	Dialect dialect.Dialect
 	Scanner *scanner.Scanner

@@ -12,3 +12,7 @@ vendor: Gopkg.toml Gopkg.lock
 test: vendor
 	go test ./... -cover -count=1 -v
 
+.PHONY: install
+install: vendor
+	go install ./cmd/...
+

@@ -762,7 +762,8 @@ func (p *Parser) parseLimit() (sqlast.ASTNode, error) {
 func (p *Parser) expectToken(expected Token) {
 	ok, err := p.consumeToken(expected)
 	if err != nil || !ok {
-		log.Fatalf("should be %s token, err: %v", expected, err)
+		tok, _ := p.peekToken()
+		log.Fatalf("should be %s token, but %v,  err: %+v", expected, tok, err)
 	}
 }
 
@@ -878,7 +879,7 @@ func (p *Parser) parseInfix(expr sqlast.ASTNode, precedence uint) (sqlast.ASTNod
 		operator = sqlast.Divide
 	case SQLKeyword:
 		word := tok.Value.(*SQLWord)
-		switch word.Value {
+		switch word.Keyword {
 		case "AND":
 			operator = sqlast.And
 		case "OR":
