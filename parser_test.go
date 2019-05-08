@@ -11,7 +11,7 @@ import (
 )
 
 func TestParser_ParseStatement(t *testing.T) {
-	t.Run("Select", func(t *testing.T) {
+	t.Run("select", func(t *testing.T) {
 
 		cases := []struct {
 			name string
@@ -459,6 +459,69 @@ func TestParser_ParseStatement(t *testing.T) {
 						{
 							sqlast.NewSingleQuotedString("Cardinal"),
 							sqlast.NewSingleQuotedString("Tom B. Erichsen"),
+						},
+					},
+				},
+			},
+		}
+
+		for _, c := range cases {
+
+			t.Run(c.name, func(t *testing.T) {
+				if c.skip {
+					t.Skip()
+				}
+				parser, err := NewParser(bytes.NewBufferString(c.in), &dialect.GenericSQLDialect{})
+				if err != nil {
+					t.Fatal(err)
+				}
+				ast, err := parser.ParseStatement()
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if diff := cmp.Diff(c.out, ast); diff != "" {
+					t.Errorf("diff %s", diff)
+				}
+			})
+		}
+	})
+
+	t.Run("alter", func(t *testing.T) {
+		cases := []struct {
+			name string
+			in   string
+			out  sqlast.SQLStmt
+			skip bool
+		}{
+			{
+				name: "add constraint unique",
+				in:   "ALTER TABLE customers ADD CONSTRAINT unique_constraint unique (customer_first_name, customer_last_name)",
+				out: &sqlast.SQLAlterTable{
+					TableName: sqlast.NewSQLObjectName("customers"),
+					Operation: &sqlast.AddConstraint{
+						TableKey: &sqlast.UniqueKey{
+							Key: &sqlast.Key{
+								Name:    sqlast.NewSQLIdent("unique_constraint"),
+								Columns: []*sqlast.SQLIdent{sqlast.NewSQLIdent("customer_first_name"), sqlast.NewSQLIdent("customer_last_name")},
+							},
+						},
+					},
+				},
+			},
+			{
+				name: "add constraint foreign key",
+				in:   "ALTER TABLE public.employee ADD CONSTRAINT dfk FOREIGN KEY (dno) REFERENCES public.department(dnumber)",
+				out: &sqlast.SQLAlterTable{
+					TableName: sqlast.NewSQLObjectName("public", "employee"),
+					Operation: &sqlast.AddConstraint{
+						TableKey: &sqlast.ForeignKey{
+							Key: &sqlast.Key{
+								Name:    sqlast.NewSQLIdent("dfk"),
+								Columns: []*sqlast.SQLIdent{sqlast.NewSQLIdent("dno")},
+							},
+							ForeignTable:    sqlast.NewSQLObjectName("public", "department"),
+							ReferredColumns: []*sqlast.SQLIdent{sqlast.NewSQLIdent("dnumber")},
 						},
 					},
 				},

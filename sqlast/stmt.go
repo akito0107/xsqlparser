@@ -125,12 +125,12 @@ func (s *SQLCreateTable) Eval() string {
 }
 
 type SQLAlterTable struct {
-	Name      *SQLObjectName
+	TableName *SQLObjectName
 	Operation AlterOperation
 }
 
 func (s *SQLAlterTable) Eval() string {
-	return fmt.Sprintf("ALTER TABLE %s %s", s.Name.Eval(), s.Operation.Eval())
+	return fmt.Sprintf("ALTER TABLE %s %s", s.TableName.Eval(), s.Operation.Eval())
 }
 
 type SQLAssignment struct {

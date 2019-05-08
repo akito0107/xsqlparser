@@ -76,7 +76,8 @@ func (p *Parser) ParseStatement() (sqlast.SQLStmt, error) {
 	case "INSERT":
 		return p.parseInsert()
 	case "ALTER":
-	case "COPY":
+		return p.parseAlter()
+	case "UPDATE":
 	default:
 		return nil, errors.Errorf("unexpected (or unsupported) keyword %s", word.Keyword)
 	}
@@ -480,6 +481,44 @@ func (p *Parser) parseInsert() (sqlast.SQLStmt, error) {
 	}, nil
 }
 
+func (p *Parser) parseAlter() (sqlast.SQLStmt, error) {
+	p.expectKeyword("TABLE")
+	p.parseKeyword("ONLY")
+	tableName, err := p.parseObjectName()
+	if err != nil {
+		return nil, errors.Errorf("parseObjectName failed %w", err)
+	}
+
+	var operaton sqlast.AlterOperation
+
+	if ok, _ := p.parseKeyword("ADD"); ok {
+		if ok, _ := p.parseKeyword("CONSTRAINT"); ok {
+			constraintName, err := p.parseIdentifier()
+			if err != nil {
+				return nil, errors.Errorf("parseIdentifier failed %w", err)
+			}
+			tableKey, err := p.parseTableKey(constraintName)
+			if err != nil {
+				return nil, errors.Errorf("parseTableKey failed %w", err)
+			}
+			operaton = &sqlast.AddConstraint{
+				TableKey: tableKey,
+			}
+
+		} else {
+			return nil, errors.Errorf("CONSTRAINT after ADD")
+		}
+	} else {
+		return nil, errors.Errorf("ADD after ALTER TABLE")
+	}
+
+	return &sqlast.SQLAlterTable{
+		TableName: tableName,
+		Operation: operaton,
+	}, nil
+
+}
+
 func (p *Parser) parseDefaultExpr(precedence uint) (sqlast.ASTNode, error) {
 	expr, err := p.parsePrefix()
 	if err != nil {
@@ -784,6 +823,59 @@ func (p *Parser) parseTableFactor() (sqlast.TableFactor, error) {
 		WithHints: withHints,
 	}, nil
 
+}
+
+func (p *Parser) parseTableKey(constraintName *sqlast.SQLIdent) (sqlast.TableKey, error) {
+	isPrimaryKey, _ := p.parseKeywords("PRIMARY", "KEY")
+	isUniqueKey, _ := p.parseKeyword("UNIQUE")
+	isForeignKey, _ := p.parseKeywords("FOREIGN", "KEY")
+
+	p.expectToken(LParen)
+
+	columns, err := p.parseColumnNames()
+	if err != nil {
+		return nil, errors.Errorf("parseColumnNames %w", err)
+	}
+	p.expectToken(RParen)
+	k := &sqlast.Key{
+		Name:    constraintName,
+		Columns: columns,
+	}
+
+	if isPrimaryKey {
+		return &sqlast.PrimaryKey{
+			Key: k,
+		}, nil
+	}
+
+	if isUniqueKey {
+		p.parseKeyword("KEY")
+		return &sqlast.UniqueKey{
+			Key: k,
+		}, nil
+	}
+
+	if isForeignKey {
+		p.expectKeyword("REFERENCES")
+		foreignTable, err := p.parseObjectName()
+		if err != nil {
+			return nil, errors.Errorf("parseObjectName %w", err)
+		}
+		p.expectToken(LParen)
+		referredColumns, err := p.parseColumnNames()
+		if err != nil {
+			return nil, errors.Errorf("parseColumnNames %w", err)
+		}
+		p.expectToken(RParen)
+
+		return &sqlast.ForeignKey{
+			Key:             k,
+			ForeignTable:    foreignTable,
+			ReferredColumns: referredColumns,
+		}, nil
+	}
+
+	return nil, errors.Errorf("expecting primary key, unique key, or foreign key")
 }
 
 func (p *Parser) parseLimit() (sqlast.ASTNode, error) {

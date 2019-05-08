@@ -38,7 +38,7 @@ func (a *AddForeignKey) Eval() string {
 }
 
 type AddConstraint struct {
-	TableKey SQLIdent
+	TableKey TableKey
 }
 
 func (a *AddConstraint) Eval() string {
@@ -67,8 +67,8 @@ type TableKey interface {
 }
 
 type Key struct {
-	Name    SQLIdent
-	Columns []SQLIdent
+	Name    *SQLIdent
+	Columns []*SQLIdent
 }
 
 func (k *Key) Eval() string {
@@ -76,7 +76,7 @@ func (k *Key) Eval() string {
 }
 
 type PrimaryKey struct {
-	Key Key
+	Key *Key
 }
 
 func (p *PrimaryKey) Eval() string {
@@ -84,7 +84,7 @@ func (p *PrimaryKey) Eval() string {
 }
 
 type UniqueKey struct {
-	Key Key
+	Key *Key
 }
 
 func (u *UniqueKey) Eval() string {
@@ -92,9 +92,9 @@ func (u *UniqueKey) Eval() string {
 }
 
 type ForeignKey struct {
-	Key             Key
-	ForeignTable    SQLObjectName
-	ReferredColumns []SQLIdent
+	Key             *Key
+	ForeignTable    *SQLObjectName
+	ReferredColumns []*SQLIdent
 }
 
 func (f *ForeignKey) Eval() string {

@@ -216,7 +216,7 @@ func TestSQLAlterTable_Eval(t *testing.T) {
 		{
 			name: "add column",
 			in: &SQLAlterTable{
-				Name: NewSQLObjectName("customers"),
+				TableName: NewSQLObjectName("customers"),
 				Operation: &AddColumn{
 					Column: &SQLColumnDef{
 						Name: NewSQLIdent("email"),
@@ -233,7 +233,7 @@ func TestSQLAlterTable_Eval(t *testing.T) {
 		{
 			name: "remove column",
 			in: &SQLAlterTable{
-				Name: NewSQLObjectName("products"),
+				TableName: NewSQLObjectName("products"),
 				Operation: &RemoveColumn{
 					Name:    NewSQLIdent("description"),
 					Cascade: true,
