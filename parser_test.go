@@ -560,8 +560,18 @@ func TestParser_ParseStatement(t *testing.T) {
 			{
 				name: "simple case",
 				in:   "UPDATE customers SET contract_name = 'Alfred Schmidt', city = 'Frankfurt' WHERE customer_id = 1",
-				out: &sqlast.SQLDelete{
+				out: &sqlast.SQLUpdate{
 					TableName: sqlast.NewSQLObjectName("customers"),
+					Assignments: []*sqlast.SQLAssignment{
+						{
+							ID:    sqlast.NewSQLIdent("contract_name"),
+							Value: sqlast.NewSingleQuotedString("Alfred Schmidt"),
+						},
+						{
+							ID:    sqlast.NewSQLIdent("city"),
+							Value: sqlast.NewSingleQuotedString("Frankfurt"),
+						},
+					},
 					Selection: &sqlast.SQLBinaryExpr{
 						Op:    sqlast.Eq,
 						Left:  sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("customer_id")),
