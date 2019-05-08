@@ -6,7 +6,7 @@ import (
 	"strings"
 	"text/scanner"
 
-	"github.com/pkg/errors"
+	errors "golang.org/x/xerrors"
 
 	"github.com/akito0107/xsqlparser/dialect"
 	"github.com/akito0107/xsqlparser/sqlast"
@@ -178,7 +178,7 @@ func (t *Tokenizer) NextToken() (*TokenSet, error) {
 		return nil, io.EOF
 	}
 	if err != nil {
-		return &TokenSet{Tok: ILLEGAL, Value: "", Pos: t.Pos()}, errors.Wrap(err, "tokenize failed")
+		return &TokenSet{Tok: ILLEGAL, Value: "", Pos: t.Pos()}, errors.Errorf("tokenize failed %w", err)
 	}
 
 	return &TokenSet{Tok: tok, Value: str, Pos: t.Pos()}, nil

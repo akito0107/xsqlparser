@@ -10,7 +10,7 @@
   revision = "c7f18ee00883bfd3b00e0a2bf7607827e0148ad4"
 
 [[projects]]
-  digest = "1:bf40199583e5143d1472fc34d10d6f4b69d97572142acf343b3e43136da40823"
+  digest = "1:bb179c1a3b5d2b954725549b358818cd26b5dfd594bff23a6a803e55a7aa8d8a"
   name = "github.com/google/go-cmp"
   packages = [
     "cmp",
@@ -48,14 +48,6 @@
   version = "v0.0.7"
 
 [[projects]]
-  digest = "1:cf31692c14422fa27c83a05292eb5cbe0fb2775972e8f1f8446a71549bd8980b"
-  name = "github.com/pkg/errors"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "ba968bfe8b2f7e042a574c888954fccecfa385b4"
-  version = "v0.8.1"
-
-[[projects]]
   digest = "1:d917313f309bda80d27274d53985bc65651f81a5b66b820749ac7f8ef061fd04"
   name = "github.com/sergi/go-diff"
   packages = ["diffmatchpatch"]
@@ -73,7 +65,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d9d3a231c70b17470fc134900032da48d5c146f0f4a2ce12ceb92704dae8d67d"
+  digest = "1:e02c5b5aadc210aafb308f919156d78a457d31e9c24ec1e27f72dd52e1a4f319"
   name = "golang.org/x/xerrors"
   packages = [
     ".",
@@ -89,7 +81,6 @@
     "github.com/andreyvit/diff",
     "github.com/google/go-cmp/cmp",
     "github.com/k0kubun/pp",
-    "github.com/pkg/errors",
     "golang.org/x/xerrors",
   ]
   solver-name = "gps-cdcl"
