@@ -143,29 +143,79 @@ func (s *SQLAssignment) Eval() string {
 }
 
 type SQLColumnDef struct {
-	Name      *SQLIdent
-	DateType  SQLType
-	IsPrimary bool
-	IsUnique  bool
-	Default   ASTNode
-	AllowNull bool
+	Name        *SQLIdent
+	DateType    SQLType
+	IsPrimary   bool
+	IsUnique    bool
+	Default     ASTNode
+	AllowNull   bool
+	Constraints []*ColumnConstraint
 }
 
 func (s *SQLColumnDef) Eval() string {
 	str := fmt.Sprintf("%s %s", s.Name.Eval(), s.DateType.Eval())
-	if s.IsPrimary {
-		str += " PRIMARY KEY"
-	}
-	if s.IsUnique {
-		str += " UNIQUE"
-	}
 	if s.Default != nil {
 		str += fmt.Sprintf(" DEFAULT %s", s.Default.Eval())
 	}
-	if !s.AllowNull {
-		str += " NOT NULL"
+
+	for _, c := range s.Constraints {
+		str += fmt.Sprintf("%s", c.Eval())
 	}
 	return str
+}
+
+type ColumnConstraint struct {
+	Name *SQLIdentifier
+	Spec ColumnConstraintSpec
+}
+
+func (c *ColumnConstraint) Eval() string {
+	s := " "
+	if c.Name != nil {
+		s += fmt.Sprintf("CONSTRAINT %s ", c.Name.Eval())
+	}
+	return s + c.Spec.Eval()
+}
+
+// https://jakewheat.github.io/sql-overview/sql-2008-foundation-grammar.html#column-constraint
+type ColumnConstraintSpec interface {
+	ASTNode
+}
+
+type NotNullColumnSpec struct {
+}
+
+func (*NotNullColumnSpec) Eval() string {
+	return fmt.Sprintf("NOT NULL")
+}
+
+type UniqueColumnSpec struct {
+	IsPrimaryKey bool
+}
+
+func (u *UniqueColumnSpec) Eval() string {
+	if u.IsPrimaryKey {
+		return fmt.Sprintf("PRIMARY KEY")
+	} else {
+		return fmt.Sprintf("UNIQUE")
+	}
+}
+
+type ReferencesColumnSpec struct {
+	TableName *SQLObjectName
+	Columns   []*SQLIdent
+}
+
+func (r *ReferencesColumnSpec) Eval() string {
+	return fmt.Sprintf("REFERENCES %s(%s)", r.TableName.Eval(), commaSeparatedString(r.Columns))
+}
+
+type CheckColumnSpec struct {
+	Expr ASTNode
+}
+
+func (c *CheckColumnSpec) Eval() string {
+	return fmt.Sprintf("CHECK(%s)", c.Expr.Eval())
 }
 
 type FileFormat int

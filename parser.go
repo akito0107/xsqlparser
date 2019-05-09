@@ -422,6 +422,10 @@ func (p *Parser) parseColumns() ([]*sqlast.SQLColumnDef, error) {
 	return columns, nil
 }
 
+func (p *Parser) parseColumnConstraint() (*sqlast.ColumnConstraint, error) {
+
+}
+
 func (p *Parser) parseDelete() (sqlast.SQLStmt, error) {
 	p.expectKeyword("FROM")
 	tableName, err := p.parseObjectName()

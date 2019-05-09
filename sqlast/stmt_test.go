@@ -173,26 +173,103 @@ func TestSQLCreateTable_Eval(t *testing.T) {
 				Name: NewSQLObjectName("persons"),
 				Columns: []*SQLColumnDef{
 					{
-						Name:      NewSQLIdent("person_id"),
-						DateType:  &Int{},
-						IsPrimary: true,
+						Name:     NewSQLIdent("person_id"),
+						DateType: &Int{},
+						Constraints: []*ColumnConstraint{
+							{
+								Spec: &UniqueColumnSpec{
+									IsPrimaryKey: true,
+								},
+							},
+							{
+								Spec: &NotNullColumnSpec{},
+							},
+						},
 					},
 					{
 						Name: NewSQLIdent("last_name"),
 						DateType: &VarcharType{
 							Size: NewSize(255),
 						},
+						Constraints: []*ColumnConstraint{
+							{
+								Spec: &NotNullColumnSpec{},
+							},
+						},
+					},
+					{
+						Name:     NewSQLIdent("test_id"),
+						DateType: &Int{},
+						Constraints: []*ColumnConstraint{
+							{
+								Spec: &NotNullColumnSpec{},
+							},
+							{
+								Spec: &ReferencesColumnSpec{
+									TableName: NewSQLObjectName("test"),
+									Columns:   []*SQLIdent{NewSQLIdent("id1"), NewSQLIdent("id2")},
+								},
+							},
+						},
+					},
+					{
+						Name: NewSQLIdent("email"),
+						DateType: &VarcharType{
+							Size: NewSize(255),
+						},
+						Constraints: []*ColumnConstraint{
+							{
+								Spec: &UniqueColumnSpec{},
+							},
+							{
+								Spec: &NotNullColumnSpec{},
+							},
+						},
+					},
+					{
+						Name:     NewSQLIdent("age"),
+						DateType: &Int{},
+						Constraints: []*ColumnConstraint{
+							{
+								Spec: &NotNullColumnSpec{},
+							},
+							{
+								Spec: &CheckColumnSpec{
+									Expr: &SQLBinaryExpr{
+										Op: And,
+										Left: &SQLBinaryExpr{
+											Op:    Gt,
+											Left:  NewSQLIdent("age"),
+											Right: NewLongValue(0),
+										},
+										Right: &SQLBinaryExpr{
+											Op:    Lt,
+											Left:  NewSQLIdent("age"),
+											Right: NewLongValue(100),
+										},
+									},
+								},
+							},
+						},
 					},
 					{
 						Name:     NewSQLIdent("created_at"),
 						DateType: &Timestamp{},
 						Default:  NewSQLIdent("CURRENT_TIMESTAMP"),
+						Constraints: []*ColumnConstraint{
+							{
+								Spec: &NotNullColumnSpec{},
+							},
+						},
 					},
 				},
 			},
 			out: "CREATE TABLE persons (" +
 				"person_id int PRIMARY KEY NOT NULL, " +
 				"last_name character varying(255) NOT NULL, " +
+				"test_id int NOT NULL REFERENCES test(id1, id2), " +
+				"email character varying(255) UNIQUE NOT NULL, " +
+				"age int NOT NULL CHECK(age > 0 AND age < 100), " +
 				"created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL)",
 		},
 	}
