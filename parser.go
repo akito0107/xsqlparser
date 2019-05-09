@@ -383,8 +383,10 @@ func (p *Parser) parseColumns() ([]*sqlast.SQLColumnDef, error) {
 		if err != nil {
 			return nil, errors.Errorf("parseDataType failed %w", err)
 		}
-		isPrimary, _ := p.parseKeywords("PRIMARY", "KEY")
-		isUnique, _ := p.parseKeyword("UNIQUE")
+
+		t, _ := p.peekToken()
+
+		if t.Tok == SQLKeyword
 
 		var def sqlast.ASTNode
 		if ok, _ := p.parseKeyword("DEFAULT"); ok {
@@ -394,21 +396,10 @@ func (p *Parser) parseColumns() ([]*sqlast.SQLColumnDef, error) {
 			}
 		}
 
-		var allowNull bool
-		if ok, _ := p.parseKeywords("NOT", "NULL"); ok {
-			allowNull = false
-		} else {
-			p.parseKeyword("NULL")
-			allowNull = true
-		}
-
 		columns = append(columns, &sqlast.SQLColumnDef{
-			Name:      columnName.AsSQLIdent(),
-			DateType:  dataType,
-			IsPrimary: isPrimary,
-			IsUnique:  isUnique,
-			Default:   def,
-			AllowNull: allowNull,
+			Name:     columnName.AsSQLIdent(),
+			DateType: dataType,
+			Default:  def,
 		})
 
 		t, _ := p.nextToken()
@@ -422,8 +413,66 @@ func (p *Parser) parseColumns() ([]*sqlast.SQLColumnDef, error) {
 	return columns, nil
 }
 
-func (p *Parser) parseColumnConstraint() (*sqlast.ColumnConstraint, error) {
+func (p *Parser) parseColumnConstraints() ([]*sqlast.ColumnConstraint, error) {
+	var constraints []*sqlast.ColumnConstraint
 
+	for {
+		tok, _ := p.peekToken()
+		word, ok := tok.Value.(*SQLWord)
+
+		var name *sqlast.SQLIdentifier
+		if ok && word.Keyword == "CONSTRAINT" {
+			p.nextToken()
+			i, err := p.parseIdentifier()
+			if err != nil {
+				return nil, errors.Errorf("parseIdentifier failed: %w", err)
+			}
+			name = &sqlast.SQLIdentifier{Ident: i}
+		}
+
+		tok, _ = p.peekToken()
+		if tok.Tok != SQLKeyword {
+			break
+		}
+
+		var spec sqlast.ColumnConstraintSpec
+
+		word = tok.Value.(*SQLWord)
+		switch word.Keyword {
+		case "NOT":
+			p.expectKeyword("NULL")
+			spec = &sqlast.NotNullColumnSpec{}
+		case "UNIQUE":
+			spec = &sqlast.UniqueColumnSpec{}
+		case "PRIMARY":
+			p.expectKeyword("KEY")
+			spec = &sqlast.UniqueColumnSpec{IsPrimaryKey: true}
+		case "REFERENCES":
+			tname, err := p.parseObjectName()
+			if err != nil {
+				return nil, errors.Errorf("parseObjectName failed: %w", err)
+			}
+			p.expectToken(LParen)
+			columns, err := p.parseColumnNames()
+			if err != nil {
+				return nil, errors.Errorf("parseColumnNames failed: %w", err)
+			}
+			p.expectToken(RParen)
+			spec = &sqlast.ReferencesColumnSpec{
+				TableName: tname,
+				Columns:   columns,
+			}
+		default:
+			break
+		}
+
+		constraints = append(constraints, &sqlast.ColumnConstraint{
+			Name: name,
+			Spec: spec,
+		})
+
+	}
+	return constraints, nil
 }
 
 func (p *Parser) parseDelete() (sqlast.SQLStmt, error) {
