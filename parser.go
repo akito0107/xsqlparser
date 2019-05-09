@@ -1,6 +1,7 @@
 package xsqlparser
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"strconv"
@@ -951,11 +952,28 @@ func (p *Parser) parseLimit() (sqlast.ASTNode, error) {
 	return sqlast.NewLongValue(int64(i)), nil
 }
 
+// TODO Must~
+func (p *Parser) expectKeyword(expected string) {
+	ok, err := p.parseKeyword(expected)
+	if err != nil || !ok {
+		for i := 0; i < int(p.index); i++ {
+			fmt.Printf("%v", p.tokens[i].Value)
+		}
+		fmt.Println()
+		log.Fatalf("should be expected keyword: %s err: %v", expected, err)
+	}
+}
+
 func (p *Parser) expectToken(expected Token) {
 	ok, err := p.consumeToken(expected)
 	if err != nil || !ok {
 		tok, _ := p.peekToken()
-		log.Fatalf("should be %s token, but %v,  err: %+v", expected, tok, err)
+
+		for i := 0; i < int(p.index); i++ {
+			fmt.Printf("%v", p.tokens[i].Value)
+		}
+		fmt.Println()
+		log.Fatalf("should be %s token, but %+v,  err: %+v", expected, tok, err)
 	}
 }
 
@@ -1102,7 +1120,7 @@ func (p *Parser) parseInfix(expr sqlast.ASTNode, precedence uint) (sqlast.ASTNod
 	if tok.Tok == SQLKeyword {
 		word := tok.Value.(*SQLWord)
 
-		switch word.Value {
+		switch word.Keyword {
 		case "IS":
 			if ok, _ := p.parseKeyword("NULL"); ok {
 				return &sqlast.SQLIsNull{
@@ -1184,7 +1202,7 @@ func (p *Parser) parseBetween(expr sqlast.ASTNode, negated bool) (sqlast.ASTNode
 	if err != nil {
 		return nil, errors.Errorf("parsePrefix %w", err)
 	}
-	p.expectKeyword("BETWEEN")
+	p.expectKeyword("AND")
 	high, err := p.parsePrefix()
 	if err != nil {
 		return nil, errors.Errorf("parsePrefix %w", err)
@@ -1966,14 +1984,6 @@ func (p *Parser) tilNonWhitespace() (uint, error) {
 			continue
 		}
 		return idx, nil
-	}
-}
-
-// TODO Must~
-func (p *Parser) expectKeyword(expected string) {
-	ok, err := p.parseKeyword(expected)
-	if err != nil || !ok {
-		log.Fatalf("should be expected keyword: %s err: %v", expected, err)
 	}
 }
 
