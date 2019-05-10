@@ -2,6 +2,7 @@
 
 [![Build Status](https://dev.azure.com/akito01070362/xsqlparser/_apis/build/status/akito0107.xsqlparser?branchName=master)](https://dev.azure.com/akito01070362/xsqlparser/_build/latest?definitionId=2&branchName=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/akito0107/xsqlparser)](https://goreportcard.com/report/github.com/akito0107/xsqlparesr)
+[![codecov](https://codecov.io/gh/akito0107/xsqlparser/branch/master/graph/badge.svg)](https://codecov.io/gh/akito0107/xsqlparser)
 
 __[WORK IN PROGRESS] currently only supports very limited queries. DO NOT USE IN PRODUCTION.__
 
@@ -21,7 +22,7 @@ $ go get -u github.com/akito0107/xsqlparser/...
 ```
 
 ### How to use
-__Currently only supports `SELECT` query.__
+__Currently supports `SELECT`,`CREATE TABLE`,`CREATE VIEW`,`INSERT`,`UPDATE`,`DELETE`.__
 
 - simple case
 ```go
