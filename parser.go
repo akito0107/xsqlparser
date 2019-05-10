@@ -332,15 +332,15 @@ func (p *Parser) parseCreateTable() (sqlast.SQLStmt, error) {
 		return nil, errors.Errorf("parseObjectName failed %w", err)
 	}
 
-	columns, err := p.parseColumns()
+	elements, err := p.parseElements()
 	if err != nil {
-		return nil, errors.Errorf("parseColumns failed %w", err)
+		return nil, errors.Errorf("parseElements failed %w", err)
 	}
 
 	return &sqlast.SQLCreateTable{
 		Name:     name,
-		Columns:  columns,
 		External: false,
+		Elements: elements,
 	}, nil
 }
 
@@ -365,10 +365,10 @@ func (p *Parser) parseCreateView() (sqlast.SQLStmt, error) {
 
 }
 
-func (p *Parser) parseColumns() ([]*sqlast.SQLColumnDef, error) {
-	var columns []*sqlast.SQLColumnDef
+func (p *Parser) parseElements() ([]sqlast.TableElement, error) {
+	var elements []sqlast.TableElement
 	if ok, _ := p.consumeToken(LParen); !ok {
-		return columns, nil
+		return elements, nil
 	}
 
 	for {
@@ -391,7 +391,7 @@ func (p *Parser) parseColumns() ([]*sqlast.SQLColumnDef, error) {
 			return nil, errors.Errorf("parseColumnDefinition: %w", err)
 		}
 
-		columns = append(columns, &sqlast.SQLColumnDef{
+		elements = append(elements, &sqlast.SQLColumnDef{
 			Constraints: specs,
 			Name:        columnName.AsSQLIdent(),
 			DateType:    dataType,
@@ -406,7 +406,7 @@ func (p *Parser) parseColumns() ([]*sqlast.SQLColumnDef, error) {
 		}
 	}
 
-	return columns, nil
+	return elements, nil
 }
 
 func (p *Parser) parseColumnDefinition() (sqlast.ASTNode, []*sqlast.ColumnConstraint, error) {

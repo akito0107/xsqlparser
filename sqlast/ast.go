@@ -250,6 +250,10 @@ func commaSeparatedString(list interface{}) string {
 		for _, l := range s {
 			strs = append(strs, l.Eval())
 		}
+	case []TableElement:
+		for _, l := range s {
+			strs = append(strs, l.Eval())
+		}
 	case []SQLSelectItem:
 		for _, l := range s {
 			strs = append(strs, l.Eval())
@@ -267,6 +271,10 @@ func commaSeparatedString(list interface{}) string {
 			strs = append(strs, l.Eval())
 		}
 	case []*SQLColumnDef:
+		for _, l := range s {
+			strs = append(strs, l.Eval())
+		}
+	case []*TableConstraint:
 		for _, l := range s {
 			strs = append(strs, l.Eval())
 		}

@@ -362,8 +362,8 @@ func TestParser_ParseStatement(t *testing.T) {
 					"created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL)",
 				out: &sqlast.SQLCreateTable{
 					Name: sqlast.NewSQLObjectName("persons"),
-					Columns: []*sqlast.SQLColumnDef{
-						{
+					Elements: []sqlast.TableElement{
+						&sqlast.SQLColumnDef{
 							Name:     sqlast.NewSQLIdent("person_id"),
 							DateType: &sqlast.UUID{},
 							Constraints: []*sqlast.ColumnConstraint{
@@ -377,7 +377,7 @@ func TestParser_ParseStatement(t *testing.T) {
 								},
 							},
 						},
-						{
+						&sqlast.SQLColumnDef{
 							Name: sqlast.NewSQLIdent("first_name"),
 							DateType: &sqlast.VarcharType{
 								Size: sqlast.NewSize(255),
@@ -388,7 +388,7 @@ func TestParser_ParseStatement(t *testing.T) {
 								},
 							},
 						},
-						{
+						&sqlast.SQLColumnDef{
 							Name: sqlast.NewSQLIdent("last_name"),
 							DateType: &sqlast.VarcharType{
 								Size: sqlast.NewSize(255),
@@ -399,7 +399,7 @@ func TestParser_ParseStatement(t *testing.T) {
 								},
 							},
 						},
-						{
+						&sqlast.SQLColumnDef{
 							Name:     sqlast.NewSQLIdent("created_at"),
 							DateType: &sqlast.Timestamp{},
 							Default:  sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("CURRENT_TIMESTAMP")),
@@ -423,8 +423,8 @@ func TestParser_ParseStatement(t *testing.T) {
 					"created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL)",
 				out: &sqlast.SQLCreateTable{
 					Name: sqlast.NewSQLObjectName("persons"),
-					Columns: []*sqlast.SQLColumnDef{
-						{
+					Elements: []sqlast.TableElement{
+						&sqlast.SQLColumnDef{
 							Name:     sqlast.NewSQLIdent("person_id"),
 							DateType: &sqlast.Int{},
 							Constraints: []*sqlast.ColumnConstraint{
@@ -438,7 +438,7 @@ func TestParser_ParseStatement(t *testing.T) {
 								},
 							},
 						},
-						{
+						&sqlast.SQLColumnDef{
 							Name: sqlast.NewSQLIdent("last_name"),
 							DateType: &sqlast.VarcharType{
 								Size: sqlast.NewSize(255),
@@ -449,7 +449,7 @@ func TestParser_ParseStatement(t *testing.T) {
 								},
 							},
 						},
-						{
+						&sqlast.SQLColumnDef{
 							Name:     sqlast.NewSQLIdent("test_id"),
 							DateType: &sqlast.Int{},
 							Constraints: []*sqlast.ColumnConstraint{
@@ -464,7 +464,7 @@ func TestParser_ParseStatement(t *testing.T) {
 								},
 							},
 						},
-						{
+						&sqlast.SQLColumnDef{
 							Name: sqlast.NewSQLIdent("email"),
 							DateType: &sqlast.VarcharType{
 								Size: sqlast.NewSize(255),
@@ -478,7 +478,7 @@ func TestParser_ParseStatement(t *testing.T) {
 								},
 							},
 						},
-						{
+						&sqlast.SQLColumnDef{
 							Name:     sqlast.NewSQLIdent("age"),
 							DateType: &sqlast.Int{},
 							Constraints: []*sqlast.ColumnConstraint{
@@ -504,7 +504,7 @@ func TestParser_ParseStatement(t *testing.T) {
 								},
 							},
 						},
-						{
+						&sqlast.SQLColumnDef{
 							Name:     sqlast.NewSQLIdent("created_at"),
 							DateType: &sqlast.Timestamp{},
 							Default:  sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("CURRENT_TIMESTAMP")),

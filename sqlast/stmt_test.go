@@ -171,8 +171,8 @@ func TestSQLCreateTable_Eval(t *testing.T) {
 			name: "simple case",
 			in: &SQLCreateTable{
 				Name: NewSQLObjectName("persons"),
-				Columns: []*SQLColumnDef{
-					{
+				Elements: []TableElement{
+					&SQLColumnDef{
 						Name:     NewSQLIdent("person_id"),
 						DateType: &Int{},
 						Constraints: []*ColumnConstraint{
@@ -186,7 +186,7 @@ func TestSQLCreateTable_Eval(t *testing.T) {
 							},
 						},
 					},
-					{
+					&SQLColumnDef{
 						Name: NewSQLIdent("last_name"),
 						DateType: &VarcharType{
 							Size: NewSize(255),
@@ -197,7 +197,7 @@ func TestSQLCreateTable_Eval(t *testing.T) {
 							},
 						},
 					},
-					{
+					&SQLColumnDef{
 						Name:     NewSQLIdent("test_id"),
 						DateType: &Int{},
 						Constraints: []*ColumnConstraint{
@@ -212,7 +212,7 @@ func TestSQLCreateTable_Eval(t *testing.T) {
 							},
 						},
 					},
-					{
+					&SQLColumnDef{
 						Name: NewSQLIdent("email"),
 						DateType: &VarcharType{
 							Size: NewSize(255),
@@ -226,7 +226,7 @@ func TestSQLCreateTable_Eval(t *testing.T) {
 							},
 						},
 					},
-					{
+					&SQLColumnDef{
 						Name:     NewSQLIdent("age"),
 						DateType: &Int{},
 						Constraints: []*ColumnConstraint{
@@ -252,7 +252,7 @@ func TestSQLCreateTable_Eval(t *testing.T) {
 							},
 						},
 					},
-					{
+					&SQLColumnDef{
 						Name:     NewSQLIdent("created_at"),
 						DateType: &Timestamp{},
 						Default:  NewSQLIdent("CURRENT_TIMESTAMP"),
@@ -271,6 +271,55 @@ func TestSQLCreateTable_Eval(t *testing.T) {
 				"email character varying(255) UNIQUE NOT NULL, " +
 				"age int NOT NULL CHECK(age > 0 AND age < 100), " +
 				"created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL)",
+		},
+		{
+			name: "with table constraint",
+			in: &SQLCreateTable{
+				Name: NewSQLObjectName("persons"),
+				Elements: []TableElement{
+					&SQLColumnDef{
+						Name:     NewSQLIdent("person_id"),
+						DateType: &Int{},
+					},
+					&TableConstraint{
+						Name: NewSQLObjectName("production"),
+						Spec: &UniqueTableConstraint{
+							Columns: []*SQLIdent{NewSQLIdent("test_column")},
+						},
+					},
+					&TableConstraint{
+						Spec: &UniqueTableConstraint{
+							Columns:   []*SQLIdent{NewSQLIdent("person_id")},
+							IsPrimary: true,
+						},
+					},
+					&TableConstraint{
+						Spec: &CheckTableConstraint{
+							Expr: &SQLBinaryExpr{
+								Left:  NewSQLIdentifier(NewSQLIdent("id")),
+								Op:    Gt,
+								Right: NewLongValue(100),
+							},
+						},
+					},
+					&TableConstraint{
+						Spec: &ReferentialTableConstraint{
+							Columns: []*SQLIdent{NewSQLIdent("test_id")},
+							KeyExpr: &ReferenceKeyExpr{
+								TableName: NewSQLObjectName("other_table"),
+								Columns:   []*SQLIdent{NewSQLIdent("col1"), NewSQLIdent("col2")},
+							},
+						},
+					},
+				},
+			},
+			out: "CREATE TABLE persons (" +
+				"person_id int, " +
+				"CONSTRAINT production UNIQUE(test_column), " +
+				"PRIMARY KEY(person_id), " +
+				"CHECK(id > 100), " +
+				"FOREIGN KEY(test_id) REFERENCES other_table(col1, col2)" +
+				")",
 		},
 	}
 	for _, c := range cases {

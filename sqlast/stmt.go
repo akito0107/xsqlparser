@@ -110,7 +110,7 @@ func (s *SQLCreateView) Eval() string {
 
 type SQLCreateTable struct {
 	Name       *SQLObjectName
-	Columns    []*SQLColumnDef
+	Elements   []TableElement
 	External   bool
 	FileFormat *FileFormat
 	Location   *string
@@ -119,9 +119,9 @@ type SQLCreateTable struct {
 func (s *SQLCreateTable) Eval() string {
 	if s.External {
 		return fmt.Sprintf("CREATE EXETRNAL TABLE %s (%s) STORED AS %s LOCATION '%s'",
-			s.Name.Eval(), commaSeparatedString(s.Columns), s.FileFormat.Eval(), *s.Location)
+			s.Name.Eval(), commaSeparatedString(s.Elements), s.FileFormat.Eval(), *s.Location)
 	}
-	return fmt.Sprintf("CREATE TABLE %s (%s)", s.Name.Eval(), commaSeparatedString(s.Columns))
+	return fmt.Sprintf("CREATE TABLE %s (%s)", s.Name.Eval(), commaSeparatedString(s.Elements))
 }
 
 type SQLAlterTable struct {
@@ -142,6 +142,71 @@ func (s *SQLAssignment) Eval() string {
 	return fmt.Sprintf("%s = %s", s.ID.Eval(), s.Value.Eval())
 }
 
+type TableElement interface {
+	ASTNode
+}
+
+//TableElement
+type TableConstraint struct {
+	Name *SQLObjectName
+	Spec TableConstraintSpec
+}
+
+func (t *TableConstraint) Eval() string {
+	var str string
+
+	if t.Name != nil {
+		str += fmt.Sprintf("CONSTRAINT %s ", t.Name.Eval())
+	}
+
+	str += t.Spec.Eval()
+
+	return str
+}
+
+type TableConstraintSpec interface {
+	ASTNode
+}
+
+type UniqueTableConstraint struct {
+	IsPrimary bool
+	Columns   []*SQLIdent
+}
+
+func (u *UniqueTableConstraint) Eval() string {
+	if u.IsPrimary {
+		return fmt.Sprintf("PRIMARY KEY(%s)", commaSeparatedString(u.Columns))
+	}
+	return fmt.Sprintf("UNIQUE(%s)", commaSeparatedString(u.Columns))
+}
+
+type ReferentialTableConstraint struct {
+	Columns []*SQLIdent
+	KeyExpr *ReferenceKeyExpr
+}
+
+func (r *ReferentialTableConstraint) Eval() string {
+	return fmt.Sprintf("FOREIGN KEY(%s) REFERENCES %s", commaSeparatedString(r.Columns), r.KeyExpr.Eval())
+}
+
+type ReferenceKeyExpr struct {
+	TableName *SQLObjectName
+	Columns   []*SQLIdent
+}
+
+func (r *ReferenceKeyExpr) Eval() string {
+	return fmt.Sprintf("%s(%s)", r.TableName.Eval(), commaSeparatedString(r.Columns))
+}
+
+type CheckTableConstraint struct {
+	Expr ASTNode
+}
+
+func (c *CheckTableConstraint) Eval() string {
+	return fmt.Sprintf("CHECK(%s)", c.Expr.Eval())
+}
+
+//TableElement
 type SQLColumnDef struct {
 	AllowNull   bool
 	Name        *SQLIdent
