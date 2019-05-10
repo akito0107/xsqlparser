@@ -6,11 +6,10 @@ import (
 	"strings"
 )
 
-type SQLStmt interface {
-	ASTNode
-}
+//go:generate genmark -t SQLStmt -e ASTNode
 
 type SQLInsert struct {
+	sqlStmt
 	TableName *SQLObjectName
 	Columns   []*SQLIdent
 	Values    [][]ASTNode
@@ -33,6 +32,7 @@ func (s *SQLInsert) Eval() string {
 }
 
 type SQLCopy struct {
+	sqlStmt
 	TableName SQLObjectName
 	Columns   []SQLIdent
 	Values    []*string
@@ -62,6 +62,7 @@ func (s *SQLCopy) Eval() string {
 }
 
 type SQLUpdate struct {
+	sqlStmt
 	TableName   *SQLObjectName
 	Assignments []*SQLAssignment
 	Selection   ASTNode
@@ -80,6 +81,7 @@ func (s *SQLUpdate) Eval() string {
 }
 
 type SQLDelete struct {
+	sqlStmt
 	TableName *SQLObjectName
 	Selection ASTNode
 }
@@ -95,6 +97,7 @@ func (s *SQLDelete) Eval() string {
 }
 
 type SQLCreateView struct {
+	sqlStmt
 	Name         *SQLObjectName
 	Query        *SQLQuery
 	Materialized bool
@@ -109,6 +112,7 @@ func (s *SQLCreateView) Eval() string {
 }
 
 type SQLCreateTable struct {
+	sqlStmt
 	Name       *SQLObjectName
 	Elements   []TableElement
 	External   bool
@@ -125,6 +129,7 @@ func (s *SQLCreateTable) Eval() string {
 }
 
 type SQLAlterTable struct {
+	sqlStmt
 	TableName *SQLObjectName
 	Operation AlterOperation
 }
@@ -142,12 +147,10 @@ func (s *SQLAssignment) Eval() string {
 	return fmt.Sprintf("%s = %s", s.ID.Eval(), s.Value.Eval())
 }
 
-type TableElement interface {
-	ASTNode
-}
+//go:generate genmark -t TableElement -e ASTNode
 
-//TableElement
 type TableConstraint struct {
+	tableElement
 	Name *SQLIdentifier
 	Spec TableConstraintSpec
 }
@@ -164,11 +167,10 @@ func (t *TableConstraint) Eval() string {
 	return str
 }
 
-type TableConstraintSpec interface {
-	ASTNode
-}
+//go:generate genmark -t TableConstraintSpec -e ASTNode
 
 type UniqueTableConstraint struct {
+	tableConstraintSpec
 	IsPrimary bool
 	Columns   []*SQLIdent
 }
@@ -181,6 +183,7 @@ func (u *UniqueTableConstraint) Eval() string {
 }
 
 type ReferentialTableConstraint struct {
+	tableConstraintSpec
 	Columns []*SQLIdent
 	KeyExpr *ReferenceKeyExpr
 }
@@ -199,6 +202,7 @@ func (r *ReferenceKeyExpr) Eval() string {
 }
 
 type CheckTableConstraint struct {
+	tableConstraintSpec
 	Expr ASTNode
 }
 
@@ -206,8 +210,8 @@ func (c *CheckTableConstraint) Eval() string {
 	return fmt.Sprintf("CHECK(%s)", c.Expr.Eval())
 }
 
-//TableElement
 type SQLColumnDef struct {
+	tableElement
 	AllowNull   bool
 	Name        *SQLIdent
 	DateType    SQLType

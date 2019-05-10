@@ -134,7 +134,13 @@ func TestSQLCreateView_Eval(t *testing.T) {
 									Node: NewSQLIdent("contract_name"),
 								},
 							},
-							Relation: NewSQLIdent("customers"),
+							Relation: &Table{
+								Name: &SQLObjectName{
+									Idents: []*SQLIdent{
+										NewSQLIdent("customers"),
+									},
+								},
+							},
 							Selection: &SQLBinaryExpr{
 								Op:    Eq,
 								Left:  NewSQLIdent("country"),
