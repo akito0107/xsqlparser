@@ -148,7 +148,7 @@ type TableElement interface {
 
 //TableElement
 type TableConstraint struct {
-	Name *SQLObjectName
+	Name *SQLIdentifier
 	Spec TableConstraintSpec
 }
 
@@ -190,7 +190,7 @@ func (r *ReferentialTableConstraint) Eval() string {
 }
 
 type ReferenceKeyExpr struct {
-	TableName *SQLObjectName
+	TableName *SQLIdentifier
 	Columns   []*SQLIdent
 }
 

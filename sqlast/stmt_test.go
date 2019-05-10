@@ -282,7 +282,7 @@ func TestSQLCreateTable_Eval(t *testing.T) {
 						DateType: &Int{},
 					},
 					&TableConstraint{
-						Name: NewSQLObjectName("production"),
+						Name: NewSQLIdentifier(NewSQLIdent("production")),
 						Spec: &UniqueTableConstraint{
 							Columns: []*SQLIdent{NewSQLIdent("test_column")},
 						},
@@ -306,7 +306,7 @@ func TestSQLCreateTable_Eval(t *testing.T) {
 						Spec: &ReferentialTableConstraint{
 							Columns: []*SQLIdent{NewSQLIdent("test_id")},
 							KeyExpr: &ReferenceKeyExpr{
-								TableName: NewSQLObjectName("other_table"),
+								TableName: NewSQLIdentifier(NewSQLIdent("other_table")),
 								Columns:   []*SQLIdent{NewSQLIdent("col1"), NewSQLIdent("col2")},
 							},
 						},

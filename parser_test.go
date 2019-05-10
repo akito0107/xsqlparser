@@ -518,6 +518,55 @@ func TestParser_ParseStatement(t *testing.T) {
 				},
 			},
 			{
+				name: "with table constraint",
+				in: "CREATE TABLE persons (" +
+					"person_id int, " +
+					"CONSTRAINT production UNIQUE(test_column), " +
+					"PRIMARY KEY(person_id), " +
+					"CHECK(id > 100), " +
+					"FOREIGN KEY(test_id) REFERENCES other_table(col1, col2)" +
+					")",
+				out: &sqlast.SQLCreateTable{
+					Name: sqlast.NewSQLObjectName("persons"),
+					Elements: []sqlast.TableElement{
+						&sqlast.SQLColumnDef{
+							Name:     sqlast.NewSQLIdent("person_id"),
+							DateType: &sqlast.Int{},
+						},
+						&sqlast.TableConstraint{
+							Name: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("production")),
+							Spec: &sqlast.UniqueTableConstraint{
+								Columns: []*sqlast.SQLIdent{sqlast.NewSQLIdent("test_column")},
+							},
+						},
+						&sqlast.TableConstraint{
+							Spec: &sqlast.UniqueTableConstraint{
+								Columns:   []*sqlast.SQLIdent{sqlast.NewSQLIdent("person_id")},
+								IsPrimary: true,
+							},
+						},
+						&sqlast.TableConstraint{
+							Spec: &sqlast.CheckTableConstraint{
+								Expr: &sqlast.SQLBinaryExpr{
+									Left:  sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("id")),
+									Op:    sqlast.Gt,
+									Right: sqlast.NewLongValue(100),
+								},
+							},
+						},
+						&sqlast.TableConstraint{
+							Spec: &sqlast.ReferentialTableConstraint{
+								Columns: []*sqlast.SQLIdent{sqlast.NewSQLIdent("test_id")},
+								KeyExpr: &sqlast.ReferenceKeyExpr{
+									TableName: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("other_table")),
+									Columns:   []*sqlast.SQLIdent{sqlast.NewSQLIdent("col1"), sqlast.NewSQLIdent("col2")},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
 				name: "create view",
 				in:   "CREATE VIEW comedies AS SELECT * FROM films WHERE kind = 'Comedy'",
 				out: &sqlast.SQLCreateView{
@@ -551,7 +600,7 @@ func TestParser_ParseStatement(t *testing.T) {
 				}
 				ast, err := parser.ParseStatement()
 				if err != nil {
-					t.Fatal(err)
+					t.Fatalf("%+v", err)
 				}
 
 				if diff := cmp.Diff(c.out, ast); diff != "" {
