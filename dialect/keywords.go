@@ -44,6 +44,7 @@ func init() {
 	Keywords[CAST] = struct{}{}
 	Keywords[CEIL] = struct{}{}
 	Keywords[CEILING] = struct{}{}
+	Keywords[CHR] = struct{}{}
 	Keywords[CHAR] = struct{}{}
 	Keywords[CHAR_LENGTH] = struct{}{}
 	Keywords[CHARACTER] = struct{}{}
@@ -423,6 +424,7 @@ const (
 	CAST                                    = "CAST"
 	CEIL                                    = "CEIL"
 	CEILING                                 = "CEILING"
+	CHR                                     = "CHR"
 	CHAR                                    = "CHAR"
 	CHAR_LENGTH                             = "CHAR_LENGTH"
 	CHARACTER                               = "CHARACTER"

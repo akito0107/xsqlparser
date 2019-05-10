@@ -1,6 +1,7 @@
 package xsqlparser
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"strconv"
@@ -382,35 +383,22 @@ func (p *Parser) parseColumns() ([]*sqlast.SQLColumnDef, error) {
 		if err != nil {
 			return nil, errors.Errorf("parseDataType failed %w", err)
 		}
-		isPrimary, _ := p.parseKeywords("PRIMARY", "KEY")
-		isUnique, _ := p.parseKeyword("UNIQUE")
 
-		var def sqlast.ASTNode
-		if ok, _ := p.parseKeyword("DEFAULT"); ok {
-			def, err = p.parseDefaultExpr(0)
-			if err != nil {
-				return nil, errors.Errorf("parseDefaultExpr failed %w", err)
-			}
-		}
+		t, _ := p.peekToken()
 
-		var allowNull bool
-		if ok, _ := p.parseKeywords("NOT", "NULL"); ok {
-			allowNull = false
-		} else {
-			p.parseKeyword("NULL")
-			allowNull = true
+		def, specs, err := p.parseColumnDefinition()
+		if err != nil {
+			return nil, errors.Errorf("parseColumnDefinition: %w", err)
 		}
 
 		columns = append(columns, &sqlast.SQLColumnDef{
-			Name:      columnName.AsSQLIdent(),
-			DateType:  dataType,
-			IsPrimary: isPrimary,
-			IsUnique:  isUnique,
-			Default:   def,
-			AllowNull: allowNull,
+			Constraints: specs,
+			Name:        columnName.AsSQLIdent(),
+			DateType:    dataType,
+			Default:     def,
 		})
 
-		t, _ := p.nextToken()
+		t, _ = p.nextToken()
 		if t == nil || (t.Tok != Comma && t.Tok != RParen) {
 			log.Fatal("Expected ',' or ')' after column definition")
 		} else if t.Tok == RParen {
@@ -419,6 +407,121 @@ func (p *Parser) parseColumns() ([]*sqlast.SQLColumnDef, error) {
 	}
 
 	return columns, nil
+}
+
+func (p *Parser) parseColumnDefinition() (sqlast.ASTNode, []*sqlast.ColumnConstraint, error) {
+	var specs []*sqlast.ColumnConstraint
+	var def sqlast.ASTNode
+
+COLUMN_DEF_LOOP:
+	for {
+		t, _ := p.peekToken()
+		if t.Tok != SQLKeyword {
+			break
+		}
+
+		word := t.Value.(*SQLWord)
+
+		switch word.Keyword {
+		case "DEFAULT":
+			if ok, _ := p.parseKeyword("DEFAULT"); ok {
+				d, err := p.parseDefaultExpr(0)
+				if err != nil {
+					return nil, nil, errors.Errorf("parseDefaultExpr failed %w", err)
+				}
+				def = d
+				continue
+			}
+		case "CONSTRAINT", "NOT", "UNIQUE", "PRIMARY", "REFERENCES", "CHECK":
+			s, err := p.parseColumnConstraints()
+			if err != nil {
+				return nil, nil, errors.Errorf("parseColumnConstrains failed: %w", err)
+			}
+			specs = s
+		default:
+			break COLUMN_DEF_LOOP
+		}
+	}
+	return def, specs, nil
+}
+
+func (p *Parser) parseColumnConstraints() ([]*sqlast.ColumnConstraint, error) {
+	var constraints []*sqlast.ColumnConstraint
+
+CONSTRAINT_LOOP:
+	for {
+		tok, _ := p.peekToken()
+		word, ok := tok.Value.(*SQLWord)
+
+		var name *sqlast.SQLIdentifier
+		if ok && word.Keyword == "CONSTRAINT" {
+			p.nextToken()
+			i, err := p.parseIdentifier()
+			if err != nil {
+				return nil, errors.Errorf("parseIdentifier failed: %w", err)
+			}
+			name = &sqlast.SQLIdentifier{Ident: i}
+		}
+
+		tok, _ = p.peekToken()
+		if tok.Tok != SQLKeyword {
+			break
+		}
+
+		var spec sqlast.ColumnConstraintSpec
+
+		word = tok.Value.(*SQLWord)
+		switch word.Keyword {
+		case "NOT":
+			p.nextToken()
+			p.expectKeyword("NULL")
+			spec = &sqlast.NotNullColumnSpec{}
+		case "UNIQUE":
+			p.nextToken()
+			spec = &sqlast.UniqueColumnSpec{}
+		case "PRIMARY":
+			p.nextToken()
+			p.expectKeyword("KEY")
+			spec = &sqlast.UniqueColumnSpec{IsPrimaryKey: true}
+		case "REFERENCES":
+			p.nextToken()
+			tname, err := p.parseObjectName()
+			if err != nil {
+				return nil, errors.Errorf("parseObjectName failed: %w", err)
+			}
+			p.expectToken(LParen)
+			columns, err := p.parseColumnNames()
+			if err != nil {
+				return nil, errors.Errorf("parseColumnNames failed: %w", err)
+			}
+			p.expectToken(RParen)
+			spec = &sqlast.ReferencesColumnSpec{
+				TableName: tname,
+				Columns:   columns,
+			}
+		case "CHECK":
+			p.nextToken()
+			p.expectToken(LParen)
+			expr, err := p.parseExpr()
+			if err != nil {
+				return nil, errors.Errorf("parseExpr failed: %w", err)
+			}
+
+			spec = &sqlast.CheckColumnSpec{
+				Expr: expr,
+			}
+			p.expectToken(RParen)
+		default:
+			break CONSTRAINT_LOOP
+		}
+
+		constraints = append(constraints, &sqlast.ColumnConstraint{
+			Name: name,
+			Spec: spec,
+		})
+
+	}
+	return constraints, nil
 }
 
 func (p *Parser) parseDelete() (sqlast.SQLStmt, error) {
@@ -951,11 +1054,28 @@ func (p *Parser) parseLimit() (sqlast.ASTNode, error) {
 	return sqlast.NewLongValue(int64(i)), nil
 }
 
+// TODO Must~
+func (p *Parser) expectKeyword(expected string) {
+	ok, err := p.parseKeyword(expected)
+	if err != nil || !ok {
+		for i := 0; i < int(p.index); i++ {
+			fmt.Printf("%v", p.tokens[i].Value)
+		}
+		fmt.Println()
+		log.Fatalf("should be expected keyword: %s err: %v", expected, err)
+	}
+}
+
 func (p *Parser) expectToken(expected Token) {
 	ok, err := p.consumeToken(expected)
 	if err != nil || !ok {
 		tok, _ := p.peekToken()
-		log.Fatalf("should be %s token, but %v,  err: %+v", expected, tok, err)
+
+		for i := 0; i < int(p.index); i++ {
+			fmt.Printf("%v", p.tokens[i].Value)
+		}
+		fmt.Println()
+		log.Fatalf("should be %s token, but %+v,  err: %+v", expected, tok, err)
 	}
 }
 
@@ -1102,7 +1222,7 @@ func (p *Parser) parseInfix(expr sqlast.ASTNode, precedence uint) (sqlast.ASTNod
 	if tok.Tok == SQLKeyword {
 		word := tok.Value.(*SQLWord)
 
-		switch word.Value {
+		switch word.Keyword {
 		case "IS":
 			if ok, _ := p.parseKeyword("NULL"); ok {
 				return &sqlast.SQLIsNull{
@@ -1184,7 +1304,7 @@ func (p *Parser) parseBetween(expr sqlast.ASTNode, negated bool) (sqlast.ASTNode
 	if err != nil {
 		return nil, errors.Errorf("parsePrefix %w", err)
 	}
-	p.expectKeyword("BETWEEN")
+	p.expectKeyword("AND")
 	high, err := p.parsePrefix()
 	if err != nil {
 		return nil, errors.Errorf("parsePrefix %w", err)
@@ -1966,14 +2086,6 @@ func (p *Parser) tilNonWhitespace() (uint, error) {
 			continue
 		}
 		return idx, nil
-	}
-}
-
-// TODO Must~
-func (p *Parser) expectKeyword(expected string) {
-	ok, err := p.parseKeyword(expected)
-	if err != nil || !ok {
-		log.Fatalf("should be expected keyword: %s err: %v", expected, err)
 	}
 }
 

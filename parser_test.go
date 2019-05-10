@@ -364,28 +364,155 @@ func TestParser_ParseStatement(t *testing.T) {
 					Name: sqlast.NewSQLObjectName("persons"),
 					Columns: []*sqlast.SQLColumnDef{
 						{
-							Name:      sqlast.NewSQLIdent("person_id"),
-							DateType:  &sqlast.UUID{},
-							IsPrimary: true,
+							Name:     sqlast.NewSQLIdent("person_id"),
+							DateType: &sqlast.UUID{},
+							Constraints: []*sqlast.ColumnConstraint{
+								{
+									Spec: &sqlast.UniqueColumnSpec{
+										IsPrimaryKey: true,
+									},
+								},
+								{
+									Spec: &sqlast.NotNullColumnSpec{},
+								},
+							},
 						},
 						{
 							Name: sqlast.NewSQLIdent("first_name"),
 							DateType: &sqlast.VarcharType{
 								Size: sqlast.NewSize(255),
 							},
-							AllowNull: true,
-							IsUnique:  true,
+							Constraints: []*sqlast.ColumnConstraint{
+								{
+									Spec: &sqlast.UniqueColumnSpec{},
+								},
+							},
 						},
 						{
 							Name: sqlast.NewSQLIdent("last_name"),
 							DateType: &sqlast.VarcharType{
 								Size: sqlast.NewSize(255),
 							},
+							Constraints: []*sqlast.ColumnConstraint{
+								{
+									Spec: &sqlast.NotNullColumnSpec{},
+								},
+							},
 						},
 						{
 							Name:     sqlast.NewSQLIdent("created_at"),
 							DateType: &sqlast.Timestamp{},
 							Default:  sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("CURRENT_TIMESTAMP")),
+							Constraints: []*sqlast.ColumnConstraint{
+								{
+									Spec: &sqlast.NotNullColumnSpec{},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				name: "with case",
+				in: "CREATE TABLE persons (" +
+					"person_id int PRIMARY KEY NOT NULL, " +
+					"last_name character varying(255) NOT NULL, " +
+					"test_id int NOT NULL REFERENCES test(id1, id2), " +
+					"email character varying(255) UNIQUE NOT NULL, " +
+					"age int NOT NULL CHECK(age > 0 AND age < 100), " +
+					"created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL)",
+				out: &sqlast.SQLCreateTable{
+					Name: sqlast.NewSQLObjectName("persons"),
+					Columns: []*sqlast.SQLColumnDef{
+						{
+							Name:     sqlast.NewSQLIdent("person_id"),
+							DateType: &sqlast.Int{},
+							Constraints: []*sqlast.ColumnConstraint{
+								{
+									Spec: &sqlast.UniqueColumnSpec{
+										IsPrimaryKey: true,
+									},
+								},
+								{
+									Spec: &sqlast.NotNullColumnSpec{},
+								},
+							},
+						},
+						{
+							Name: sqlast.NewSQLIdent("last_name"),
+							DateType: &sqlast.VarcharType{
+								Size: sqlast.NewSize(255),
+							},
+							Constraints: []*sqlast.ColumnConstraint{
+								{
+									Spec: &sqlast.NotNullColumnSpec{},
+								},
+							},
+						},
+						{
+							Name:     sqlast.NewSQLIdent("test_id"),
+							DateType: &sqlast.Int{},
+							Constraints: []*sqlast.ColumnConstraint{
+								{
+									Spec: &sqlast.NotNullColumnSpec{},
+								},
+								{
+									Spec: &sqlast.ReferencesColumnSpec{
+										TableName: sqlast.NewSQLObjectName("test"),
+										Columns:   []*sqlast.SQLIdent{sqlast.NewSQLIdent("id1"), sqlast.NewSQLIdent("id2")},
+									},
+								},
+							},
+						},
+						{
+							Name: sqlast.NewSQLIdent("email"),
+							DateType: &sqlast.VarcharType{
+								Size: sqlast.NewSize(255),
+							},
+							Constraints: []*sqlast.ColumnConstraint{
+								{
+									Spec: &sqlast.UniqueColumnSpec{},
+								},
+								{
+									Spec: &sqlast.NotNullColumnSpec{},
+								},
+							},
+						},
+						{
+							Name:     sqlast.NewSQLIdent("age"),
+							DateType: &sqlast.Int{},
+							Constraints: []*sqlast.ColumnConstraint{
+								{
+									Spec: &sqlast.NotNullColumnSpec{},
+								},
+								{
+									Spec: &sqlast.CheckColumnSpec{
+										Expr: &sqlast.SQLBinaryExpr{
+											Op: sqlast.And,
+											Left: &sqlast.SQLBinaryExpr{
+												Op:    sqlast.Gt,
+												Left:  sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("age")),
+												Right: sqlast.NewLongValue(0),
+											},
+											Right: &sqlast.SQLBinaryExpr{
+												Op:    sqlast.Lt,
+												Left:  sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("age")),
+												Right: sqlast.NewLongValue(100),
+											},
+										},
+									},
+								},
+							},
+						},
+						{
+							Name:     sqlast.NewSQLIdent("created_at"),
+							DateType: &sqlast.Timestamp{},
+							Default:  sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("CURRENT_TIMESTAMP")),
+							Constraints: []*sqlast.ColumnConstraint{
+								{
+									Spec: &sqlast.NotNullColumnSpec{},
+								},
+							},
 						},
 					},
 				},
