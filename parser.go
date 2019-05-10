@@ -386,23 +386,19 @@ func (p *Parser) parseColumns() ([]*sqlast.SQLColumnDef, error) {
 
 		t, _ := p.peekToken()
 
-		if t.Tok == SQLKeyword
-
-		var def sqlast.ASTNode
-		if ok, _ := p.parseKeyword("DEFAULT"); ok {
-			def, err = p.parseDefaultExpr(0)
-			if err != nil {
-				return nil, errors.Errorf("parseDefaultExpr failed %w", err)
-			}
+		def, specs, err := p.parseColumnDefinition()
+		if err != nil {
+			return nil, errors.Errorf("parseColumnDefinition: %w", err)
 		}
 
 		columns = append(columns, &sqlast.SQLColumnDef{
-			Name:     columnName.AsSQLIdent(),
-			DateType: dataType,
-			Default:  def,
+			Constraints: specs,
+			Name:        columnName.AsSQLIdent(),
+			DateType:    dataType,
+			Default:     def,
 		})
 
-		t, _ := p.nextToken()
+		t, _ = p.nextToken()
 		if t == nil || (t.Tok != Comma && t.Tok != RParen) {
 			log.Fatal("Expected ',' or ')' after column definition")
 		} else if t.Tok == RParen {
@@ -413,9 +409,46 @@ func (p *Parser) parseColumns() ([]*sqlast.SQLColumnDef, error) {
 	return columns, nil
 }
 
+func (p *Parser) parseColumnDefinition() (sqlast.ASTNode, []*sqlast.ColumnConstraint, error) {
+	var specs []*sqlast.ColumnConstraint
+	var def sqlast.ASTNode
+
+COLUMN_DEF_LOOP:
+	for {
+		t, _ := p.peekToken()
+		if t.Tok != SQLKeyword {
+			break
+		}
+
+		word := t.Value.(*SQLWord)
+
+		switch word.Keyword {
+		case "DEFAULT":
+			if ok, _ := p.parseKeyword("DEFAULT"); ok {
+				d, err := p.parseDefaultExpr(0)
+				if err != nil {
+					return nil, nil, errors.Errorf("parseDefaultExpr failed %w", err)
+				}
+				def = d
+				continue
+			}
+		case "CONSTRAINT", "NOT", "UNIQUE", "PRIMARY", "REFERENCES", "CHECK":
+			s, err := p.parseColumnConstraints()
+			if err != nil {
+				return nil, nil, errors.Errorf("parseColumnConstrains failed: %w", err)
+			}
+			specs = s
+		default:
+			break COLUMN_DEF_LOOP
+		}
+	}
+	return def, specs, nil
+}
+
 func (p *Parser) parseColumnConstraints() ([]*sqlast.ColumnConstraint, error) {
 	var constraints []*sqlast.ColumnConstraint
 
+CONSTRAINT_LOOP:
 	for {
 		tok, _ := p.peekToken()
 		word, ok := tok.Value.(*SQLWord)
@@ -440,14 +473,18 @@ func (p *Parser) parseColumnConstraints() ([]*sqlast.ColumnConstraint, error) {
 		word = tok.Value.(*SQLWord)
 		switch word.Keyword {
 		case "NOT":
+			p.nextToken()
 			p.expectKeyword("NULL")
 			spec = &sqlast.NotNullColumnSpec{}
 		case "UNIQUE":
+			p.nextToken()
 			spec = &sqlast.UniqueColumnSpec{}
 		case "PRIMARY":
+			p.nextToken()
 			p.expectKeyword("KEY")
 			spec = &sqlast.UniqueColumnSpec{IsPrimaryKey: true}
 		case "REFERENCES":
+			p.nextToken()
 			tname, err := p.parseObjectName()
 			if err != nil {
 				return nil, errors.Errorf("parseObjectName failed: %w", err)
@@ -462,8 +499,20 @@ func (p *Parser) parseColumnConstraints() ([]*sqlast.ColumnConstraint, error) {
 				TableName: tname,
 				Columns:   columns,
 			}
+		case "CHECK":
+			p.nextToken()
+			p.expectToken(LParen)
+			expr, err := p.parseExpr()
+			if err != nil {
+				return nil, errors.Errorf("parseExpr failed: %w", err)
+			}
+
+			spec = &sqlast.CheckColumnSpec{
+				Expr: expr,
+			}
+			p.expectToken(RParen)
 		default:
-			break
+			break CONSTRAINT_LOOP
 		}
 
 		constraints = append(constraints, &sqlast.ColumnConstraint{

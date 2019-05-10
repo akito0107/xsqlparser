@@ -143,12 +143,10 @@ func (s *SQLAssignment) Eval() string {
 }
 
 type SQLColumnDef struct {
+	AllowNull   bool
 	Name        *SQLIdent
 	DateType    SQLType
-	IsPrimary   bool
-	IsUnique    bool
 	Default     ASTNode
-	AllowNull   bool
 	Constraints []*ColumnConstraint
 }
 
