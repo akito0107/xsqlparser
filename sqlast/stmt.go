@@ -114,14 +114,19 @@ type SQLCreateTable struct {
 	External   bool
 	FileFormat *FileFormat
 	Location   *string
+	NotExists  bool
 }
 
 func (s *SQLCreateTable) Eval() string {
-	if s.External {
-		return fmt.Sprintf("CREATE EXETRNAL TABLE %s (%s) STORED AS %s LOCATION '%s'",
-			s.Name.Eval(), commaSeparatedString(s.Elements), s.FileFormat.Eval(), *s.Location)
+	ifNotExists := ""
+	if s.NotExists {
+		ifNotExists = "IF NOT EXISTS "
 	}
-	return fmt.Sprintf("CREATE TABLE %s (%s)", s.Name.Eval(), commaSeparatedString(s.Elements))
+	if s.External {
+		return fmt.Sprintf("CREATE EXETRNAL TABLE %s%s (%s) STORED AS %s LOCATION '%s'",
+			ifNotExists, s.Name.Eval(), commaSeparatedString(s.Elements), s.FileFormat.Eval(), *s.Location)
+	}
+	return fmt.Sprintf("CREATE TABLE %s%s (%s)", ifNotExists, s.Name.Eval(), commaSeparatedString(s.Elements))
 }
 
 type SQLAlterTable struct {

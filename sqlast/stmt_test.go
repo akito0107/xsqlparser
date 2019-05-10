@@ -321,6 +321,54 @@ func TestSQLCreateTable_Eval(t *testing.T) {
 				"FOREIGN KEY(test_id) REFERENCES other_table(col1, col2)" +
 				")",
 		},
+		{
+			name: "NotExists",
+			in: &SQLCreateTable{
+				Name:      NewSQLObjectName("persons"),
+				NotExists: true,
+				Elements: []TableElement{
+					&SQLColumnDef{
+						Name:     NewSQLIdent("person_id"),
+						DateType: &Int{},
+						Constraints: []*ColumnConstraint{
+							{
+								Spec: &UniqueColumnSpec{
+									IsPrimaryKey: true,
+								},
+							},
+							{
+								Spec: &NotNullColumnSpec{},
+							},
+						},
+					},
+					&SQLColumnDef{
+						Name: NewSQLIdent("last_name"),
+						DateType: &VarcharType{
+							Size: NewSize(255),
+						},
+						Constraints: []*ColumnConstraint{
+							{
+								Spec: &NotNullColumnSpec{},
+							},
+						},
+					},
+					&SQLColumnDef{
+						Name:     NewSQLIdent("created_at"),
+						DateType: &Timestamp{},
+						Default:  NewSQLIdent("CURRENT_TIMESTAMP"),
+						Constraints: []*ColumnConstraint{
+							{
+								Spec: &NotNullColumnSpec{},
+							},
+						},
+					},
+				},
+			},
+			out: "CREATE TABLE IF NOT EXISTS persons (" +
+				"person_id int PRIMARY KEY NOT NULL, " +
+				"last_name character varying(255) NOT NULL, " +
+				"created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL)",
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
