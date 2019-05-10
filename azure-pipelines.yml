@@ -48,3 +48,13 @@ steps:
     go test -v ./...
   workingDirectory: '$(modulePath)'
   displayName: 'Get dependencies, and the test'
+
+- script: |
+    go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+  workingDirectory: '$(modulePath)'
+  displayName: 'Run test'
+
+- script: |
+    bash <(curl -s https://codecov.io/bash)
+  workingDirectory: '$(modulePath)'
+  displayName: 'upload coverage'
