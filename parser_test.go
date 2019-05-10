@@ -362,8 +362,8 @@ func TestParser_ParseStatement(t *testing.T) {
 					"created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL)",
 				out: &sqlast.SQLCreateTable{
 					Name: sqlast.NewSQLObjectName("persons"),
-					Columns: []*sqlast.SQLColumnDef{
-						{
+					Elements: []sqlast.TableElement{
+						&sqlast.SQLColumnDef{
 							Name:     sqlast.NewSQLIdent("person_id"),
 							DateType: &sqlast.UUID{},
 							Constraints: []*sqlast.ColumnConstraint{
@@ -377,7 +377,7 @@ func TestParser_ParseStatement(t *testing.T) {
 								},
 							},
 						},
-						{
+						&sqlast.SQLColumnDef{
 							Name: sqlast.NewSQLIdent("first_name"),
 							DateType: &sqlast.VarcharType{
 								Size: sqlast.NewSize(255),
@@ -388,7 +388,7 @@ func TestParser_ParseStatement(t *testing.T) {
 								},
 							},
 						},
-						{
+						&sqlast.SQLColumnDef{
 							Name: sqlast.NewSQLIdent("last_name"),
 							DateType: &sqlast.VarcharType{
 								Size: sqlast.NewSize(255),
@@ -399,7 +399,7 @@ func TestParser_ParseStatement(t *testing.T) {
 								},
 							},
 						},
-						{
+						&sqlast.SQLColumnDef{
 							Name:     sqlast.NewSQLIdent("created_at"),
 							DateType: &sqlast.Timestamp{},
 							Default:  sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("CURRENT_TIMESTAMP")),
@@ -423,8 +423,8 @@ func TestParser_ParseStatement(t *testing.T) {
 					"created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL)",
 				out: &sqlast.SQLCreateTable{
 					Name: sqlast.NewSQLObjectName("persons"),
-					Columns: []*sqlast.SQLColumnDef{
-						{
+					Elements: []sqlast.TableElement{
+						&sqlast.SQLColumnDef{
 							Name:     sqlast.NewSQLIdent("person_id"),
 							DateType: &sqlast.Int{},
 							Constraints: []*sqlast.ColumnConstraint{
@@ -438,7 +438,7 @@ func TestParser_ParseStatement(t *testing.T) {
 								},
 							},
 						},
-						{
+						&sqlast.SQLColumnDef{
 							Name: sqlast.NewSQLIdent("last_name"),
 							DateType: &sqlast.VarcharType{
 								Size: sqlast.NewSize(255),
@@ -449,7 +449,7 @@ func TestParser_ParseStatement(t *testing.T) {
 								},
 							},
 						},
-						{
+						&sqlast.SQLColumnDef{
 							Name:     sqlast.NewSQLIdent("test_id"),
 							DateType: &sqlast.Int{},
 							Constraints: []*sqlast.ColumnConstraint{
@@ -464,7 +464,7 @@ func TestParser_ParseStatement(t *testing.T) {
 								},
 							},
 						},
-						{
+						&sqlast.SQLColumnDef{
 							Name: sqlast.NewSQLIdent("email"),
 							DateType: &sqlast.VarcharType{
 								Size: sqlast.NewSize(255),
@@ -478,7 +478,7 @@ func TestParser_ParseStatement(t *testing.T) {
 								},
 							},
 						},
-						{
+						&sqlast.SQLColumnDef{
 							Name:     sqlast.NewSQLIdent("age"),
 							DateType: &sqlast.Int{},
 							Constraints: []*sqlast.ColumnConstraint{
@@ -504,13 +504,62 @@ func TestParser_ParseStatement(t *testing.T) {
 								},
 							},
 						},
-						{
+						&sqlast.SQLColumnDef{
 							Name:     sqlast.NewSQLIdent("created_at"),
 							DateType: &sqlast.Timestamp{},
 							Default:  sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("CURRENT_TIMESTAMP")),
 							Constraints: []*sqlast.ColumnConstraint{
 								{
 									Spec: &sqlast.NotNullColumnSpec{},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				name: "with table constraint",
+				in: "CREATE TABLE persons (" +
+					"person_id int, " +
+					"CONSTRAINT production UNIQUE(test_column), " +
+					"PRIMARY KEY(person_id), " +
+					"CHECK(id > 100), " +
+					"FOREIGN KEY(test_id) REFERENCES other_table(col1, col2)" +
+					")",
+				out: &sqlast.SQLCreateTable{
+					Name: sqlast.NewSQLObjectName("persons"),
+					Elements: []sqlast.TableElement{
+						&sqlast.SQLColumnDef{
+							Name:     sqlast.NewSQLIdent("person_id"),
+							DateType: &sqlast.Int{},
+						},
+						&sqlast.TableConstraint{
+							Name: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("production")),
+							Spec: &sqlast.UniqueTableConstraint{
+								Columns: []*sqlast.SQLIdent{sqlast.NewSQLIdent("test_column")},
+							},
+						},
+						&sqlast.TableConstraint{
+							Spec: &sqlast.UniqueTableConstraint{
+								Columns:   []*sqlast.SQLIdent{sqlast.NewSQLIdent("person_id")},
+								IsPrimary: true,
+							},
+						},
+						&sqlast.TableConstraint{
+							Spec: &sqlast.CheckTableConstraint{
+								Expr: &sqlast.SQLBinaryExpr{
+									Left:  sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("id")),
+									Op:    sqlast.Gt,
+									Right: sqlast.NewLongValue(100),
+								},
+							},
+						},
+						&sqlast.TableConstraint{
+							Spec: &sqlast.ReferentialTableConstraint{
+								Columns: []*sqlast.SQLIdent{sqlast.NewSQLIdent("test_id")},
+								KeyExpr: &sqlast.ReferenceKeyExpr{
+									TableName: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("other_table")),
+									Columns:   []*sqlast.SQLIdent{sqlast.NewSQLIdent("col1"), sqlast.NewSQLIdent("col2")},
 								},
 							},
 						},
@@ -551,7 +600,7 @@ func TestParser_ParseStatement(t *testing.T) {
 				}
 				ast, err := parser.ParseStatement()
 				if err != nil {
-					t.Fatal(err)
+					t.Fatalf("%+v", err)
 				}
 
 				if diff := cmp.Diff(c.out, ast); diff != "" {
