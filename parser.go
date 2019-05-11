@@ -1174,47 +1174,6 @@ func (p *Parser) parseLimit() (sqlast.ASTNode, error) {
 	return sqlast.NewLongValue(int64(i)), nil
 }
 
-// TODO Must~
-func (p *Parser) expectKeyword(expected string) {
-	ok, err := p.parseKeyword(expected)
-	if err != nil || !ok {
-		for i := 0; i < int(p.index); i++ {
-			fmt.Printf("%v", p.tokens[i].Value)
-		}
-		fmt.Println()
-		log.Fatalf("should be expected keyword: %s err: %v", expected, err)
-	}
-}
-
-func (p *Parser) expectToken(expected Token) {
-	ok, err := p.consumeToken(expected)
-	if err != nil || !ok {
-		tok, _ := p.peekToken()
-
-		for i := 0; i < int(p.index); i++ {
-			fmt.Printf("%v", p.tokens[i].Value)
-		}
-		fmt.Println()
-		log.Fatalf("should be %s token, but %+v,  err: %+v", expected, tok, err)
-	}
-}
-
-func (p *Parser) consumeToken(expected Token) (bool, error) {
-	tok, err := p.peekToken()
-	if err != nil {
-		return false, err
-	}
-
-	if tok.Tok == expected {
-		if _, err := p.nextToken(); err != nil {
-			return false, err
-		}
-		return true, nil
-	}
-
-	return false, nil
-}
-
 func (p *Parser) parseIdentifier() (*sqlast.SQLIdent, error) {
 	tok, err := p.nextToken()
 	if err != nil {
@@ -2139,6 +2098,46 @@ func (p *Parser) parseExistsExpression(negated bool) (sqlast.ASTNode, error) {
 		Negated: negated,
 		Query:   expr,
 	}, nil
+}
+
+func (p *Parser) expectKeyword(expected string) {
+	ok, err := p.parseKeyword(expected)
+	if err != nil || !ok {
+		for i := 0; i < int(p.index); i++ {
+			fmt.Printf("%v", p.tokens[i].Value)
+		}
+		fmt.Println()
+		log.Fatalf("should be expected keyword: %s err: %v", expected, err)
+	}
+}
+
+func (p *Parser) expectToken(expected Token) {
+	ok, err := p.consumeToken(expected)
+	if err != nil || !ok {
+		tok, _ := p.peekToken()
+
+		for i := 0; i < int(p.index); i++ {
+			fmt.Printf("%v", p.tokens[i].Value)
+		}
+		fmt.Println()
+		log.Fatalf("should be %s token, but %+v,  err: %+v", expected, tok, err)
+	}
+}
+
+func (p *Parser) consumeToken(expected Token) (bool, error) {
+	tok, err := p.peekToken()
+	if err != nil {
+		return false, err
+	}
+
+	if tok.Tok == expected {
+		if _, err := p.nextToken(); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func (p *Parser) mustNextToken() *TokenSet {
