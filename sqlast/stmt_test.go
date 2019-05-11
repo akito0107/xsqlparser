@@ -397,7 +397,7 @@ func TestSQLAlterTable_ToSQLString(t *testing.T) {
 			name: "add column",
 			in: &SQLAlterTable{
 				TableName: NewSQLObjectName("customers"),
-				Operation: &AddColumn{
+				Action: &AddColumnTableAction{
 					Column: &SQLColumnDef{
 						Name: NewSQLIdent("email"),
 						DateType: &VarcharType{
@@ -414,7 +414,7 @@ func TestSQLAlterTable_ToSQLString(t *testing.T) {
 			name: "remove column",
 			in: &SQLAlterTable{
 				TableName: NewSQLObjectName("products"),
-				Operation: &RemoveColumn{
+				Action: &RemoveColumnTableAction{
 					Name:    NewSQLIdent("description"),
 					Cascade: true,
 				},

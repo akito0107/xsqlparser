@@ -759,7 +759,7 @@ func (p *Parser) parseAlter() (sqlast.SQLStmt, error) {
 		return nil, errors.Errorf("parseObjectName failed: %w", err)
 	}
 
-	var operaton sqlast.AlterOperation
+	// var operaton sqlast.AlterTableAction
 
 	if ok, _ := p.parseKeyword("ADD"); ok {
 		if ok, _ := p.parseKeyword("CONSTRAINT"); ok {
@@ -767,13 +767,15 @@ func (p *Parser) parseAlter() (sqlast.SQLStmt, error) {
 			if err != nil {
 				return nil, errors.Errorf("parseIdentifier failed: %w", err)
 			}
-			tableKey, err := p.parseTableKey(constraintName)
+			_, err = p.parseTableKey(constraintName)
 			if err != nil {
 				return nil, errors.Errorf("parseTableKey failed: %w", err)
 			}
-			operaton = &sqlast.AddConstraint{
-				TableKey: tableKey,
-			}
+			/*
+				operaton = &sqlast.AddConstraintTableAction{
+					TableKey: tableKey,
+				}
+			*/
 
 		} else {
 			return nil, errors.Errorf("CONSTRAINT after ADD")
@@ -784,7 +786,7 @@ func (p *Parser) parseAlter() (sqlast.SQLStmt, error) {
 
 	return &sqlast.SQLAlterTable{
 		TableName: tableName,
-		Operation: operaton,
+		// Operation: operaton,
 	}, nil
 
 }

@@ -133,16 +133,6 @@ func (s *SQLCreateTable) ToSQLString() string {
 	return fmt.Sprintf("CREATE TABLE %s%s (%s)", ifNotExists, s.Name.ToSQLString(), commaSeparatedString(s.Elements))
 }
 
-type SQLAlterTable struct {
-	sqlStmt
-	TableName *SQLObjectName
-	Operation AlterOperation
-}
-
-func (s *SQLAlterTable) ToSQLString() string {
-	return fmt.Sprintf("ALTER TABLE %s %s", s.TableName.ToSQLString(), s.Operation.ToSQLString())
-}
-
 type SQLAssignment struct {
 	ID    *SQLIdent
 	Value ASTNode
@@ -341,4 +331,94 @@ func (FileFormat) FromStr(str string) FileFormat {
 	}
 	log.Fatalf("unexpected file format %s", str)
 	return 0
+}
+
+type SQLAlterTable struct {
+	sqlStmt
+	TableName *SQLObjectName
+	Action    AlterTableAction
+}
+
+func (s *SQLAlterTable) ToSQLString() string {
+	return fmt.Sprintf("ALTER TABLE %s %s", s.TableName.ToSQLString(), s.Action.ToSQLString())
+}
+
+//go:generate genmark -t AlterTableAction -e ASTNode
+
+type AddColumnTableAction struct {
+	alterTableAction
+	Column *SQLColumnDef
+}
+
+func (a *AddColumnTableAction) ToSQLString() string {
+	return fmt.Sprintf("ADD COLUMN %s", a.Column.ToSQLString())
+}
+
+type AlterColumnTableAction struct {
+	alterTableAction
+	ColumnName *SQLIdent
+	Action     AlterColumnAction
+}
+
+func (a *AlterColumnTableAction) ToSQLString() string {
+	return fmt.Sprintf("ALTER COLUMN %s %s", a.ColumnName.ToSQLString(), a.Action.ToSQLString())
+}
+
+//go:generate genmark -t AlterColumnAction -e ASTNode
+
+// TODO add column scope / drop column scope / alter identity column spec
+// https://jakewheat.github.io/sql-overview/sql-2008-foundation-grammar.html#alter-column-definition
+
+type SetDefaultColumnAction struct {
+	alterColumnAction
+	Default ASTNode
+}
+
+func (s *SetDefaultColumnAction) ToSQLString() string {
+	return fmt.Sprintf("DEFAULT %s", s.Default.ToSQLString())
+}
+
+type DropDefaultColumnAction struct {
+	alterColumnAction
+}
+
+func (*DropDefaultColumnAction) ToSQLString() string {
+	return fmt.Sprintf("DROP DEFAULT")
+}
+
+type RemoveColumnTableAction struct {
+	alterTableAction
+	Name    *SQLIdent
+	Cascade bool
+}
+
+func (r *RemoveColumnTableAction) ToSQLString() string {
+	var cascade string
+	if r.Cascade {
+		cascade += " CASCADE"
+	}
+	return fmt.Sprintf("DROP COLUMN %s%s", r.Name.ToSQLString(), cascade)
+}
+
+type AddConstraintTableAction struct {
+	alterTableAction
+	Constraint *TableConstraint
+}
+
+func (a *AddConstraintTableAction) ToSQLString() string {
+	return fmt.Sprintf("ADD %s", a.Constraint.ToSQLString())
+}
+
+type DropConstraintTableAction struct {
+	alterTableAction
+	Name    *SQLIdent
+	Cascade bool
+}
+
+func (d *DropConstraintTableAction) ToSQLString() string {
+	var cascade string
+	if d.Cascade {
+		cascade += " CASCADE"
+	}
+	return fmt.Sprintf("DROP CONSTRAINT %s%s", d.Name.ToSQLString(), cascade)
 }

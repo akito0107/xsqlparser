@@ -2,66 +2,6 @@ package sqlast
 
 import "fmt"
 
-type AlterOperation interface {
-	ASTNode
-}
-
-type AddColumn struct {
-	Column *SQLColumnDef
-}
-
-func (a *AddColumn) ToSQLString() string {
-	return fmt.Sprintf("ADD COLUMN %s", a.Column.ToSQLString())
-}
-
-type RemoveColumn struct {
-	Name    *SQLIdent
-	Cascade bool
-}
-
-func (r *RemoveColumn) ToSQLString() string {
-	var cascade string
-	if r.Cascade {
-		cascade += " CASCADE"
-	}
-	return fmt.Sprintf("DROP COLUMN %s%s", r.Name.ToSQLString(), cascade)
-}
-
-// postgres
-type AddForeignKey struct {
-	ForeignTable   *SQLObjectName
-	ReferredColumn *SQLIdent
-}
-
-func (a *AddForeignKey) ToSQLString() string {
-	return fmt.Sprintf("ADD FOREIGN KEY (%s) REFERENCES %s", a.ReferredColumn.ToSQLString(), a.ForeignTable.ToSQLString())
-}
-
-type AddConstraint struct {
-	TableKey TableKey
-}
-
-func (a *AddConstraint) ToSQLString() string {
-	return fmt.Sprintf("ADD CONSTRAINT %s", a.TableKey.ToSQLString())
-}
-
-type AlterColumn struct {
-	Expr   ASTNode
-	Column *SQLIdent
-}
-
-func (a *AlterColumn) ToSQLString() string {
-	return fmt.Sprintf("ALTER COLUMN %s %s", a.Column.ToSQLString(), a.Expr.ToSQLString())
-}
-
-type RemoveConstraint struct {
-	Name SQLIdent
-}
-
-func (r *RemoveConstraint) ToSQLString() string {
-	return fmt.Sprintf("REMOVE CONSTRAINT %s", r.Name.ToSQLString())
-}
-
 type TableKey interface {
 	ASTNode
 }
