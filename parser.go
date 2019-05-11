@@ -387,25 +387,13 @@ func (p *Parser) parseElements() ([]sqlast.TableElement, error) {
 			elements = append(elements, constraints)
 
 		default:
-
-			columnName := tok.Value.(*SQLWord)
-
-			dataType, err := p.parseDataType()
+			p.prevToken()
+			def, err := p.parseColumnDef()
 			if err != nil {
-				return nil, errors.Errorf("parseDataType failed: %w", err)
+				return nil, errors.Errorf("parseColumnDef failed: %w")
 			}
 
-			def, specs, err := p.parseColumnDefinition()
-			if err != nil {
-				return nil, errors.Errorf("parseColumnDefinition: %w", err)
-			}
-
-			elements = append(elements, &sqlast.SQLColumnDef{
-				Constraints: specs,
-				Name:        columnName.AsSQLIdent(),
-				DateType:    dataType,
-				Default:     def,
-			})
+			elements = append(elements, def)
 		}
 
 		t, _ := p.nextToken()
@@ -417,6 +405,28 @@ func (p *Parser) parseElements() ([]sqlast.TableElement, error) {
 	}
 
 	return elements, nil
+}
+
+func (p *Parser) parseColumnDef() (*sqlast.SQLColumnDef, error) {
+	tok := p.mustNextToken()
+	columnName := tok.Value.(*SQLWord)
+
+	dataType, err := p.parseDataType()
+	if err != nil {
+		return nil, errors.Errorf("parseDataType failed: %w", err)
+	}
+
+	def, specs, err := p.parseColumnDefinition()
+	if err != nil {
+		return nil, errors.Errorf("parseColumnDefinition: %w", err)
+	}
+
+	return &sqlast.SQLColumnDef{
+		Constraints: specs,
+		Name:        columnName.AsSQLIdent(),
+		DataType:    dataType,
+		Default:     def,
+	}, nil
 }
 
 func (p *Parser) parseTableConstraints() (*sqlast.TableConstraint, error) {
@@ -521,7 +531,7 @@ func (p *Parser) parseColumnDefinition() (sqlast.ASTNode, []*sqlast.ColumnConstr
 COLUMN_DEF_LOOP:
 	for {
 		t, _ := p.peekToken()
-		if t.Tok != SQLKeyword {
+		if t == nil || t.Tok != SQLKeyword {
 			break
 		}
 
@@ -751,44 +761,137 @@ func (p *Parser) parseInsert() (sqlast.SQLStmt, error) {
 
 func (p *Parser) parseAlter() (sqlast.SQLStmt, error) {
 	p.expectKeyword("TABLE")
-	if _, err := p.parseKeyword("ONLY"); err != nil {
-		return nil, errors.Errorf("parseKeyword ONLY failed: %w", err)
-	}
+
 	tableName, err := p.parseObjectName()
 	if err != nil {
 		return nil, errors.Errorf("parseObjectName failed: %w", err)
 	}
 
-	// var operaton sqlast.AlterTableAction
-
-	if ok, _ := p.parseKeyword("ADD"); ok {
-		if ok, _ := p.parseKeyword("CONSTRAINT"); ok {
-			constraintName, err := p.parseIdentifier()
-			if err != nil {
-				return nil, errors.Errorf("parseIdentifier failed: %w", err)
-			}
-			_, err = p.parseTableKey(constraintName)
-			if err != nil {
-				return nil, errors.Errorf("parseTableKey failed: %w", err)
-			}
-			/*
-				operaton = &sqlast.AddConstraintTableAction{
-					TableKey: tableKey,
-				}
-			*/
-
-		} else {
-			return nil, errors.Errorf("CONSTRAINT after ADD")
+	if ok, _ := p.parseKeywords("ADD", "COLUMN"); ok {
+		columnDef, err := p.parseColumnDef()
+		if err != nil {
+			return nil, errors.Errorf("parseColumnDef failed: %w", err)
 		}
-	} else {
-		return nil, errors.Errorf("ADD after ALTER TABLE")
+
+		return &sqlast.SQLAlterTable{
+			TableName: tableName,
+			Action: &sqlast.AddColumnTableAction{
+				Column: columnDef,
+			},
+		}, nil
 	}
 
-	return &sqlast.SQLAlterTable{
-		TableName: tableName,
-		// Operation: operaton,
-	}, nil
+	if ok, _ := p.parseKeyword("ADD"); ok {
+		constraint, err := p.parseTableConstraints()
+		if err != nil {
+			return nil, errors.Errorf("parseTableConstraints failed: %w")
+		}
 
+		return &sqlast.SQLAlterTable{
+			TableName: tableName,
+			Action: &sqlast.AddConstraintTableAction{
+				Constraint: constraint,
+			},
+		}, nil
+	}
+
+	if ok, _ := p.parseKeywords("DROP", "CONSTRAINT"); ok {
+		constraintName, err := p.parseIdentifier()
+		if err != nil {
+			return nil, errors.Errorf("parseIdentifier failed: %w", err)
+		}
+		cascade, _ := p.parseKeyword("CASCADE")
+
+		return &sqlast.SQLAlterTable{
+			TableName: tableName,
+			Action: &sqlast.DropConstraintTableAction{
+				Name:    constraintName,
+				Cascade: cascade,
+			},
+		}, nil
+	}
+
+	if ok, _ := p.parseKeywords("DROP", "COLUMN"); ok {
+		constraintName, err := p.parseIdentifier()
+		if err != nil {
+			return nil, errors.Errorf("parseIdentifier failed: %w", err)
+		}
+		cascade, _ := p.parseKeyword("CASCADE")
+
+		return &sqlast.SQLAlterTable{
+			TableName: tableName,
+			Action: &sqlast.RemoveColumnTableAction{
+				Name:    constraintName,
+				Cascade: cascade,
+			},
+		}, nil
+	}
+
+	if ok, _ := p.parseKeywords("ALTER", "COLUMN"); ok {
+		action, err := p.parseAlterColumn()
+		if err != nil {
+			return nil, errors.Errorf("parseAlterColumn failed: %w", err)
+		}
+
+		return &sqlast.SQLAlterTable{
+			TableName: tableName,
+			Action:    action,
+		}, nil
+
+	}
+
+	t, _ := p.peekToken()
+	return nil, errors.Errorf("unknown alter operation %v", t)
+}
+
+func (p *Parser) parseAlterColumn() (*sqlast.AlterColumnTableAction, error) {
+	columnName, err := p.parseIdentifier()
+	if err != nil {
+		return nil, errors.Errorf("parseIdentifier failed: %w", err)
+	}
+
+	tok := p.mustNextToken()
+	if tok.Tok != SQLKeyword {
+		return nil, errors.Errorf("must be SQLKeyword but: %v", tok)
+	}
+
+	word := tok.Value.(*SQLWord)
+
+	switch word.Keyword {
+	case "SET":
+		p.expectKeyword("DEFAULT")
+		def, err := p.parseDefaultExpr(0)
+		if err != nil {
+			return nil, errors.Errorf("parseDefaultExpr failed: %w", err)
+		}
+		return &sqlast.AlterColumnTableAction{
+			ColumnName: columnName,
+			Action: &sqlast.SetDefaultColumnAction{
+				Default: def,
+			},
+		}, nil
+	case "DROP":
+		p.expectKeyword("DEFAULT")
+
+		return &sqlast.AlterColumnTableAction{
+			ColumnName: columnName,
+			Action:     &sqlast.DropDefaultColumnAction{},
+		}, nil
+	case "TYPE":
+		tp, err := p.parseDataType()
+		if err != nil {
+			return nil, errors.Errorf("parseDataType failed: %w", err)
+		}
+
+		return &sqlast.AlterColumnTableAction{
+			ColumnName: columnName,
+			Action: &sqlast.PGAlterDataTypeColumnAction{
+				DataType: tp,
+			},
+		}, nil
+	default:
+		return nil, errors.Errorf("unknown alter column action %v", word)
+	}
 }
 
 func (p *Parser) parseDefaultExpr(precedence uint) (sqlast.ASTNode, error) {

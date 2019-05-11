@@ -414,7 +414,7 @@ func TestParser_ParseStatement(t *testing.T) {
 					Elements: []sqlast.TableElement{
 						&sqlast.SQLColumnDef{
 							Name:     sqlast.NewSQLIdent("person_id"),
-							DateType: &sqlast.UUID{},
+							DataType: &sqlast.UUID{},
 							Constraints: []*sqlast.ColumnConstraint{
 								{
 									Spec: &sqlast.UniqueColumnSpec{
@@ -428,7 +428,7 @@ func TestParser_ParseStatement(t *testing.T) {
 						},
 						&sqlast.SQLColumnDef{
 							Name: sqlast.NewSQLIdent("first_name"),
-							DateType: &sqlast.VarcharType{
+							DataType: &sqlast.VarcharType{
 								Size: sqlast.NewSize(255),
 							},
 							Constraints: []*sqlast.ColumnConstraint{
@@ -439,7 +439,7 @@ func TestParser_ParseStatement(t *testing.T) {
 						},
 						&sqlast.SQLColumnDef{
 							Name: sqlast.NewSQLIdent("last_name"),
-							DateType: &sqlast.VarcharType{
+							DataType: &sqlast.VarcharType{
 								Size: sqlast.NewSize(255),
 							},
 							Constraints: []*sqlast.ColumnConstraint{
@@ -450,7 +450,7 @@ func TestParser_ParseStatement(t *testing.T) {
 						},
 						&sqlast.SQLColumnDef{
 							Name:     sqlast.NewSQLIdent("created_at"),
-							DateType: &sqlast.Timestamp{},
+							DataType: &sqlast.Timestamp{},
 							Default:  sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("CURRENT_TIMESTAMP")),
 							Constraints: []*sqlast.ColumnConstraint{
 								{
@@ -475,7 +475,7 @@ func TestParser_ParseStatement(t *testing.T) {
 					Elements: []sqlast.TableElement{
 						&sqlast.SQLColumnDef{
 							Name:     sqlast.NewSQLIdent("person_id"),
-							DateType: &sqlast.Int{},
+							DataType: &sqlast.Int{},
 							Constraints: []*sqlast.ColumnConstraint{
 								{
 									Spec: &sqlast.UniqueColumnSpec{
@@ -489,7 +489,7 @@ func TestParser_ParseStatement(t *testing.T) {
 						},
 						&sqlast.SQLColumnDef{
 							Name: sqlast.NewSQLIdent("last_name"),
-							DateType: &sqlast.VarcharType{
+							DataType: &sqlast.VarcharType{
 								Size: sqlast.NewSize(255),
 							},
 							Constraints: []*sqlast.ColumnConstraint{
@@ -500,7 +500,7 @@ func TestParser_ParseStatement(t *testing.T) {
 						},
 						&sqlast.SQLColumnDef{
 							Name:     sqlast.NewSQLIdent("test_id"),
-							DateType: &sqlast.Int{},
+							DataType: &sqlast.Int{},
 							Constraints: []*sqlast.ColumnConstraint{
 								{
 									Spec: &sqlast.NotNullColumnSpec{},
@@ -515,7 +515,7 @@ func TestParser_ParseStatement(t *testing.T) {
 						},
 						&sqlast.SQLColumnDef{
 							Name: sqlast.NewSQLIdent("email"),
-							DateType: &sqlast.VarcharType{
+							DataType: &sqlast.VarcharType{
 								Size: sqlast.NewSize(255),
 							},
 							Constraints: []*sqlast.ColumnConstraint{
@@ -529,7 +529,7 @@ func TestParser_ParseStatement(t *testing.T) {
 						},
 						&sqlast.SQLColumnDef{
 							Name:     sqlast.NewSQLIdent("age"),
-							DateType: &sqlast.Int{},
+							DataType: &sqlast.Int{},
 							Constraints: []*sqlast.ColumnConstraint{
 								{
 									Spec: &sqlast.NotNullColumnSpec{},
@@ -555,7 +555,7 @@ func TestParser_ParseStatement(t *testing.T) {
 						},
 						&sqlast.SQLColumnDef{
 							Name:     sqlast.NewSQLIdent("created_at"),
-							DateType: &sqlast.Timestamp{},
+							DataType: &sqlast.Timestamp{},
 							Default:  sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("CURRENT_TIMESTAMP")),
 							Constraints: []*sqlast.ColumnConstraint{
 								{
@@ -580,7 +580,7 @@ func TestParser_ParseStatement(t *testing.T) {
 					Elements: []sqlast.TableElement{
 						&sqlast.SQLColumnDef{
 							Name:     sqlast.NewSQLIdent("person_id"),
-							DateType: &sqlast.Int{},
+							DataType: &sqlast.Int{},
 						},
 						&sqlast.TableConstraint{
 							Name: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("production")),
@@ -781,22 +781,94 @@ func TestParser_ParseStatement(t *testing.T) {
 			skip bool
 		}{
 			{
-				skip: true,
-				name: "add constraint unique",
-				in:   "ALTER TABLE customers ADD CONSTRAINT unique_constraint unique (customer_first_name, customer_last_name)",
+				name: "add column",
 				out: &sqlast.SQLAlterTable{
 					TableName: sqlast.NewSQLObjectName("customers"),
-					Action:    &sqlast.AddConstraintTableAction{},
+					Action: &sqlast.AddColumnTableAction{
+						Column: &sqlast.SQLColumnDef{
+							Name: sqlast.NewSQLIdent("email"),
+							DataType: &sqlast.VarcharType{
+								Size: sqlast.NewSize(255),
+							},
+						},
+					},
 				},
+				in: "ALTER TABLE customers " +
+					"ADD COLUMN email character varying(255)",
 			},
 			{
-				skip: true,
-				name: "add constraint foreign key",
-				in:   "ALTER TABLE public.employee ADD CONSTRAINT dfk FOREIGN KEY (dno) REFERENCES public.department(dnumber)",
+				name: "add constraint",
 				out: &sqlast.SQLAlterTable{
-					TableName: sqlast.NewSQLObjectName("public", "employee"),
-					Action:    &sqlast.AddConstraintTableAction{},
+					TableName: sqlast.NewSQLObjectName("products"),
+					Action: &sqlast.AddConstraintTableAction{
+						Constraint: &sqlast.TableConstraint{
+							Spec: &sqlast.ReferentialTableConstraint{
+								Columns: []*sqlast.SQLIdent{sqlast.NewSQLIdent("test_id")},
+								KeyExpr: &sqlast.ReferenceKeyExpr{
+									TableName: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("other_table")),
+									Columns:   []*sqlast.SQLIdent{sqlast.NewSQLIdent("col1"), sqlast.NewSQLIdent("col2")},
+								},
+							},
+						},
+					},
 				},
+				in: "ALTER TABLE products " +
+					"ADD FOREIGN KEY(test_id) REFERENCES other_table(col1, col2)",
+			},
+			{
+				name: "drop constraint",
+				out: &sqlast.SQLAlterTable{
+					TableName: sqlast.NewSQLObjectName("products"),
+					Action: &sqlast.DropConstraintTableAction{
+						Name:    sqlast.NewSQLIdent("fk"),
+						Cascade: true,
+					},
+				},
+				in: "ALTER TABLE products " +
+					"DROP CONSTRAINT fk CASCADE",
+			},
+			{
+				name: "remove column",
+				out: &sqlast.SQLAlterTable{
+					TableName: sqlast.NewSQLObjectName("products"),
+					Action: &sqlast.RemoveColumnTableAction{
+						Name:    sqlast.NewSQLIdent("description"),
+						Cascade: true,
+					},
+				},
+				in: "ALTER TABLE products " +
+					"DROP COLUMN description CASCADE",
+			},
+			{
+				name: "alter column",
+				out: &sqlast.SQLAlterTable{
+					TableName: sqlast.NewSQLObjectName("products"),
+					Action: &sqlast.AlterColumnTableAction{
+						ColumnName: sqlast.NewSQLIdent("created_at"),
+						Action: &sqlast.SetDefaultColumnAction{
+							Default: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("current_timestamp")),
+						},
+					},
+				},
+				in: "ALTER TABLE products " +
+					"ALTER COLUMN created_at SET DEFAULT current_timestamp",
+			},
+			{
+				name: "pg change type",
+				out: &sqlast.SQLAlterTable{
+					TableName: sqlast.NewSQLObjectName("products"),
+					Action: &sqlast.AlterColumnTableAction{
+						ColumnName: sqlast.NewSQLIdent("number"),
+						Action: &sqlast.PGAlterDataTypeColumnAction{
+							DataType: &sqlast.Decimal{
+								Scale:     sqlast.NewSize(10),
+								Precision: sqlast.NewSize(255),
+							},
+						},
+					},
+				},
+				in: "ALTER TABLE products " +
+					"ALTER COLUMN number TYPE numeric(255,10)",
 			},
 		}
 

@@ -180,7 +180,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 				Elements: []TableElement{
 					&SQLColumnDef{
 						Name:     NewSQLIdent("person_id"),
-						DateType: &Int{},
+						DataType: &Int{},
 						Constraints: []*ColumnConstraint{
 							{
 								Spec: &UniqueColumnSpec{
@@ -194,7 +194,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 					},
 					&SQLColumnDef{
 						Name: NewSQLIdent("last_name"),
-						DateType: &VarcharType{
+						DataType: &VarcharType{
 							Size: NewSize(255),
 						},
 						Constraints: []*ColumnConstraint{
@@ -205,7 +205,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 					},
 					&SQLColumnDef{
 						Name:     NewSQLIdent("test_id"),
-						DateType: &Int{},
+						DataType: &Int{},
 						Constraints: []*ColumnConstraint{
 							{
 								Spec: &NotNullColumnSpec{},
@@ -220,7 +220,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 					},
 					&SQLColumnDef{
 						Name: NewSQLIdent("email"),
-						DateType: &VarcharType{
+						DataType: &VarcharType{
 							Size: NewSize(255),
 						},
 						Constraints: []*ColumnConstraint{
@@ -234,7 +234,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 					},
 					&SQLColumnDef{
 						Name:     NewSQLIdent("age"),
-						DateType: &Int{},
+						DataType: &Int{},
 						Constraints: []*ColumnConstraint{
 							{
 								Spec: &NotNullColumnSpec{},
@@ -260,7 +260,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 					},
 					&SQLColumnDef{
 						Name:     NewSQLIdent("created_at"),
-						DateType: &Timestamp{},
+						DataType: &Timestamp{},
 						Default:  NewSQLIdent("CURRENT_TIMESTAMP"),
 						Constraints: []*ColumnConstraint{
 							{
@@ -285,7 +285,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 				Elements: []TableElement{
 					&SQLColumnDef{
 						Name:     NewSQLIdent("person_id"),
-						DateType: &Int{},
+						DataType: &Int{},
 					},
 					&TableConstraint{
 						Name: NewSQLIdentifier(NewSQLIdent("production")),
@@ -335,7 +335,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 				Elements: []TableElement{
 					&SQLColumnDef{
 						Name:     NewSQLIdent("person_id"),
-						DateType: &Int{},
+						DataType: &Int{},
 						Constraints: []*ColumnConstraint{
 							{
 								Spec: &UniqueColumnSpec{
@@ -349,7 +349,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 					},
 					&SQLColumnDef{
 						Name: NewSQLIdent("last_name"),
-						DateType: &VarcharType{
+						DataType: &VarcharType{
 							Size: NewSize(255),
 						},
 						Constraints: []*ColumnConstraint{
@@ -360,7 +360,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 					},
 					&SQLColumnDef{
 						Name:     NewSQLIdent("created_at"),
-						DateType: &Timestamp{},
+						DataType: &Timestamp{},
 						Default:  NewSQLIdent("CURRENT_TIMESTAMP"),
 						Constraints: []*ColumnConstraint{
 							{
@@ -400,10 +400,9 @@ func TestSQLAlterTable_ToSQLString(t *testing.T) {
 				Action: &AddColumnTableAction{
 					Column: &SQLColumnDef{
 						Name: NewSQLIdent("email"),
-						DateType: &VarcharType{
+						DataType: &VarcharType{
 							Size: NewSize(255),
 						},
-						AllowNull: true,
 					},
 				},
 			},

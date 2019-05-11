@@ -207,15 +207,14 @@ func (c *CheckTableConstraint) ToSQLString() string {
 
 type SQLColumnDef struct {
 	tableElement
-	AllowNull   bool
 	Name        *SQLIdent
-	DateType    SQLType
+	DataType    SQLType
 	Default     ASTNode
 	Constraints []*ColumnConstraint
 }
 
 func (s *SQLColumnDef) ToSQLString() string {
-	str := fmt.Sprintf("%s %s", s.Name.ToSQLString(), s.DateType.ToSQLString())
+	str := fmt.Sprintf("%s %s", s.Name.ToSQLString(), s.DataType.ToSQLString())
 	if s.Default != nil {
 		str += fmt.Sprintf(" DEFAULT %s", s.Default.ToSQLString())
 	}
