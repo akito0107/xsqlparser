@@ -129,7 +129,7 @@ func (p *Parser) parseQuery() (*sqlast.SQLQuery, error) {
 }
 
 func (p *Parser) parseQueryBody(precedence uint8) (sqlast.SQLSetExpr, error) {
-	var expr sqlast.ASTNode
+	var expr sqlast.SQLSetExpr
 	if ok, _ := p.parseKeyword("SELECT"); ok {
 		s, err := p.parseSelect()
 		if err != nil {

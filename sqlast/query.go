@@ -6,6 +6,7 @@ import (
 )
 
 type SQLQuery struct {
+	sqlStmt
 	CTEs    []*CTE
 	Body    SQLSetExpr
 	OrderBy []*SQLOrderByExpr
@@ -42,12 +43,10 @@ type CTE struct {
 	Query *SQLQuery
 }
 
-/** SQLSetExpr **/
-type SQLSetExpr interface {
-	ASTNode
-}
+//go:generate genmark -t SQLSetExpr -e ASTNode
 
 type SelectExpr struct {
+	sqlSetExpr
 	Select *SQLSelect
 }
 
@@ -56,6 +55,7 @@ func (s *SelectExpr) Eval() string {
 }
 
 type QueryExpr struct {
+	sqlSetExpr
 	Query *SQLQuery
 }
 
@@ -64,6 +64,7 @@ func (q *QueryExpr) Eval() string {
 }
 
 type SetOperationExpr struct {
+	sqlSetExpr
 	Op    SQLSetOperator
 	All   bool
 	Left  SQLSetExpr
@@ -78,18 +79,18 @@ func (s *SetOperationExpr) Eval() string {
 	return fmt.Sprintf("%s %s%s %s", s.Left.Eval(), s.Op.Eval(), allStr, s.Right.Eval())
 }
 
-/** SQLSetOperator **/
-type SQLSetOperator interface {
-	ASTNode
-}
+//go:generate genmark -t SQLSetOperator -e ASTNode
 
-type UnionOperator struct{}
+type UnionOperator struct{
+	sqlSetOperator
+}
 
 func (UnionOperator) Eval() string {
 	return "UNION"
 }
 
 type ExceptOperator struct {
+	sqlSetOperator
 }
 
 func (ExceptOperator) Eval() string {
@@ -97,15 +98,15 @@ func (ExceptOperator) Eval() string {
 }
 
 type IntersectOperator struct {
+	sqlSetOperator
 }
 
 func (IntersectOperator) Eval() string {
 	return "INTERSECT"
 }
 
-/** SQLSetOperator end **/
-
 type SQLSelect struct {
+	sqlSetExpr
 	Distinct   bool
 	Projection []SQLSelectItem
 	Relation   TableFactor
@@ -145,12 +146,10 @@ func (s *SQLSelect) Eval() string {
 	return q
 }
 
-/** TableFactor **/
-type TableFactor interface {
-	Eval() string
-}
+//go:generate genmark -t TableFactor -e ASTNode
 
 type Table struct {
+	tableFactor
 	Name      *SQLObjectName
 	Alias     *SQLIdent
 	Args      []ASTNode
@@ -172,6 +171,7 @@ func (t *Table) Eval() string {
 }
 
 type Derived struct {
+	tableFactor
 	SubQuery *SQLQuery
 	Alias    *SQLIdent
 }
@@ -184,14 +184,10 @@ func (d *Derived) Eval() string {
 	return s
 }
 
-/** TableFactor end **/
-
-/** SQLSelectItem **/
-type SQLSelectItem interface {
-	ASTNode
-}
+//go:generate genmark -t SQLSelectItem -e ASTNode
 
 type UnnamedExpression struct {
+	sqlSelectItem
 	Node ASTNode
 }
 
@@ -200,6 +196,7 @@ func (u *UnnamedExpression) Eval() string {
 }
 
 type ExpressionWithAlias struct {
+	sqlSelectItem
 	Expr  ASTNode
 	Alias *SQLIdent
 }
@@ -210,6 +207,7 @@ func (e *ExpressionWithAlias) Eval() string {
 
 // schema.*
 type QualifiedWildcard struct {
+	sqlSelectItem
 	Prefix *SQLObjectName
 }
 
@@ -217,13 +215,13 @@ func (q *QualifiedWildcard) Eval() string {
 	return fmt.Sprintf("%s.*", q.Prefix.Eval())
 }
 
-type Wildcard struct{}
+type Wildcard struct{
+	sqlSelectItem
+}
 
 func (w *Wildcard) Eval() string {
 	return "*"
 }
-
-/** SQLSelectItem end **/
 
 type Join struct {
 	Relation TableFactor

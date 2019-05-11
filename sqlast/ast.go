@@ -358,29 +358,34 @@ func (SQLWindowFrameUnits) FromStr(str string) SQLWindowFrameUnits {
 	return 0
 }
 
-type SQLWindowFrameBound interface {
-	ASTNode
-}
+//go:generate genmark -t SQLWindowFrameBound -e ASTNode
 
-type CurrentRow struct{}
+type CurrentRow struct{
+	sqlWindowFrameBound
+}
 
 func (*CurrentRow) Eval() string {
 	return "CURRENT ROW"
 }
 
-type UnboundedPreceding struct{}
+type UnboundedPreceding struct{
+	sqlWindowFrameBound
+}
 
 func (*UnboundedPreceding) Eval() string {
 	return "UNBOUNDED PRECEDING"
 }
 
-type UnboundedFollowing struct{}
+type UnboundedFollowing struct{
+	sqlWindowFrameBound
+}
 
 func (*UnboundedFollowing) Eval() string {
 	return "UNBOUNDED FOLLOWING"
 }
 
 type Preceding struct {
+	sqlWindowFrameBound
 	Bound *uint64
 }
 
@@ -389,6 +394,7 @@ func (p *Preceding) Eval() string {
 }
 
 type Following struct {
+	sqlWindowFrameBound
 	Bound *uint64
 }
 

@@ -2,13 +2,21 @@ package xsqlparser
 
 import (
 	"bytes"
+	"reflect"
 	"testing"
-
-	"github.com/google/go-cmp/cmp"
+	"unicode"
 
 	"github.com/akito0107/xsqlparser/dialect"
 	"github.com/akito0107/xsqlparser/sqlast"
+	"github.com/google/go-cmp/cmp"
 )
+
+var ignoreMarker = cmp.FilterPath(func(paths cmp.Path) bool {
+	s := paths.Last().Type()
+	name := s.Name()
+	r := []rune(name)
+	return s.Kind() == reflect.Struct && len(r) > 0 && unicode.IsLower(r[0])
+}, cmp.Ignore())
 
 func TestParser_ParseStatement(t *testing.T) {
 	t.Run("select", func(t *testing.T) {
@@ -339,7 +347,7 @@ func TestParser_ParseStatement(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				if diff := cmp.Diff(c.out, ast); diff != "" {
+				if diff := cmp.Diff(c.out, ast, ignoreMarker); diff != "" {
 					t.Errorf("diff %s", diff)
 				}
 			})
@@ -603,7 +611,7 @@ func TestParser_ParseStatement(t *testing.T) {
 					t.Fatalf("%+v", err)
 				}
 
-				if diff := cmp.Diff(c.out, ast); diff != "" {
+				if diff := cmp.Diff(c.out, ast, ignoreMarker); diff != "" {
 					t.Errorf("diff %s", diff)
 				}
 			})
@@ -646,7 +654,7 @@ func TestParser_ParseStatement(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				if diff := cmp.Diff(c.out, ast); diff != "" {
+				if diff := cmp.Diff(c.out, ast, ignoreMarker); diff != "" {
 					t.Errorf("diff %s", diff)
 				}
 			})
@@ -717,7 +725,7 @@ func TestParser_ParseStatement(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				if diff := cmp.Diff(c.out, ast); diff != "" {
+				if diff := cmp.Diff(c.out, ast, ignoreMarker); diff != "" {
 					t.Errorf("diff %s", diff)
 				}
 			})
@@ -780,7 +788,7 @@ func TestParser_ParseStatement(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				if diff := cmp.Diff(c.out, ast); diff != "" {
+				if diff := cmp.Diff(c.out, ast, ignoreMarker); diff != "" {
 					t.Errorf("diff %s", diff)
 				}
 			})
@@ -833,7 +841,7 @@ func TestParser_ParseStatement(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				if diff := cmp.Diff(c.out, ast); diff != "" {
+				if diff := cmp.Diff(c.out, ast, ignoreMarker); diff != "" {
 					t.Errorf("diff %s", diff)
 				}
 			})
