@@ -784,7 +784,7 @@ func (p *Parser) parseAlter() (sqlast.SQLStmt, error) {
 	if ok, _ := p.parseKeyword("ADD"); ok {
 		constraint, err := p.parseTableConstraints()
 		if err != nil {
-			return nil, errors.Errorf("parseTableConstraints failed: %w")
+			return nil, errors.Errorf("parseTableConstraints failed: %w", err)
 		}
 
 		return &sqlast.SQLAlterTable{
