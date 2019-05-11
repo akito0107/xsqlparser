@@ -81,9 +81,9 @@ got:
 }
 ```
 
-You can also create `sql` from ast via `Eval()`.
+You can also create `sql` from ast via `ToSQLString()`.
 ```go
-log.Println(stmt.Eval())
+log.Println(stmt.ToSQLString())
 ```
 
 got:
