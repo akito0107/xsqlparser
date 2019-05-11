@@ -785,7 +785,7 @@ func TestParser_ParseStatement(t *testing.T) {
 				}
 				ast, err := parser.ParseStatement()
 				if err != nil {
-					t.Fatal(err)
+					t.Fatalf("%+v", err)
 				}
 
 				if diff := cmp.Diff(c.out, ast, ignoreMarker); diff != "" {
