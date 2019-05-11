@@ -21,7 +21,7 @@ func (l *LongValue) Value() interface{} {
 	return *l
 }
 
-func (l *LongValue) Eval() string {
+func (l *LongValue) ToSQLString() string {
 	return fmt.Sprintf("%d", *l)
 }
 
@@ -36,7 +36,7 @@ func (d *DoubleValue) Value() interface{} {
 	return *d
 }
 
-func (d *DoubleValue) Eval() string {
+func (d *DoubleValue) ToSQLString() string {
 	return fmt.Sprintf("%f", *d)
 }
 
@@ -51,7 +51,7 @@ func (s *SingleQuotedString) Value() interface{} {
 	return *s
 }
 
-func (s *SingleQuotedString) Eval() string {
+func (s *SingleQuotedString) ToSQLString() string {
 	return fmt.Sprintf("'%s'", *s)
 }
 
@@ -66,7 +66,7 @@ func (n *NationalStringLiteral) Value() interface{} {
 	return *n
 }
 
-func (n *NationalStringLiteral) Eval() string {
+func (n *NationalStringLiteral) ToSQLString() string {
 	return fmt.Sprintf("N'%s'", *n)
 }
 
@@ -81,7 +81,7 @@ func (b *BooleanValue) Value() interface{} {
 	return *b
 }
 
-func (b *BooleanValue) Eval() string {
+func (b *BooleanValue) ToSQLString() string {
 	return fmt.Sprintf("%t", *b)
 }
 
@@ -91,7 +91,7 @@ func (d *DateValue) Value() interface{} {
 	return *d
 }
 
-func (d *DateValue) Eval() string {
+func (d *DateValue) ToSQLString() string {
 	return time.Time(*d).Format("2006-01-02")
 }
 
@@ -106,7 +106,7 @@ func (t *TimeValue) Value() interface{} {
 	return *t
 }
 
-func (t *TimeValue) Eval() string {
+func (t *TimeValue) ToSQLString() string {
 	return time.Time(*t).Format("15:04:05")
 }
 
@@ -121,7 +121,7 @@ func (d *DateTimeValue) Value() interface{} {
 	return *d
 }
 
-func (d *DateTimeValue) Eval() string {
+func (d *DateTimeValue) ToSQLString() string {
 	return time.Time(*d).Format("2006-01-02 15:04:05")
 }
 
@@ -137,7 +137,7 @@ func (t *TimestampValue) Value() interface{} {
 	return *t
 }
 
-func (t *TimestampValue) Eval() string {
+func (t *TimestampValue) ToSQLString() string {
 	return time.Time(*t).Format("2006-01-02 15:04:05")
 }
 
@@ -151,6 +151,6 @@ func (n *NullValue) Value() interface{} {
 	return nil
 }
 
-func (n *NullValue) Eval() string {
+func (n *NullValue) ToSQLString() string {
 	return "NULL"
 }

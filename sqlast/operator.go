@@ -22,7 +22,7 @@ const (
 	None
 )
 
-func (s *SQLOperator) Eval() string {
+func (s *SQLOperator) ToSQLString() string {
 	switch *s {
 	case Plus:
 		return "+"

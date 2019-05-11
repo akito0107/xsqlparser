@@ -6,7 +6,7 @@ import (
 	"github.com/andreyvit/diff"
 )
 
-func TestSQLSelect_Eval(t *testing.T) {
+func TestSQLSelect_ToSQLString(t *testing.T) {
 	cases := []struct {
 		name string
 		in   *SQLSelect
@@ -165,7 +165,7 @@ func TestSQLSelect_Eval(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			act := c.in.Eval()
+			act := c.in.ToSQLString()
 
 			if act != c.out {
 				t.Errorf("must be \n%s but \n%s \n diff: %s", c.out, act, diff.CharacterDiff(c.out, act))
@@ -175,7 +175,7 @@ func TestSQLSelect_Eval(t *testing.T) {
 
 }
 
-func TestSQLQuery_Eval(t *testing.T) {
+func TestSQLQuery_ToSQLString(t *testing.T) {
 	cases := []struct {
 		name string
 		in   *SQLQuery
@@ -352,7 +352,7 @@ func TestSQLQuery_Eval(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			act := c.in.Eval()
+			act := c.in.ToSQLString()
 
 			if act != c.out {
 				t.Errorf("must be \n%s but \n%s \n diff: %s", c.out, act, diff.CharacterDiff(c.out, act))

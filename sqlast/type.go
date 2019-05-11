@@ -5,14 +5,14 @@ import (
 )
 
 type SQLType interface {
-	Eval() string
+	ToSQLString() string
 }
 
 type CharType struct {
 	Size *uint8
 }
 
-func (c *CharType) Eval() string {
+func (c *CharType) ToSQLString() string {
 	return formatTypeWithOptionalLength("char", c.Size)
 }
 
@@ -20,14 +20,14 @@ type VarcharType struct {
 	Size *uint8
 }
 
-func (v *VarcharType) Eval() string {
+func (v *VarcharType) ToSQLString() string {
 	return formatTypeWithOptionalLength("character varying", v.Size)
 }
 
 type UUID struct {
 }
 
-func (*UUID) Eval() string {
+func (*UUID) ToSQLString() string {
 	return "uuid"
 }
 
@@ -35,7 +35,7 @@ type Clob struct {
 	Size uint8
 }
 
-func (c *Clob) Eval() string {
+func (c *Clob) ToSQLString() string {
 	return fmt.Sprintf("clob(%d)", c.Size)
 }
 
@@ -43,7 +43,7 @@ type Binary struct {
 	Size uint8
 }
 
-func (b *Binary) Eval() string {
+func (b *Binary) ToSQLString() string {
 	return fmt.Sprintf("birany(%d)", b.Size)
 }
 
@@ -51,7 +51,7 @@ type Varbinary struct {
 	Size uint8
 }
 
-func (v *Varbinary) Eval() string {
+func (v *Varbinary) ToSQLString() string {
 	return fmt.Sprintf("varbinary(%d)", v.Size)
 }
 
@@ -59,7 +59,7 @@ type Blob struct {
 	Size uint8
 }
 
-func (b *Blob) Eval() string {
+func (b *Blob) ToSQLString() string {
 	return fmt.Sprintf("blob(%d)", b.Size)
 }
 
@@ -68,7 +68,7 @@ type Decimal struct {
 	Scale     *uint8
 }
 
-func (d *Decimal) Eval() string {
+func (d *Decimal) ToSQLString() string {
 	if d.Scale != nil {
 		return fmt.Sprintf("numeric(%d,%d)", *d.Precision, *d.Scale)
 	}
@@ -79,81 +79,81 @@ type Float struct {
 	Size *uint8
 }
 
-func (f *Float) Eval() string {
+func (f *Float) ToSQLString() string {
 	return formatTypeWithOptionalLength("float", f.Size)
 }
 
 type SmallInt struct {
 }
 
-func (s *SmallInt) Eval() string {
+func (s *SmallInt) ToSQLString() string {
 	return "smallint"
 }
 
 type Int struct{}
 
-func (i *Int) Eval() string {
+func (i *Int) ToSQLString() string {
 	return "int"
 }
 
 type BigInt struct{}
 
-func (b *BigInt) Eval() string {
+func (b *BigInt) ToSQLString() string {
 	return "bigint"
 }
 
 type Real struct {
 }
 
-func (*Real) Eval() string {
+func (*Real) ToSQLString() string {
 	return "real"
 }
 
 type Double struct{}
 
-func (*Double) Eval() string {
+func (*Double) ToSQLString() string {
 	return "double"
 }
 
 type Boolean struct{}
 
-func (*Boolean) Eval() string {
+func (*Boolean) ToSQLString() string {
 	return "boolean"
 }
 
 type Date struct{}
 
-func (*Date) Eval() string {
+func (*Date) ToSQLString() string {
 	return "date"
 }
 
 type Time struct{}
 
-func (*Time) Eval() string {
+func (*Time) ToSQLString() string {
 	return "time"
 }
 
 type Timestamp struct{}
 
-func (*Timestamp) Eval() string {
+func (*Timestamp) ToSQLString() string {
 	return "timestamp"
 }
 
 type Regclass struct{}
 
-func (*Regclass) Eval() string {
+func (*Regclass) ToSQLString() string {
 	return "regclass"
 }
 
 type Text struct{}
 
-func (*Text) Eval() string {
+func (*Text) ToSQLString() string {
 	return "text"
 }
 
 type Bytea struct{}
 
-func (*Bytea) Eval() string {
+func (*Bytea) ToSQLString() string {
 	return "bytea"
 }
 
@@ -161,16 +161,16 @@ type Array struct {
 	Ty SQLType
 }
 
-func (a *Array) Eval() string {
-	return fmt.Sprintf("%s[]", a.Ty.Eval())
+func (a *Array) ToSQLString() string {
+	return fmt.Sprintf("%s[]", a.Ty.ToSQLString())
 }
 
 type Custom struct {
 	Ty *SQLObjectName
 }
 
-func (c *Custom) Eval() string {
-	return c.Ty.Eval()
+func (c *Custom) ToSQLString() string {
+	return c.Ty.ToSQLString()
 }
 
 func formatTypeWithOptionalLength(sqltype string, len *uint8) string {

@@ -13,12 +13,12 @@ func NewSQLIdent(str string) *SQLIdent {
 	return &s
 }
 
-func (s *SQLIdent) Eval() string {
+func (s *SQLIdent) ToSQLString() string {
 	return string(*s)
 }
 
 type ASTNode interface {
-	Eval() string
+	ToSQLString() string
 }
 
 // Identifier e.g. table name or column name
@@ -32,14 +32,14 @@ func NewSQLIdentifier(ident *SQLIdent) *SQLIdentifier {
 	}
 }
 
-func (s *SQLIdentifier) Eval() string {
+func (s *SQLIdentifier) ToSQLString() string {
 	return string(*s.Ident)
 }
 
 // *
 type SQLWildcard struct{}
 
-func (s SQLWildcard) Eval() string {
+func (s SQLWildcard) ToSQLString() string {
 	return "*"
 }
 
@@ -48,7 +48,7 @@ type SQLQualifiedWildcard struct {
 	Idents []*SQLIdent
 }
 
-func (s *SQLQualifiedWildcard) Eval() string {
+func (s *SQLQualifiedWildcard) ToSQLString() string {
 	strs := make([]string, 0, len(s.Idents))
 	for _, ident := range s.Idents {
 		strs = append(strs, string(*ident))
@@ -61,7 +61,7 @@ type SQLCompoundIdentifier struct {
 	Idents []*SQLIdent
 }
 
-func (s *SQLCompoundIdentifier) Eval() string {
+func (s *SQLCompoundIdentifier) ToSQLString() string {
 	strs := make([]string, 0, len(s.Idents))
 	for _, ident := range s.Idents {
 		strs = append(strs, string(*ident))
@@ -73,16 +73,16 @@ type SQLIsNull struct {
 	X ASTNode
 }
 
-func (s *SQLIsNull) Eval() string {
-	return fmt.Sprintf("%s IS NULl", s.X.Eval())
+func (s *SQLIsNull) ToSQLString() string {
+	return fmt.Sprintf("%s IS NULl", s.X.ToSQLString())
 }
 
 type SQLIsNotNull struct {
 	X ASTNode
 }
 
-func (s *SQLIsNotNull) Eval() string {
-	return fmt.Sprintf("%s IS NOT NULL", s.X.Eval())
+func (s *SQLIsNotNull) ToSQLString() string {
+	return fmt.Sprintf("%s IS NOT NULL", s.X.ToSQLString())
 }
 
 type SQLInList struct {
@@ -91,8 +91,8 @@ type SQLInList struct {
 	Negated bool
 }
 
-func (s *SQLInList) Eval() string {
-	return fmt.Sprintf("%s %sIN {%s}", s.Expr.Eval(), negatedString(s.Negated), commaSeparatedString(s.List))
+func (s *SQLInList) ToSQLString() string {
+	return fmt.Sprintf("%s %sIN {%s}", s.Expr.ToSQLString(), negatedString(s.Negated), commaSeparatedString(s.List))
 }
 
 //[ NOT ] IN (SELECT ...)
@@ -102,8 +102,8 @@ type SQLInSubQuery struct {
 	Negated  bool
 }
 
-func (s *SQLInSubQuery) Eval() string {
-	return fmt.Sprintf("%s %sIN (%s)", s.Expr.Eval(), negatedString(s.Negated), s.SubQuery.Eval())
+func (s *SQLInSubQuery) ToSQLString() string {
+	return fmt.Sprintf("%s %sIN (%s)", s.Expr.ToSQLString(), negatedString(s.Negated), s.SubQuery.ToSQLString())
 }
 
 type SQLBetween struct {
@@ -113,8 +113,8 @@ type SQLBetween struct {
 	High    ASTNode
 }
 
-func (s *SQLBetween) Eval() string {
-	return fmt.Sprintf("%s %sBETWEEN %s AND %s", s.Expr.Eval(), negatedString(s.Negated), s.Low.Eval(), s.High.Eval())
+func (s *SQLBetween) ToSQLString() string {
+	return fmt.Sprintf("%s %sBETWEEN %s AND %s", s.Expr.ToSQLString(), negatedString(s.Negated), s.Low.ToSQLString(), s.High.ToSQLString())
 }
 
 type SQLBinaryExpr struct {
@@ -123,8 +123,8 @@ type SQLBinaryExpr struct {
 	Right ASTNode
 }
 
-func (s *SQLBinaryExpr) Eval() string {
-	return fmt.Sprintf("%s %s %s", s.Left.Eval(), s.Op.Eval(), s.Right.Eval())
+func (s *SQLBinaryExpr) ToSQLString() string {
+	return fmt.Sprintf("%s %s %s", s.Left.ToSQLString(), s.Op.ToSQLString(), s.Right.ToSQLString())
 }
 
 type SQLCast struct {
@@ -132,16 +132,16 @@ type SQLCast struct {
 	DateType SQLType
 }
 
-func (s *SQLCast) Eval() string {
-	return fmt.Sprintf("CAST(%s AS %s)", s.Expr.Eval(), s.DateType.Eval())
+func (s *SQLCast) ToSQLString() string {
+	return fmt.Sprintf("CAST(%s AS %s)", s.Expr.ToSQLString(), s.DateType.ToSQLString())
 }
 
 type SQLNested struct {
 	AST ASTNode
 }
 
-func (s *SQLNested) Eval() string {
-	return fmt.Sprintf("(%s)", s.AST.Eval())
+func (s *SQLNested) ToSQLString() string {
+	return fmt.Sprintf("(%s)", s.AST.ToSQLString())
 }
 
 type SQLUnary struct {
@@ -149,16 +149,16 @@ type SQLUnary struct {
 	Expr     ASTNode
 }
 
-func (s *SQLUnary) Eval() string {
-	return fmt.Sprintf("%s %s", s.Operator.Eval(), s.Expr.Eval())
+func (s *SQLUnary) ToSQLString() string {
+	return fmt.Sprintf("%s %s", s.Operator.ToSQLString(), s.Expr.ToSQLString())
 }
 
 type SQLValue struct {
 	Value Value
 }
 
-func (s *SQLValue) Eval() string {
-	return s.Value.Eval()
+func (s *SQLValue) ToSQLString() string {
+	return s.Value.ToSQLString()
 }
 
 type SQLFunction struct {
@@ -167,11 +167,11 @@ type SQLFunction struct {
 	Over *SQLWindowSpec
 }
 
-func (s *SQLFunction) Eval() string {
-	str := fmt.Sprintf("%s(%s)", s.Name.Eval(), commaSeparatedString(s.Args))
+func (s *SQLFunction) ToSQLString() string {
+	str := fmt.Sprintf("%s(%s)", s.Name.ToSQLString(), commaSeparatedString(s.Args))
 
 	if s.Over != nil {
-		str += fmt.Sprintf(" OVER (%s)", s.Over.Eval())
+		str += fmt.Sprintf(" OVER (%s)", s.Over.ToSQLString())
 	}
 
 	return str
@@ -184,18 +184,18 @@ type SQLCase struct {
 	ElseResult ASTNode
 }
 
-func (s *SQLCase) Eval() string {
+func (s *SQLCase) ToSQLString() string {
 	str := "CASE"
 	if s.Operand != nil {
-		str += fmt.Sprintf(" %s", s.Operand.Eval())
+		str += fmt.Sprintf(" %s", s.Operand.ToSQLString())
 	}
 	var conditionsStr []string
 	for i := 0; i < len(s.Conditions); i++ {
-		conditionsStr = append(conditionsStr, fmt.Sprintf(" WHEN %s THEN %s", s.Conditions[i].Eval(), s.Results[i].Eval()))
+		conditionsStr = append(conditionsStr, fmt.Sprintf(" WHEN %s THEN %s", s.Conditions[i].ToSQLString(), s.Results[i].ToSQLString()))
 	}
 	str += strings.Join(conditionsStr, "")
 	if s.ElseResult != nil {
-		str += fmt.Sprintf(" ELSE %s", s.ElseResult.Eval())
+		str += fmt.Sprintf(" ELSE %s", s.ElseResult.ToSQLString())
 	}
 	str += " END"
 
@@ -207,16 +207,16 @@ type SQLExists struct {
 	Query   *SQLQuery
 }
 
-func (s *SQLExists) Eval() string {
-	return fmt.Sprintf("%sEXISTS (%s)", negatedString(s.Negated), s.Query.Eval())
+func (s *SQLExists) ToSQLString() string {
+	return fmt.Sprintf("%sEXISTS (%s)", negatedString(s.Negated), s.Query.ToSQLString())
 }
 
 type SQLSubquery struct {
 	Query *SQLQuery
 }
 
-func (s *SQLSubquery) Eval() string {
-	return fmt.Sprintf("(%s)", s.Query.Eval())
+func (s *SQLSubquery) ToSQLString() string {
+	return fmt.Sprintf("(%s)", s.Query.ToSQLString())
 }
 
 type SQLObjectName struct {
@@ -235,7 +235,7 @@ func NewSQLObjectName(strs ...string) *SQLObjectName {
 	}
 }
 
-func (s *SQLObjectName) Eval() string {
+func (s *SQLObjectName) ToSQLString() string {
 	var strs []string
 	for _, l := range s.Idents {
 		strs = append(strs, string(*l))
@@ -248,35 +248,35 @@ func commaSeparatedString(list interface{}) string {
 	switch s := list.(type) {
 	case []ASTNode:
 		for _, l := range s {
-			strs = append(strs, l.Eval())
+			strs = append(strs, l.ToSQLString())
 		}
 	case []TableElement:
 		for _, l := range s {
-			strs = append(strs, l.Eval())
+			strs = append(strs, l.ToSQLString())
 		}
 	case []SQLSelectItem:
 		for _, l := range s {
-			strs = append(strs, l.Eval())
+			strs = append(strs, l.ToSQLString())
 		}
 	case []*SQLAssignment:
 		for _, l := range s {
-			strs = append(strs, l.Eval())
+			strs = append(strs, l.ToSQLString())
 		}
 	case []*SQLIdent:
 		for _, l := range s {
-			strs = append(strs, l.Eval())
+			strs = append(strs, l.ToSQLString())
 		}
 	case []*SQLOrderByExpr:
 		for _, l := range s {
-			strs = append(strs, l.Eval())
+			strs = append(strs, l.ToSQLString())
 		}
 	case []*SQLColumnDef:
 		for _, l := range s {
-			strs = append(strs, l.Eval())
+			strs = append(strs, l.ToSQLString())
 		}
 	case []*TableConstraint:
 		for _, l := range s {
-			strs = append(strs, l.Eval())
+			strs = append(strs, l.ToSQLString())
 		}
 	default:
 		log.Fatalf("unexpected type array %+v", list)
@@ -300,7 +300,7 @@ type SQLWindowSpec struct {
 	WindowsFrame *SQLWindowFrame
 }
 
-func (s *SQLWindowSpec) Eval() string {
+func (s *SQLWindowSpec) ToSQLString() string {
 	var clauses []string
 	if len(s.PartitionBy) != 0 {
 		clauses = append(clauses, fmt.Sprintf("PARTITION BY %s", commaSeparatedString(s.PartitionBy)))
@@ -311,9 +311,9 @@ func (s *SQLWindowSpec) Eval() string {
 
 	if s.WindowsFrame != nil {
 		if s.WindowsFrame.EndBound != nil {
-			clauses = append(clauses, fmt.Sprintf("%s BETWEEN %s AND %s", s.WindowsFrame.Units.Eval(), s.WindowsFrame.StartBound.Eval(), s.WindowsFrame.EndBound.Eval()))
+			clauses = append(clauses, fmt.Sprintf("%s BETWEEN %s AND %s", s.WindowsFrame.Units.ToSQLString(), s.WindowsFrame.StartBound.ToSQLString(), s.WindowsFrame.EndBound.ToSQLString()))
 		} else {
-			clauses = append(clauses, fmt.Sprintf("%s %s", s.WindowsFrame.Units.Eval(), s.WindowsFrame.StartBound.Eval()))
+			clauses = append(clauses, fmt.Sprintf("%s %s", s.WindowsFrame.Units.ToSQLString(), s.WindowsFrame.StartBound.ToSQLString()))
 		}
 	}
 
@@ -334,7 +334,7 @@ const (
 	GroupsUnit
 )
 
-func (s *SQLWindowFrameUnits) Eval() string {
+func (s *SQLWindowFrameUnits) ToSQLString() string {
 	switch *s {
 	case RowsUnit:
 		return "ROWS"
@@ -360,27 +360,27 @@ func (SQLWindowFrameUnits) FromStr(str string) SQLWindowFrameUnits {
 
 //go:generate genmark -t SQLWindowFrameBound -e ASTNode
 
-type CurrentRow struct{
+type CurrentRow struct {
 	sqlWindowFrameBound
 }
 
-func (*CurrentRow) Eval() string {
+func (*CurrentRow) ToSQLString() string {
 	return "CURRENT ROW"
 }
 
-type UnboundedPreceding struct{
+type UnboundedPreceding struct {
 	sqlWindowFrameBound
 }
 
-func (*UnboundedPreceding) Eval() string {
+func (*UnboundedPreceding) ToSQLString() string {
 	return "UNBOUNDED PRECEDING"
 }
 
-type UnboundedFollowing struct{
+type UnboundedFollowing struct {
 	sqlWindowFrameBound
 }
 
-func (*UnboundedFollowing) Eval() string {
+func (*UnboundedFollowing) ToSQLString() string {
 	return "UNBOUNDED FOLLOWING"
 }
 
@@ -389,7 +389,7 @@ type Preceding struct {
 	Bound *uint64
 }
 
-func (p *Preceding) Eval() string {
+func (p *Preceding) ToSQLString() string {
 	return fmt.Sprintf("%d PRECEDING", *p.Bound)
 }
 
@@ -398,6 +398,6 @@ type Following struct {
 	Bound *uint64
 }
 
-func (f *Following) Eval() string {
+func (f *Following) ToSQLString() string {
 	return fmt.Sprintf("%d FOLLOWING", *f.Bound)
 }
