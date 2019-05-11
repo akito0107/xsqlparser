@@ -180,7 +180,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 				Elements: []TableElement{
 					&SQLColumnDef{
 						Name:     NewSQLIdent("person_id"),
-						DateType: &Int{},
+						DataType: &Int{},
 						Constraints: []*ColumnConstraint{
 							{
 								Spec: &UniqueColumnSpec{
@@ -194,7 +194,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 					},
 					&SQLColumnDef{
 						Name: NewSQLIdent("last_name"),
-						DateType: &VarcharType{
+						DataType: &VarcharType{
 							Size: NewSize(255),
 						},
 						Constraints: []*ColumnConstraint{
@@ -205,7 +205,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 					},
 					&SQLColumnDef{
 						Name:     NewSQLIdent("test_id"),
-						DateType: &Int{},
+						DataType: &Int{},
 						Constraints: []*ColumnConstraint{
 							{
 								Spec: &NotNullColumnSpec{},
@@ -220,7 +220,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 					},
 					&SQLColumnDef{
 						Name: NewSQLIdent("email"),
-						DateType: &VarcharType{
+						DataType: &VarcharType{
 							Size: NewSize(255),
 						},
 						Constraints: []*ColumnConstraint{
@@ -234,7 +234,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 					},
 					&SQLColumnDef{
 						Name:     NewSQLIdent("age"),
-						DateType: &Int{},
+						DataType: &Int{},
 						Constraints: []*ColumnConstraint{
 							{
 								Spec: &NotNullColumnSpec{},
@@ -260,7 +260,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 					},
 					&SQLColumnDef{
 						Name:     NewSQLIdent("created_at"),
-						DateType: &Timestamp{},
+						DataType: &Timestamp{},
 						Default:  NewSQLIdent("CURRENT_TIMESTAMP"),
 						Constraints: []*ColumnConstraint{
 							{
@@ -285,7 +285,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 				Elements: []TableElement{
 					&SQLColumnDef{
 						Name:     NewSQLIdent("person_id"),
-						DateType: &Int{},
+						DataType: &Int{},
 					},
 					&TableConstraint{
 						Name: NewSQLIdentifier(NewSQLIdent("production")),
@@ -335,7 +335,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 				Elements: []TableElement{
 					&SQLColumnDef{
 						Name:     NewSQLIdent("person_id"),
-						DateType: &Int{},
+						DataType: &Int{},
 						Constraints: []*ColumnConstraint{
 							{
 								Spec: &UniqueColumnSpec{
@@ -349,7 +349,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 					},
 					&SQLColumnDef{
 						Name: NewSQLIdent("last_name"),
-						DateType: &VarcharType{
+						DataType: &VarcharType{
 							Size: NewSize(255),
 						},
 						Constraints: []*ColumnConstraint{
@@ -360,7 +360,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 					},
 					&SQLColumnDef{
 						Name:     NewSQLIdent("created_at"),
-						DateType: &Timestamp{},
+						DataType: &Timestamp{},
 						Default:  NewSQLIdent("CURRENT_TIMESTAMP"),
 						Constraints: []*ColumnConstraint{
 							{
@@ -397,13 +397,12 @@ func TestSQLAlterTable_ToSQLString(t *testing.T) {
 			name: "add column",
 			in: &SQLAlterTable{
 				TableName: NewSQLObjectName("customers"),
-				Operation: &AddColumn{
+				Action: &AddColumnTableAction{
 					Column: &SQLColumnDef{
 						Name: NewSQLIdent("email"),
-						DateType: &VarcharType{
+						DataType: &VarcharType{
 							Size: NewSize(255),
 						},
-						AllowNull: true,
 					},
 				},
 			},
@@ -414,13 +413,63 @@ func TestSQLAlterTable_ToSQLString(t *testing.T) {
 			name: "remove column",
 			in: &SQLAlterTable{
 				TableName: NewSQLObjectName("products"),
-				Operation: &RemoveColumn{
+				Action: &RemoveColumnTableAction{
 					Name:    NewSQLIdent("description"),
 					Cascade: true,
 				},
 			},
 			out: "ALTER TABLE products " +
 				"DROP COLUMN description CASCADE",
+		},
+		{
+			name: "add constraint",
+			in: &SQLAlterTable{
+				TableName: NewSQLObjectName("products"),
+				Action: &AddConstraintTableAction{
+					Constraint: &TableConstraint{
+						Spec: &ReferentialTableConstraint{
+							Columns: []*SQLIdent{NewSQLIdent("test_id")},
+							KeyExpr: &ReferenceKeyExpr{
+								TableName: NewSQLIdentifier(NewSQLIdent("other_table")),
+								Columns:   []*SQLIdent{NewSQLIdent("col1"), NewSQLIdent("col2")},
+							},
+						},
+					},
+				},
+			},
+			out: "ALTER TABLE products " +
+				"ADD FOREIGN KEY(test_id) REFERENCES other_table(col1, col2)",
+		},
+		{
+			name: "alter column",
+			in: &SQLAlterTable{
+				TableName: NewSQLObjectName("products"),
+				Action: &AlterColumnTableAction{
+					ColumnName: NewSQLIdent("created_at"),
+					Action: &SetDefaultColumnAction{
+						Default: NewSQLIdentifier(NewSQLIdent("current_timestamp")),
+					},
+				},
+			},
+			out: "ALTER TABLE products " +
+				"ALTER COLUMN created_at SET DEFAULT current_timestamp",
+		},
+		{
+			name: "pg change type",
+			in: &SQLAlterTable{
+				TableName: NewSQLObjectName("products"),
+				Action: &AlterColumnTableAction{
+					ColumnName: NewSQLIdent("number"),
+					Action: &PGAlterDataTypeColumnAction{
+						DataType: &Decimal{
+							Scale:     NewSize(10),
+							Precision: NewSize(255),
+						},
+					},
+				},
+			},
+			out: "ALTER TABLE products " +
+				"ALTER COLUMN number TYPE numeric(255,10)",
 		},
 	}
 	for _, c := range cases {
