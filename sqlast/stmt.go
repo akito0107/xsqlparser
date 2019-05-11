@@ -375,7 +375,7 @@ type SetDefaultColumnAction struct {
 }
 
 func (s *SetDefaultColumnAction) ToSQLString() string {
-	return fmt.Sprintf("DEFAULT %s", s.Default.ToSQLString())
+	return fmt.Sprintf("SET DEFAULT %s", s.Default.ToSQLString())
 }
 
 type DropDefaultColumnAction struct {
@@ -384,6 +384,16 @@ type DropDefaultColumnAction struct {
 
 func (*DropDefaultColumnAction) ToSQLString() string {
 	return fmt.Sprintf("DROP DEFAULT")
+}
+
+// postgres only
+type PGAlterDataTypeColumnAction struct {
+	alterColumnAction
+	DataType SQLType
+}
+
+func (p *PGAlterDataTypeColumnAction) ToSQLString() string {
+	return fmt.Sprintf("TYPE %s", p.DataType.ToSQLString())
 }
 
 type RemoveColumnTableAction struct {

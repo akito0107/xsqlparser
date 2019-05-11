@@ -422,6 +422,56 @@ func TestSQLAlterTable_ToSQLString(t *testing.T) {
 			out: "ALTER TABLE products " +
 				"DROP COLUMN description CASCADE",
 		},
+		{
+			name: "add constraint",
+			in: &SQLAlterTable{
+				TableName: NewSQLObjectName("products"),
+				Action: &AddConstraintTableAction{
+					Constraint: &TableConstraint{
+						Spec: &ReferentialTableConstraint{
+							Columns: []*SQLIdent{NewSQLIdent("test_id")},
+							KeyExpr: &ReferenceKeyExpr{
+								TableName: NewSQLIdentifier(NewSQLIdent("other_table")),
+								Columns:   []*SQLIdent{NewSQLIdent("col1"), NewSQLIdent("col2")},
+							},
+						},
+					},
+				},
+			},
+			out: "ALTER TABLE products " +
+				"ADD FOREIGN KEY(test_id) REFERENCES other_table(col1, col2)",
+		},
+		{
+			name: "alter column",
+			in: &SQLAlterTable{
+				TableName: NewSQLObjectName("products"),
+				Action: &AlterColumnTableAction{
+					ColumnName: NewSQLIdent("created_at"),
+					Action: &SetDefaultColumnAction{
+						Default: NewSQLIdentifier(NewSQLIdent("current_timestamp")),
+					},
+				},
+			},
+			out: "ALTER TABLE products " +
+				"ALTER COLUMN created_at SET DEFAULT current_timestamp",
+		},
+		{
+			name: "pg change type",
+			in: &SQLAlterTable{
+				TableName: NewSQLObjectName("products"),
+				Action: &AlterColumnTableAction{
+					ColumnName: NewSQLIdent("number"),
+					Action: &PGAlterDataTypeColumnAction{
+						DataType: &Decimal{
+							Scale:     NewSize(10),
+							Precision: NewSize(255),
+						},
+					},
+				},
+			},
+			out: "ALTER TABLE products " +
+				"ALTER COLUMN number TYPE numeric(255,10)",
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
