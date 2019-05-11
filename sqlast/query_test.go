@@ -6,7 +6,7 @@ import (
 	"github.com/andreyvit/diff"
 )
 
-func TestSQLSelect_Eval(t *testing.T) {
+func TestSQLSelect_ToSQLString(t *testing.T) {
 	cases := []struct {
 		name string
 		in   *SQLSelect
@@ -165,7 +165,7 @@ func TestSQLSelect_Eval(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			act := c.in.Eval()
+			act := c.in.ToSQLString()
 
 			if act != c.out {
 				t.Errorf("must be \n%s but \n%s \n diff: %s", c.out, act, diff.CharacterDiff(c.out, act))
@@ -175,7 +175,7 @@ func TestSQLSelect_Eval(t *testing.T) {
 
 }
 
-func TestSQLQuery_Eval(t *testing.T) {
+func TestSQLQuery_ToSQLString(t *testing.T) {
 	cases := []struct {
 		name string
 		in   *SQLQuery
@@ -348,11 +348,52 @@ func TestSQLQuery_Eval(t *testing.T) {
 				"SELECT * FROM user_sub WHERE user.id = user_sub.id AND user_sub.job = 'job'" +
 				")",
 		},
+		{
+			name: "between / case",
+			in: &SQLQuery{
+				Body: &SQLSelect{
+					Projection: []SQLSelectItem{
+						&ExpressionWithAlias{
+							Expr: &SQLCase{
+								Conditions: []ASTNode{
+									&SQLBinaryExpr{
+										Op:    Eq,
+										Left:  NewSQLIdentifier(NewSQLIdent("expr1")),
+										Right: NewSingleQuotedString("1"),
+									},
+									&SQLBinaryExpr{
+										Op:    Eq,
+										Left:  NewSQLIdentifier(NewSQLIdent("expr2")),
+										Right: NewSingleQuotedString("2"),
+									},
+								},
+								Results: []ASTNode{
+									NewSingleQuotedString("test1"),
+									NewSingleQuotedString("test2"),
+								},
+								ElseResult: NewSingleQuotedString("other"),
+							},
+							Alias: NewSQLIdent("alias"),
+						},
+					},
+					Relation: &Table{
+						Name: NewSQLObjectName("user"),
+					},
+					Selection: &SQLBetween{
+						Expr: NewSQLIdentifier(NewSQLIdent("id")),
+						High: NewLongValue(2),
+						Low:  NewLongValue(1),
+					},
+				},
+			},
+			out: "SELECT CASE WHEN expr1 = '1' THEN 'test1' WHEN expr2 = '2' THEN 'test2' ELSE 'other' END AS alias " +
+				"FROM user WHERE id BETWEEN 1 AND 2",
+		},
 	}
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			act := c.in.Eval()
+			act := c.in.ToSQLString()
 
 			if act != c.out {
 				t.Errorf("must be \n%s but \n%s \n diff: %s", c.out, act, diff.CharacterDiff(c.out, act))

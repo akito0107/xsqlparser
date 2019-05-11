@@ -15,8 +15,8 @@ type SQLInsert struct {
 	Values    [][]ASTNode
 }
 
-func (s *SQLInsert) Eval() string {
-	str := fmt.Sprintf("INSERT INTO %s", s.TableName.Eval())
+func (s *SQLInsert) ToSQLString() string {
+	str := fmt.Sprintf("INSERT INTO %s", s.TableName.ToSQLString())
 	if len(s.Columns) != 0 {
 		str += fmt.Sprintf(" (%s)", commaSeparatedString(s.Columns))
 	}
@@ -38,8 +38,8 @@ type SQLCopy struct {
 	Values    []*string
 }
 
-func (s *SQLCopy) Eval() string {
-	str := fmt.Sprintf("COPY %s", s.TableName.Eval())
+func (s *SQLCopy) ToSQLString() string {
+	str := fmt.Sprintf("COPY %s", s.TableName.ToSQLString())
 	if len(s.Columns) != 0 {
 		str += fmt.Sprintf(" (%s)", commaSeparatedString(s.Columns))
 	}
@@ -68,13 +68,13 @@ type SQLUpdate struct {
 	Selection   ASTNode
 }
 
-func (s *SQLUpdate) Eval() string {
-	str := fmt.Sprintf("UPDATE %s SET ", s.TableName.Eval())
+func (s *SQLUpdate) ToSQLString() string {
+	str := fmt.Sprintf("UPDATE %s SET ", s.TableName.ToSQLString())
 	if s.Assignments != nil {
 		str += commaSeparatedString(s.Assignments)
 	}
 	if s.Selection != nil {
-		str += fmt.Sprintf(" WHERE %s", s.Selection.Eval())
+		str += fmt.Sprintf(" WHERE %s", s.Selection.ToSQLString())
 	}
 
 	return str
@@ -86,11 +86,11 @@ type SQLDelete struct {
 	Selection ASTNode
 }
 
-func (s *SQLDelete) Eval() string {
-	str := fmt.Sprintf("DELETE FROM %s", s.TableName.Eval())
+func (s *SQLDelete) ToSQLString() string {
+	str := fmt.Sprintf("DELETE FROM %s", s.TableName.ToSQLString())
 
 	if s.Selection != nil {
-		str += fmt.Sprintf(" WHERE %s", s.Selection.Eval())
+		str += fmt.Sprintf(" WHERE %s", s.Selection.ToSQLString())
 	}
 
 	return str
@@ -103,12 +103,12 @@ type SQLCreateView struct {
 	Materialized bool
 }
 
-func (s *SQLCreateView) Eval() string {
+func (s *SQLCreateView) ToSQLString() string {
 	var modifier string
 	if s.Materialized {
 		modifier = " MATERIALIZED"
 	}
-	return fmt.Sprintf("CREATE%s VIEW %s AS %s", modifier, s.Name.Eval(), s.Query.Eval())
+	return fmt.Sprintf("CREATE%s VIEW %s AS %s", modifier, s.Name.ToSQLString(), s.Query.ToSQLString())
 }
 
 type SQLCreateTable struct {
@@ -121,16 +121,16 @@ type SQLCreateTable struct {
 	NotExists  bool
 }
 
-func (s *SQLCreateTable) Eval() string {
+func (s *SQLCreateTable) ToSQLString() string {
 	ifNotExists := ""
 	if s.NotExists {
 		ifNotExists = "IF NOT EXISTS "
 	}
 	if s.External {
 		return fmt.Sprintf("CREATE EXETRNAL TABLE %s%s (%s) STORED AS %s LOCATION '%s'",
-			ifNotExists, s.Name.Eval(), commaSeparatedString(s.Elements), s.FileFormat.Eval(), *s.Location)
+			ifNotExists, s.Name.ToSQLString(), commaSeparatedString(s.Elements), s.FileFormat.ToSQLString(), *s.Location)
 	}
-	return fmt.Sprintf("CREATE TABLE %s%s (%s)", ifNotExists, s.Name.Eval(), commaSeparatedString(s.Elements))
+	return fmt.Sprintf("CREATE TABLE %s%s (%s)", ifNotExists, s.Name.ToSQLString(), commaSeparatedString(s.Elements))
 }
 
 type SQLAlterTable struct {
@@ -139,8 +139,8 @@ type SQLAlterTable struct {
 	Operation AlterOperation
 }
 
-func (s *SQLAlterTable) Eval() string {
-	return fmt.Sprintf("ALTER TABLE %s %s", s.TableName.Eval(), s.Operation.Eval())
+func (s *SQLAlterTable) ToSQLString() string {
+	return fmt.Sprintf("ALTER TABLE %s %s", s.TableName.ToSQLString(), s.Operation.ToSQLString())
 }
 
 type SQLAssignment struct {
@@ -148,8 +148,8 @@ type SQLAssignment struct {
 	Value ASTNode
 }
 
-func (s *SQLAssignment) Eval() string {
-	return fmt.Sprintf("%s = %s", s.ID.Eval(), s.Value.Eval())
+func (s *SQLAssignment) ToSQLString() string {
+	return fmt.Sprintf("%s = %s", s.ID.ToSQLString(), s.Value.ToSQLString())
 }
 
 //go:generate genmark -t TableElement -e ASTNode
@@ -160,14 +160,14 @@ type TableConstraint struct {
 	Spec TableConstraintSpec
 }
 
-func (t *TableConstraint) Eval() string {
+func (t *TableConstraint) ToSQLString() string {
 	var str string
 
 	if t.Name != nil {
-		str += fmt.Sprintf("CONSTRAINT %s ", t.Name.Eval())
+		str += fmt.Sprintf("CONSTRAINT %s ", t.Name.ToSQLString())
 	}
 
-	str += t.Spec.Eval()
+	str += t.Spec.ToSQLString()
 
 	return str
 }
@@ -180,7 +180,7 @@ type UniqueTableConstraint struct {
 	Columns   []*SQLIdent
 }
 
-func (u *UniqueTableConstraint) Eval() string {
+func (u *UniqueTableConstraint) ToSQLString() string {
 	if u.IsPrimary {
 		return fmt.Sprintf("PRIMARY KEY(%s)", commaSeparatedString(u.Columns))
 	}
@@ -193,8 +193,8 @@ type ReferentialTableConstraint struct {
 	KeyExpr *ReferenceKeyExpr
 }
 
-func (r *ReferentialTableConstraint) Eval() string {
-	return fmt.Sprintf("FOREIGN KEY(%s) REFERENCES %s", commaSeparatedString(r.Columns), r.KeyExpr.Eval())
+func (r *ReferentialTableConstraint) ToSQLString() string {
+	return fmt.Sprintf("FOREIGN KEY(%s) REFERENCES %s", commaSeparatedString(r.Columns), r.KeyExpr.ToSQLString())
 }
 
 type ReferenceKeyExpr struct {
@@ -202,8 +202,8 @@ type ReferenceKeyExpr struct {
 	Columns   []*SQLIdent
 }
 
-func (r *ReferenceKeyExpr) Eval() string {
-	return fmt.Sprintf("%s(%s)", r.TableName.Eval(), commaSeparatedString(r.Columns))
+func (r *ReferenceKeyExpr) ToSQLString() string {
+	return fmt.Sprintf("%s(%s)", r.TableName.ToSQLString(), commaSeparatedString(r.Columns))
 }
 
 type CheckTableConstraint struct {
@@ -211,8 +211,8 @@ type CheckTableConstraint struct {
 	Expr ASTNode
 }
 
-func (c *CheckTableConstraint) Eval() string {
-	return fmt.Sprintf("CHECK(%s)", c.Expr.Eval())
+func (c *CheckTableConstraint) ToSQLString() string {
+	return fmt.Sprintf("CHECK(%s)", c.Expr.ToSQLString())
 }
 
 type SQLColumnDef struct {
@@ -224,14 +224,14 @@ type SQLColumnDef struct {
 	Constraints []*ColumnConstraint
 }
 
-func (s *SQLColumnDef) Eval() string {
-	str := fmt.Sprintf("%s %s", s.Name.Eval(), s.DateType.Eval())
+func (s *SQLColumnDef) ToSQLString() string {
+	str := fmt.Sprintf("%s %s", s.Name.ToSQLString(), s.DateType.ToSQLString())
 	if s.Default != nil {
-		str += fmt.Sprintf(" DEFAULT %s", s.Default.Eval())
+		str += fmt.Sprintf(" DEFAULT %s", s.Default.ToSQLString())
 	}
 
 	for _, c := range s.Constraints {
-		str += fmt.Sprintf("%s", c.Eval())
+		str += fmt.Sprintf("%s", c.ToSQLString())
 	}
 	return str
 }
@@ -241,12 +241,12 @@ type ColumnConstraint struct {
 	Spec ColumnConstraintSpec
 }
 
-func (c *ColumnConstraint) Eval() string {
+func (c *ColumnConstraint) ToSQLString() string {
 	s := " "
 	if c.Name != nil {
-		s += fmt.Sprintf("CONSTRAINT %s ", c.Name.Eval())
+		s += fmt.Sprintf("CONSTRAINT %s ", c.Name.ToSQLString())
 	}
-	return s + c.Spec.Eval()
+	return s + c.Spec.ToSQLString()
 }
 
 // https://jakewheat.github.io/sql-overview/sql-2008-foundation-grammar.html#column-constraint
@@ -257,7 +257,7 @@ type ColumnConstraintSpec interface {
 type NotNullColumnSpec struct {
 }
 
-func (*NotNullColumnSpec) Eval() string {
+func (*NotNullColumnSpec) ToSQLString() string {
 	return fmt.Sprintf("NOT NULL")
 }
 
@@ -265,7 +265,7 @@ type UniqueColumnSpec struct {
 	IsPrimaryKey bool
 }
 
-func (u *UniqueColumnSpec) Eval() string {
+func (u *UniqueColumnSpec) ToSQLString() string {
 	if u.IsPrimaryKey {
 		return fmt.Sprintf("PRIMARY KEY")
 	} else {
@@ -278,16 +278,16 @@ type ReferencesColumnSpec struct {
 	Columns   []*SQLIdent
 }
 
-func (r *ReferencesColumnSpec) Eval() string {
-	return fmt.Sprintf("REFERENCES %s(%s)", r.TableName.Eval(), commaSeparatedString(r.Columns))
+func (r *ReferencesColumnSpec) ToSQLString() string {
+	return fmt.Sprintf("REFERENCES %s(%s)", r.TableName.ToSQLString(), commaSeparatedString(r.Columns))
 }
 
 type CheckColumnSpec struct {
 	Expr ASTNode
 }
 
-func (c *CheckColumnSpec) Eval() string {
-	return fmt.Sprintf("CHECK(%s)", c.Expr.Eval())
+func (c *CheckColumnSpec) ToSQLString() string {
+	return fmt.Sprintf("CHECK(%s)", c.Expr.ToSQLString())
 }
 
 type FileFormat int
@@ -302,7 +302,7 @@ const (
 	JSONFILE
 )
 
-func (f *FileFormat) Eval() string {
+func (f *FileFormat) ToSQLString() string {
 	switch *f {
 	case TEXTFILE:
 		return "TEXTFILE"

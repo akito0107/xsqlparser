@@ -330,6 +330,47 @@ func TestParser_ParseStatement(t *testing.T) {
 					},
 				},
 			},
+			{
+				name: "between / case",
+				in: "SELECT CASE WHEN expr1 = '1' THEN 'test1' WHEN expr2 = '2' THEN 'test2' ELSE 'other' END AS alias " +
+					"FROM user WHERE id BETWEEN 1 AND 2",
+				out: &sqlast.SQLQuery{
+					Body: &sqlast.SQLSelect{
+						Projection: []sqlast.SQLSelectItem{
+							&sqlast.ExpressionWithAlias{
+								Expr: &sqlast.SQLCase{
+									Conditions: []sqlast.ASTNode{
+										&sqlast.SQLBinaryExpr{
+											Op:    sqlast.Eq,
+											Left:  sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("expr1")),
+											Right: sqlast.NewSingleQuotedString("1"),
+										},
+										&sqlast.SQLBinaryExpr{
+											Op:    sqlast.Eq,
+											Left:  sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("expr2")),
+											Right: sqlast.NewSingleQuotedString("2"),
+										},
+									},
+									Results: []sqlast.ASTNode{
+										sqlast.NewSingleQuotedString("test1"),
+										sqlast.NewSingleQuotedString("test2"),
+									},
+									ElseResult: sqlast.NewSingleQuotedString("other"),
+								},
+								Alias: sqlast.NewSQLIdent("alias"),
+							},
+						},
+						Relation: &sqlast.Table{
+							Name: sqlast.NewSQLObjectName("user"),
+						},
+						Selection: &sqlast.SQLBetween{
+							Expr: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("id")),
+							High: sqlast.NewLongValue(2),
+							Low:  sqlast.NewLongValue(1),
+						},
+					},
+				},
+			},
 		}
 
 		for _, c := range cases {
@@ -785,7 +826,7 @@ func TestParser_ParseStatement(t *testing.T) {
 				}
 				ast, err := parser.ParseStatement()
 				if err != nil {
-					t.Fatal(err)
+					t.Fatalf("%+v", err)
 				}
 
 				if diff := cmp.Diff(c.out, ast, ignoreMarker); diff != "" {

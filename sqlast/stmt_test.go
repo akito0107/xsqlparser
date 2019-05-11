@@ -8,7 +8,7 @@ import (
 
 // from https://www.w3schools.com/sql/sql_insert.asp
 
-func TestSQLInsert_Eval(t *testing.T) {
+func TestSQLInsert_ToSQLString(t *testing.T) {
 	cases := []struct {
 		name string
 		in   *SQLInsert
@@ -34,7 +34,7 @@ func TestSQLInsert_Eval(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			act := c.in.Eval()
+			act := c.in.ToSQLString()
 
 			if act != c.out {
 				t.Errorf("must be \n%s but \n%s \n diff: %s", c.out, act, diff.CharacterDiff(c.out, act))
@@ -43,7 +43,7 @@ func TestSQLInsert_Eval(t *testing.T) {
 	}
 }
 
-func TestSQLUpdate_Eval(t *testing.T) {
+func TestSQLUpdate_ToSQLString(t *testing.T) {
 	cases := []struct {
 		name string
 		in   *SQLUpdate
@@ -74,7 +74,7 @@ func TestSQLUpdate_Eval(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			act := c.in.Eval()
+			act := c.in.ToSQLString()
 
 			if act != c.out {
 				t.Errorf("must be \n%s but \n%s \n diff: %s", c.out, act, diff.CharacterDiff(c.out, act))
@@ -83,7 +83,7 @@ func TestSQLUpdate_Eval(t *testing.T) {
 	}
 }
 
-func TestSQLDelete_Eval(t *testing.T) {
+func TestSQLDelete_ToSQLString(t *testing.T) {
 	cases := []struct {
 		name string
 		in   *SQLDelete
@@ -104,7 +104,7 @@ func TestSQLDelete_Eval(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			act := c.in.Eval()
+			act := c.in.ToSQLString()
 
 			if act != c.out {
 				t.Errorf("must be \n%s but \n%s \n diff: %s", c.out, act, diff.CharacterDiff(c.out, act))
@@ -113,7 +113,7 @@ func TestSQLDelete_Eval(t *testing.T) {
 	}
 }
 
-func TestSQLCreateView_Eval(t *testing.T) {
+func TestSQLCreateView_ToSQLString(t *testing.T) {
 	cases := []struct {
 		name string
 		in   *SQLCreateView
@@ -158,7 +158,7 @@ func TestSQLCreateView_Eval(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			act := c.in.Eval()
+			act := c.in.ToSQLString()
 
 			if act != c.out {
 				t.Errorf("must be \n%s but \n%s \n diff: %s", c.out, act, diff.CharacterDiff(c.out, act))
@@ -167,7 +167,7 @@ func TestSQLCreateView_Eval(t *testing.T) {
 	}
 }
 
-func TestSQLCreateTable_Eval(t *testing.T) {
+func TestSQLCreateTable_ToSQLString(t *testing.T) {
 	cases := []struct {
 		name string
 		in   *SQLCreateTable
@@ -378,7 +378,7 @@ func TestSQLCreateTable_Eval(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			act := c.in.Eval()
+			act := c.in.ToSQLString()
 
 			if act != c.out {
 				t.Errorf("must be \n%s but \n%s \n diff: %s", c.out, act, diff.CharacterDiff(c.out, act))
@@ -387,7 +387,7 @@ func TestSQLCreateTable_Eval(t *testing.T) {
 	}
 }
 
-func TestSQLAlterTable_Eval(t *testing.T) {
+func TestSQLAlterTable_ToSQLString(t *testing.T) {
 	cases := []struct {
 		name string
 		in   *SQLAlterTable
@@ -425,7 +425,7 @@ func TestSQLAlterTable_Eval(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			act := c.in.Eval()
+			act := c.in.ToSQLString()
 
 			if act != c.out {
 				t.Errorf("must be \n%s but \n%s \n diff: %s", c.out, act, diff.CharacterDiff(c.out, act))

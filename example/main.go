@@ -29,7 +29,7 @@ func simpleSelect() {
 	}
 	pp.Println(stmt)
 
-	log.Println(stmt.Eval())
+	log.Println(stmt.ToSQLString())
 }
 
 func complicatedSelect() {
@@ -49,7 +49,7 @@ func complicatedSelect() {
 	}
 	pp.Println(stmt)
 
-	log.Println(stmt.Eval())
+	log.Println(stmt.ToSQLString())
 }
 
 func withCTE() {
@@ -72,6 +72,6 @@ func withCTE() {
 	}
 	pp.Println(stmt)
 
-	log.Println(stmt.Eval())
+	log.Println(stmt.ToSQLString())
 
 }
