@@ -11,7 +11,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-var ignoreMarker = cmp.FilterPath(func(paths cmp.Path) bool {
+var IgnoreMarker = cmp.FilterPath(func(paths cmp.Path) bool {
 	s := paths.Last().Type()
 	name := s.Name()
 	r := []rune(name)
@@ -388,7 +388,7 @@ func TestParser_ParseStatement(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				if diff := cmp.Diff(c.out, ast, ignoreMarker); diff != "" {
+				if diff := cmp.Diff(c.out, ast, IgnoreMarker); diff != "" {
 					t.Errorf("diff %s", diff)
 				}
 			})
@@ -652,7 +652,7 @@ func TestParser_ParseStatement(t *testing.T) {
 					t.Fatalf("%+v", err)
 				}
 
-				if diff := cmp.Diff(c.out, ast, ignoreMarker); diff != "" {
+				if diff := cmp.Diff(c.out, ast, IgnoreMarker); diff != "" {
 					t.Errorf("diff %s", diff)
 				}
 			})
@@ -695,7 +695,7 @@ func TestParser_ParseStatement(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				if diff := cmp.Diff(c.out, ast, ignoreMarker); diff != "" {
+				if diff := cmp.Diff(c.out, ast, IgnoreMarker); diff != "" {
 					t.Errorf("diff %s", diff)
 				}
 			})
@@ -766,7 +766,7 @@ func TestParser_ParseStatement(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				if diff := cmp.Diff(c.out, ast, ignoreMarker); diff != "" {
+				if diff := cmp.Diff(c.out, ast, IgnoreMarker); diff != "" {
 					t.Errorf("diff %s", diff)
 				}
 			})
@@ -887,7 +887,7 @@ func TestParser_ParseStatement(t *testing.T) {
 					t.Fatalf("%+v", err)
 				}
 
-				if diff := cmp.Diff(c.out, ast, ignoreMarker); diff != "" {
+				if diff := cmp.Diff(c.out, ast, IgnoreMarker); diff != "" {
 					t.Errorf("diff %s", diff)
 				}
 			})
@@ -940,7 +940,7 @@ func TestParser_ParseStatement(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				if diff := cmp.Diff(c.out, ast, ignoreMarker); diff != "" {
+				if diff := cmp.Diff(c.out, ast, IgnoreMarker); diff != "" {
 					t.Errorf("diff %s", diff)
 				}
 			})

@@ -112,7 +112,7 @@ func (*Real) ToSQLString() string {
 type Double struct{}
 
 func (*Double) ToSQLString() string {
-	return "double"
+	return "double precision"
 }
 
 type Boolean struct{}
