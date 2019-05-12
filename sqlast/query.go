@@ -81,7 +81,7 @@ func (s *SetOperationExpr) ToSQLString() string {
 
 //go:generate genmark -t SQLSetOperator -e ASTNode
 
-type UnionOperator struct{
+type UnionOperator struct {
 	sqlSetOperator
 }
 
@@ -177,7 +177,7 @@ type Derived struct {
 }
 
 func (d *Derived) ToSQLString() string {
-	s := d.SubQuery.ToSQLString()
+	s := fmt.Sprintf("(%s)", d.SubQuery.ToSQLString())
 	if d.Alias != nil {
 		s = fmt.Sprintf("%s AS %s", s, d.Alias.ToSQLString())
 	}
@@ -215,7 +215,7 @@ func (q *QualifiedWildcard) ToSQLString() string {
 	return fmt.Sprintf("%s.*", q.Prefix.ToSQLString())
 }
 
-type Wildcard struct{
+type Wildcard struct {
 	sqlSelectItem
 }
 

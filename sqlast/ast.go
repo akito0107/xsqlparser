@@ -92,7 +92,7 @@ type SQLInList struct {
 }
 
 func (s *SQLInList) ToSQLString() string {
-	return fmt.Sprintf("%s %sIN {%s}", s.Expr.ToSQLString(), negatedString(s.Negated), commaSeparatedString(s.List))
+	return fmt.Sprintf("%s %sIN (%s)", s.Expr.ToSQLString(), negatedString(s.Negated), commaSeparatedString(s.List))
 }
 
 //[ NOT ] IN (SELECT ...)
