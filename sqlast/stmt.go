@@ -431,3 +431,24 @@ func (d *DropConstraintTableAction) ToSQLString() string {
 	}
 	return fmt.Sprintf("DROP CONSTRAINT %s%s", d.Name.ToSQLString(), cascade)
 }
+
+type SQLDropTable struct {
+	sqlStmt
+	TableNames []*SQLObjectName
+	Cascade    bool
+	IfExists   bool
+}
+
+func (s *SQLDropTable) ToSQLString() string {
+	var ifexists string
+	if s.IfExists {
+		ifexists = "IF EXISTS "
+	}
+
+	var cascade string
+	if s.Cascade {
+		cascade = " CASCADE"
+	}
+
+	return fmt.Sprintf("DROP TABLE %s%s%s", ifexists, commaSeparatedString(s.TableNames), cascade)
+}
