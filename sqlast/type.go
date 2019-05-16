@@ -133,10 +133,16 @@ func (*Time) ToSQLString() string {
 	return "time"
 }
 
-type Timestamp struct{}
+type Timestamp struct {
+	WithTimeZone bool
+}
 
-func (*Timestamp) ToSQLString() string {
-	return "timestamp"
+func (t *Timestamp) ToSQLString() string {
+	var timezone string
+	if t.WithTimeZone {
+		timezone = " with timezone"
+	}
+	return "timestamp" + timezone
 }
 
 type Regclass struct{}

@@ -149,7 +149,9 @@ func (p *Parser) ParseDataType() (sqlast.SQLType, error) {
 			p.expectKeyword("TIME")
 			p.expectKeyword("ZONE")
 		}
-		return &sqlast.Timestamp{}, nil
+		return &sqlast.Timestamp{
+			WithTimeZone: wok,
+		}, nil
 	case "TIME":
 		wok, _ := p.parseKeyword("WITH")
 		ook, _ := p.parseKeyword("WITHOUT")

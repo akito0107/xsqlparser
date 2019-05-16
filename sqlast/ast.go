@@ -250,6 +250,10 @@ func commaSeparatedString(list interface{}) string {
 		for _, l := range s {
 			strs = append(strs, l.ToSQLString())
 		}
+	case []*SQLObjectName:
+		for _, l := range s {
+			strs = append(strs, l.ToSQLString())
+		}
 	case []TableElement:
 		for _, l := range s {
 			strs = append(strs, l.ToSQLString())
