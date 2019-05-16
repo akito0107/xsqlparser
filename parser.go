@@ -33,23 +33,27 @@ func (p *Parser) ParseSQL() ([]sqlast.SQLStmt, error) {
 
 	for {
 		for {
-			ok, err := p.consumeToken(Semicolon)
-			if err != nil {
-				return nil, err
-			}
+			ok, _ := p.consumeToken(Semicolon)
 			expectingDelimiter = false
 			if !ok {
 				break
 			}
 		}
 
-		t, err := p.peekToken()
-		if err == TokenAlreadyConsumed {
+		t, _ := p.peekToken()
+		if t == nil {
 			break
 		}
 		if expectingDelimiter {
 			return nil, errors.Errorf("unexpected token %+v", t)
 		}
+
+		stmt, err := p.ParseStatement()
+		if err != nil {
+			return nil, errors.Errorf("parseStatement failed: %w", err)
+		}
+		stmts = append(stmts, stmt)
+		expectingDelimiter = true
 
 	}
 
