@@ -395,6 +395,22 @@ func (p *PGAlterDataTypeColumnAction) ToSQLString() string {
 	return fmt.Sprintf("TYPE %s", p.DataType.ToSQLString())
 }
 
+type PGSetNotNullColumnAction struct {
+	alterColumnAction
+}
+
+func (p *PGSetNotNullColumnAction) ToSQLString() string {
+	return fmt.Sprintf("SET NOT NULL")
+}
+
+type PGDropNotNullColumnAction struct {
+	alterColumnAction
+}
+
+func (p *PGDropNotNullColumnAction) ToSQLString() string {
+	return fmt.Sprintf("DROP NOT NULL")
+}
+
 type RemoveColumnTableAction struct {
 	alterTableAction
 	Name    *SQLIdent
