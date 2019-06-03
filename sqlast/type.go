@@ -140,7 +140,7 @@ type Timestamp struct {
 func (t *Timestamp) ToSQLString() string {
 	var timezone string
 	if t.WithTimeZone {
-		timezone = " with timezone"
+		timezone = " with time zone"
 	}
 	return "timestamp" + timezone
 }
