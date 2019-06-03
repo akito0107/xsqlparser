@@ -4,8 +4,6 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/akito0107/xsqlparser)](https://goreportcard.com/report/github.com/akito0107/xsqlparesr)
 [![codecov](https://codecov.io/gh/akito0107/xsqlparser/branch/master/graph/badge.svg)](https://codecov.io/gh/akito0107/xsqlparser)
 
-__[WORK IN PROGRESS] currently only supports very limited queries. DO NOT USE IN PRODUCTION.__
-
 sql parser for golang.
 
 This repo is ported of [sqlparser-rs](https://github.com/andygrove/sqlparser-rs) in Go.
