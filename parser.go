@@ -1272,6 +1272,7 @@ func (p *Parser) parseCTEList() ([]*sqlast.CTE, error) {
 }
 
 func (p *Parser) parseTableFactor() (sqlast.TableFactor, error) {
+	isLateral, _ := p.parseKeyword("LATERAL")
 	if ok, _ := p.consumeToken(LParen); ok {
 		subquery, err := p.parseQuery()
 		if err != nil {
@@ -1280,9 +1281,13 @@ func (p *Parser) parseTableFactor() (sqlast.TableFactor, error) {
 		p.expectToken(RParen)
 		alias := p.parseOptionalAlias(dialect.ReservedForTableAlias)
 		return &sqlast.Derived{
+			Lateral:  isLateral,
 			SubQuery: subquery,
 			Alias:    alias,
 		}, nil
+	} else if isLateral && !ok {
+		t, _ := p.nextToken()
+		return nil, errors.Errorf("after lateral expected %s but %+v", LParen, t)
 	}
 
 	name, err := p.parseObjectName()

@@ -172,12 +172,19 @@ func (t *Table) ToSQLString() string {
 
 type Derived struct {
 	tableFactor
+	Lateral  bool
 	SubQuery *SQLQuery
 	Alias    *SQLIdent
 }
 
 func (d *Derived) ToSQLString() string {
-	s := fmt.Sprintf("(%s)", d.SubQuery.ToSQLString())
+	var lateralStr string
+
+	if d.Lateral {
+		lateralStr = "LATERAL "
+	}
+
+	s := fmt.Sprintf("%s(%s)", lateralStr, d.SubQuery.ToSQLString())
 	if d.Alias != nil {
 		s = fmt.Sprintf("%s AS %s", s, d.Alias.ToSQLString())
 	}
