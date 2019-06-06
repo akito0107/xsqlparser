@@ -103,11 +103,11 @@ func (p *Parser) ParseDataType() (sqlast.SQLType, error) {
 	case "BOOLEAN":
 		return &sqlast.Boolean{}, nil
 	case "FLOAT":
-		p, err := p.parseOptionalPrecision()
+		size, err := p.parseOptionalPrecision()
 		if err != nil {
 			return nil, errors.Errorf("parsePrecision failed: %w", err)
 		}
-		return &sqlast.Float{Size: p}, nil
+		return &sqlast.Float{Size: size}, nil
 	case "REAL":
 		return &sqlast.Real{}, nil
 	case "DOUBLE":
@@ -2003,21 +2003,21 @@ func (p *Parser) parseValue() (sqlast.ASTNode, error) {
 
 }
 
-func (p *Parser) parseOptionalPrecision() (*uint8, error) {
+func (p *Parser) parseOptionalPrecision() (*uint, error) {
 	if ok, _ := p.consumeToken(LParen); ok {
 		n, err := p.parseLiteralInt()
 		if err != nil {
 			return nil, errors.Errorf("parseLiteralInt failed: %w", err)
 		}
 		p.expectToken(RParen)
-		i := uint8(n)
+		i := uint(n)
 		return &i, nil
 	} else {
 		return nil, nil
 	}
 }
 
-func (p *Parser) parseOptionalPrecisionScale() (*uint8, *uint8, error) {
+func (p *Parser) parseOptionalPrecisionScale() (*uint, *uint, error) {
 	if ok, _ := p.consumeToken(LParen); !ok {
 		return nil, nil, nil
 	}
@@ -2025,17 +2025,17 @@ func (p *Parser) parseOptionalPrecisionScale() (*uint8, *uint8, error) {
 	if err != nil {
 		return nil, nil, errors.Errorf("parseLiteralInt failed: %w", err)
 	}
-	var scale *uint8
+	var scale *uint
 	if ok, _ := p.consumeToken(Comma); ok {
 		s, err := p.parseLiteralInt()
 		if err != nil {
 			return nil, nil, errors.Errorf("parseLiteralInt failed: %w", err)
 		}
-		us := uint8(s)
+		us := uint(s)
 		scale = &us
 	}
 	p.expectToken(RParen)
-	i := uint8(n)
+	i := uint(n)
 	return &i, scale, nil
 }
 

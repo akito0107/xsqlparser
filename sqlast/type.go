@@ -9,7 +9,7 @@ type SQLType interface {
 }
 
 type CharType struct {
-	Size *uint8
+	Size *uint
 }
 
 func (c *CharType) ToSQLString() string {
@@ -17,7 +17,7 @@ func (c *CharType) ToSQLString() string {
 }
 
 type VarcharType struct {
-	Size *uint8
+	Size *uint
 }
 
 func (v *VarcharType) ToSQLString() string {
@@ -32,7 +32,7 @@ func (*UUID) ToSQLString() string {
 }
 
 type Clob struct {
-	Size uint8
+	Size uint
 }
 
 func (c *Clob) ToSQLString() string {
@@ -40,7 +40,7 @@ func (c *Clob) ToSQLString() string {
 }
 
 type Binary struct {
-	Size uint8
+	Size uint
 }
 
 func (b *Binary) ToSQLString() string {
@@ -48,7 +48,7 @@ func (b *Binary) ToSQLString() string {
 }
 
 type Varbinary struct {
-	Size uint8
+	Size uint
 }
 
 func (v *Varbinary) ToSQLString() string {
@@ -56,7 +56,7 @@ func (v *Varbinary) ToSQLString() string {
 }
 
 type Blob struct {
-	Size uint8
+	Size uint
 }
 
 func (b *Blob) ToSQLString() string {
@@ -64,8 +64,8 @@ func (b *Blob) ToSQLString() string {
 }
 
 type Decimal struct {
-	Precision *uint8
-	Scale     *uint8
+	Precision *uint
+	Scale     *uint
 }
 
 func (d *Decimal) ToSQLString() string {
@@ -76,7 +76,7 @@ func (d *Decimal) ToSQLString() string {
 }
 
 type Float struct {
-	Size *uint8
+	Size *uint
 }
 
 func (f *Float) ToSQLString() string {
@@ -179,7 +179,7 @@ func (c *Custom) ToSQLString() string {
 	return c.Ty.ToSQLString()
 }
 
-func formatTypeWithOptionalLength(sqltype string, len *uint8) string {
+func formatTypeWithOptionalLength(sqltype string, len *uint) string {
 	s := sqltype
 	if len != nil {
 		s += fmt.Sprintf("(%d)", *len)
@@ -188,6 +188,6 @@ func formatTypeWithOptionalLength(sqltype string, len *uint8) string {
 	return s
 }
 
-func NewSize(s uint8) *uint8 {
+func NewSize(s uint) *uint {
 	return &s
 }
