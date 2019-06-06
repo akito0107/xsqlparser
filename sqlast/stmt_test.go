@@ -410,6 +410,22 @@ func TestSQLAlterTable_ToSQLString(t *testing.T) {
 				"ADD COLUMN email character varying(255)",
 		},
 		{
+			name: "add column over uint8",
+			in: &SQLAlterTable{
+				TableName: NewSQLObjectName("customers"),
+				Action: &AddColumnTableAction{
+					Column: &SQLColumnDef{
+						Name: NewSQLIdent("email"),
+						DataType: &VarcharType{
+							Size: NewSize(256),
+						},
+					},
+				},
+			},
+			out: "ALTER TABLE customers " +
+				"ADD COLUMN email character varying(256)",
+		},
+		{
 			name: "remove column",
 			in: &SQLAlterTable{
 				TableName: NewSQLObjectName("products"),
