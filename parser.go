@@ -1706,7 +1706,7 @@ func (p *Parser) parsePrefix() (sqlast.ASTNode, error) {
 				}
 				f, err := p.parseFunction(name)
 				if err != nil {
-					return nil, errors.Errorf("parseFuncton failed: %w", err)
+					return nil, errors.Errorf("parseFunction failed: %w", err)
 				}
 				return f, nil
 			}
