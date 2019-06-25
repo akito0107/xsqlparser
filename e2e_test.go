@@ -4,6 +4,7 @@ package xsqlparser_test
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -17,136 +18,72 @@ import (
 
 func TestParseQuery(t *testing.T) {
 
-	t.Run("SELECT", func(t *testing.T) {
-		files, err := ioutil.ReadDir("testdata/select")
-		if err != nil {
-			t.Fatalf("%+v", err)
-		}
+	cases := []struct {
+		name string
+		dir  string
+	}{
+		{
+			name: "SELECT",
+			dir:  "select",
+		},
+		{
+			name: "CREATE TABLE",
+			dir:  "create_table",
+		},
+		{
+			name: "ALTER TABLE",
+			dir:  "alter",
+		},
+		{
+			name: "DROP TABLE",
+			dir:  "drop_table",
+		},
+	}
 
-		for _, f := range files {
-			if !strings.HasSuffix(f.Name(), ".sql") {
-				continue
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			fname := fmt.Sprintf("testdata/%s/", c.dir)
+			files, err := ioutil.ReadDir(fname)
+			if err != nil {
+				t.Fatalf("%+v", err)
 			}
-			t.Run(f.Name(), func(t *testing.T) {
-				fi, err := os.Open("testdata/select/" + f.Name())
-				if err != nil {
-					t.Fatalf("%+v", err)
-				}
-				parser, err := xsqlparser.NewParser(fi, &dialect.GenericSQLDialect{})
-				if err != nil {
-					t.Fatalf("%+v", err)
-				}
 
-				stmt, err := parser.ParseStatement()
-				if err != nil {
-					t.Fatalf("%+v", err)
+			for _, f := range files {
+				if !strings.HasSuffix(f.Name(), ".sql") {
+					continue
 				}
-				recovered := stmt.ToSQLString()
+				t.Run(f.Name(), func(t *testing.T) {
+					fi, err := os.Open(fname + f.Name())
+					if err != nil {
+						t.Fatalf("%+v", err)
+					}
+					parser, err := xsqlparser.NewParser(fi, &dialect.GenericSQLDialect{})
+					if err != nil {
+						t.Fatalf("%+v", err)
+					}
 
-				parser, err = xsqlparser.NewParser(bytes.NewBufferString(recovered), &dialect.GenericSQLDialect{})
-				if err != nil {
-					t.Fatalf("%+v", err)
-				}
+					stmt, err := parser.ParseStatement()
+					if err != nil {
+						t.Fatalf("%+v", err)
+					}
+					recovered := stmt.ToSQLString()
 
-				stmt2, err := parser.ParseStatement()
-				if err != nil {
-					t.Fatalf("%+v", err)
-				}
+					parser, err = xsqlparser.NewParser(bytes.NewBufferString(recovered), &dialect.GenericSQLDialect{})
+					if err != nil {
+						t.Fatalf("%+v", err)
+					}
 
-				if astdiff := cmp.Diff(stmt, stmt2, xsqlparser.IgnoreMarker); astdiff != "" {
-					t.Logf(recovered)
-					t.Errorf("should be same ast but diff:\n %s", astdiff)
-				}
-			})
-		}
-	})
+					stmt2, err := parser.ParseStatement()
+					if err != nil {
+						t.Fatalf("%+v", err)
+					}
 
-	t.Run("CREATE TABLE", func(t *testing.T) {
-		files, err := ioutil.ReadDir("testdata/create_table")
-		if err != nil {
-			t.Fatalf("%+v", err)
-		}
-
-		for _, f := range files {
-			if !strings.HasSuffix(f.Name(), ".sql") {
-				continue
+					if astdiff := cmp.Diff(stmt, stmt2, xsqlparser.IgnoreMarker); astdiff != "" {
+						t.Logf(recovered)
+						t.Errorf("should be same ast but diff:\n %s", astdiff)
+					}
+				})
 			}
-			t.Run(f.Name(), func(t *testing.T) {
-				fi, err := os.Open("testdata/create_table/" + f.Name())
-				if err != nil {
-					t.Fatalf("%+v", err)
-				}
-				parser, err := xsqlparser.NewParser(fi, &dialect.GenericSQLDialect{})
-				if err != nil {
-					t.Fatalf("%+v", err)
-				}
-
-				stmt, err := parser.ParseStatement()
-				if err != nil {
-					t.Fatalf("%+v", err)
-				}
-				recovered := stmt.ToSQLString()
-
-				parser, err = xsqlparser.NewParser(bytes.NewBufferString(recovered), &dialect.GenericSQLDialect{})
-				if err != nil {
-					t.Fatalf("%+v", err)
-				}
-
-				stmt2, err := parser.ParseStatement()
-				if err != nil {
-					t.Fatalf("%+v", err)
-				}
-
-				if astdiff := cmp.Diff(stmt, stmt2, xsqlparser.IgnoreMarker); astdiff != "" {
-					t.Logf(recovered)
-					t.Errorf("should be same ast but diff:\n %s", astdiff)
-				}
-			})
-		}
-	})
-
-	t.Run("ALTER TABLE", func(t *testing.T) {
-		files, err := ioutil.ReadDir("testdata/alter")
-		if err != nil {
-			t.Fatalf("%+v", err)
-		}
-
-		for _, f := range files {
-			if !strings.HasSuffix(f.Name(), ".sql") {
-				continue
-			}
-			t.Run(f.Name(), func(t *testing.T) {
-				fi, err := os.Open("testdata/alter/" + f.Name())
-				if err != nil {
-					t.Fatalf("%+v", err)
-				}
-				parser, err := xsqlparser.NewParser(fi, &dialect.GenericSQLDialect{})
-				if err != nil {
-					t.Fatalf("%+v", err)
-				}
-
-				stmt, err := parser.ParseStatement()
-				if err != nil {
-					t.Fatalf("%+v", err)
-				}
-				recovered := stmt.ToSQLString()
-
-				parser, err = xsqlparser.NewParser(bytes.NewBufferString(recovered), &dialect.GenericSQLDialect{})
-				if err != nil {
-					t.Fatalf("%+v", err)
-				}
-
-				stmt2, err := parser.ParseStatement()
-				if err != nil {
-					t.Fatalf("%+v", err)
-				}
-
-				if astdiff := cmp.Diff(stmt, stmt2, xsqlparser.IgnoreMarker); astdiff != "" {
-					t.Logf(recovered)
-					t.Errorf("should be same ast but diff:\n %s", astdiff)
-				}
-			})
-		}
-	})
-
+		})
+	}
 }

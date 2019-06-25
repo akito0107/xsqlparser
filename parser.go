@@ -84,6 +84,8 @@ func (p *Parser) ParseStatement() (sqlast.SQLStmt, error) {
 		return p.parseAlter()
 	case "UPDATE":
 		return p.parseUpdate()
+	case "DROP":
+		return p.parseDrop()
 	default:
 		return nil, errors.Errorf("unexpected (or unsupported) keyword %s", word.Keyword)
 	}
@@ -964,6 +966,21 @@ func (p *Parser) parseAlter() (sqlast.SQLStmt, error) {
 
 	t, _ := p.peekToken()
 	return nil, errors.Errorf("unknown alter operation %v", t)
+}
+
+func (p *Parser) parseDrop() (sqlast.SQLStmt, error) {
+	exists, _ := p.parseKeywords("IF", "EXISTS")
+	tableName, err := p.parseObjectName()
+	if err != nil {
+		return nil, errors.Errorf("parseObjectName failed: %w", err)
+	}
+	cascade, _ := p.parseKeyword("CASCADE")
+
+	return &sqlast.SQLDropTable{
+		TableNames: []*sqlast.SQLObjectName{tableName},
+		Cascade:    cascade,
+		IfExists:   exists,
+	}, nil
 }
 
 func (p *Parser) parseAlterColumn() (*sqlast.AlterColumnTableAction, error) {
