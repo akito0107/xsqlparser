@@ -969,6 +969,7 @@ func (p *Parser) parseAlter() (sqlast.SQLStmt, error) {
 }
 
 func (p *Parser) parseDrop() (sqlast.SQLStmt, error) {
+	p.expectKeyword("TABLE")
 	exists, _ := p.parseKeywords("IF", "EXISTS")
 	tableName, err := p.parseObjectName()
 	if err != nil {
