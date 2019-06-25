@@ -681,7 +681,13 @@ func (p *Parser) parseColumnConstraints() ([]*sqlast.ColumnConstraint, error) {
 
 CONSTRAINT_LOOP:
 	for {
-		tok, _ := p.peekToken()
+		tok, err := p.peekToken()
+		if tok == nil {
+			break CONSTRAINT_LOOP
+		}
+		if err != nil {
+			return nil, errors.Errorf("peekToken failed: %w", err)
+		}
 		word, ok := tok.Value.(*SQLWord)
 
 		var name *sqlast.SQLIdentifier
@@ -975,24 +981,40 @@ func (p *Parser) parseAlterColumn() (*sqlast.AlterColumnTableAction, error) {
 
 	switch word.Keyword {
 	case "SET":
-		p.expectKeyword("DEFAULT")
-		def, err := p.parseDefaultExpr(0)
-		if err != nil {
-			return nil, errors.Errorf("parseDefaultExpr failed: %w", err)
+		if ok, _ := p.parseKeyword("DEFAULT"); ok {
+			def, err := p.parseDefaultExpr(0)
+			if err != nil {
+				return nil, errors.Errorf("parseDefaultExpr failed: %w", err)
+			}
+			return &sqlast.AlterColumnTableAction{
+				ColumnName: columnName,
+				Action: &sqlast.SetDefaultColumnAction{
+					Default: def,
+				},
+			}, nil
 		}
-		return &sqlast.AlterColumnTableAction{
-			ColumnName: columnName,
-			Action: &sqlast.SetDefaultColumnAction{
-				Default: def,
-			},
-		}, nil
-	case "DROP":
-		p.expectKeyword("DEFAULT")
+		if ok, _ := p.parseKeywords("NOT", "NULL"); ok {
+			return &sqlast.AlterColumnTableAction{
+				ColumnName: columnName,
+				Action:     &sqlast.PGSetNotNullColumnAction{},
+			}, nil
+		}
 
-		return &sqlast.AlterColumnTableAction{
-			ColumnName: columnName,
-			Action:     &sqlast.DropDefaultColumnAction{},
-		}, nil
+		return nil, errors.Errorf("unknown SET action")
+	case "DROP":
+		if ok, _ := p.parseKeyword("DEFAULT"); ok {
+			return &sqlast.AlterColumnTableAction{
+				ColumnName: columnName,
+				Action:     &sqlast.DropDefaultColumnAction{},
+			}, nil
+		}
+		if ok, _ := p.parseKeywords("NOT", "NULL"); ok {
+			return &sqlast.AlterColumnTableAction{
+				ColumnName: columnName,
+				Action:     &sqlast.PGDropNotNullColumnAction{},
+			}, nil
+		}
+		return nil, errors.Errorf("unknown DROP action")
 	case "TYPE":
 		tp, err := p.ParseDataType()
 		if err != nil {
