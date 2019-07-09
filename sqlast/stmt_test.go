@@ -498,3 +498,75 @@ func TestSQLAlterTable_ToSQLString(t *testing.T) {
 		})
 	}
 }
+
+func TestSQLCreateIndex_ToSQLString(t *testing.T) {
+	cases := []struct {
+		name string
+		in   *SQLCreateIndex
+		out  string
+	}{
+		{
+			name: "create index",
+			in: &SQLCreateIndex{
+				TableName:   NewSQLObjectName("customers"),
+				ColumnNames: []*SQLIdent{NewSQLIdent("name")},
+			},
+			out: "CREATE INDEX ON customers (name)",
+		},
+		{
+			name: "create unique index",
+			in: &SQLCreateIndex{
+				TableName:   NewSQLObjectName("customers"),
+				IsUnique:    true,
+				ColumnNames: []*SQLIdent{NewSQLIdent("name")},
+			},
+			out: "CREATE UNIQUE INDEX ON customers (name)",
+		},
+		{
+			name: "create index with name",
+			in: &SQLCreateIndex{
+				TableName:   NewSQLObjectName("customers"),
+				IndexName:   NewSQLIdent("customers_idx"),
+				IsUnique:    true,
+				ColumnNames: []*SQLIdent{NewSQLIdent("name"), NewSQLIdent("email")},
+			},
+			out: "CREATE UNIQUE INDEX customers_idx ON customers (name, email)",
+		},
+		{
+			name: "create index with name",
+			in: &SQLCreateIndex{
+				TableName:   NewSQLObjectName("customers"),
+				IndexName:   NewSQLIdent("customers_idx"),
+				IsUnique:    true,
+				MethodName:  NewSQLIdent("gist"),
+				ColumnNames: []*SQLIdent{NewSQLIdent("name")},
+			},
+			out: "CREATE UNIQUE INDEX customers_idx ON customers USING gist (name)",
+		},
+		{
+			name: "create partial index with name",
+			in: &SQLCreateIndex{
+				TableName:   NewSQLObjectName("customers"),
+				IndexName:   NewSQLIdent("customers_idx"),
+				IsUnique:    true,
+				MethodName:  NewSQLIdent("gist"),
+				ColumnNames: []*SQLIdent{NewSQLIdent("name")},
+				Selection: &SQLBinaryExpr{
+					Left:  NewSQLIdent("name"),
+					Op:    Eq,
+					Right: NewSingleQuotedString("test"),
+				},
+			},
+			out: "CREATE UNIQUE INDEX customers_idx ON customers USING gist (name) WHERE name = 'test'",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			act := c.in.ToSQLString()
+
+			if act != c.out {
+				t.Errorf("must be \n%s but \n%s \n diff: %s", c.out, act, diff.CharacterDiff(c.out, act))
+			}
+		})
+	}
+}

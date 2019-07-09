@@ -468,3 +468,40 @@ func (s *SQLDropTable) ToSQLString() string {
 
 	return fmt.Sprintf("DROP TABLE %s%s%s", ifexists, commaSeparatedString(s.TableNames), cascade)
 }
+
+type SQLCreateIndex struct {
+	sqlStmt
+	TableName   *SQLObjectName
+	IsUnique    bool
+	IndexName   *SQLIdent
+	MethodName  *SQLIdent
+	ColumnNames []*SQLIdent
+	Selection   ASTNode
+}
+
+func (s *SQLCreateIndex) ToSQLString() string {
+	var uniqueStr string
+	if s.IsUnique {
+		uniqueStr = "UNIQUE "
+
+	}
+	str := fmt.Sprintf("CREATE %sINDEX", uniqueStr)
+
+	if s.IndexName != nil {
+		str = fmt.Sprintf("%s %s ON %s", str, s.IndexName.ToSQLString(), s.TableName.ToSQLString())
+	} else {
+		str = fmt.Sprintf("%s ON %s", str, s.TableName.ToSQLString())
+	}
+
+	if s.MethodName != nil {
+		str = fmt.Sprintf("%s USING %s", str, s.MethodName.ToSQLString())
+	}
+
+	str = fmt.Sprintf("%s (%s)", str, commaSeparatedString(s.ColumnNames))
+
+	if s.Selection != nil {
+		str = fmt.Sprintf("%s WHERE %s", str, s.Selection.ToSQLString())
+	}
+
+	return str
+}
