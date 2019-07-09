@@ -422,7 +422,6 @@ func (p *Parser) parseSelectList() ([]sqlast.SQLSelectItem, error) {
 }
 
 func (p *Parser) parseCreate() (sqlast.SQLStmt, error) {
-
 	if ok, _ := p.parseKeyword("TABLE"); ok {
 		return p.parseCreateTable()
 	}
@@ -435,7 +434,14 @@ func (p *Parser) parseCreate() (sqlast.SQLStmt, error) {
 		return p.parseCreateView()
 	}
 
-	log.Fatal("TABLE or VIEW after create")
+	iok, _ := p.parseKeyword("INDEX")
+	uiok, _ := p.parseKeywords("UNIQUE", "INDEX")
+
+	if iok || uiok {
+		return p.parseCreateIndex(uiok)
+	}
+
+	log.Fatal("TABLE or VIEW or UNIQUE INDEX or INDEX after create")
 
 	return nil, nil
 }
@@ -477,6 +483,60 @@ func (p *Parser) parseCreateView() (sqlast.SQLStmt, error) {
 		Query:        q,
 	}, nil
 
+}
+
+func (p *Parser) parseCreateIndex(unique bool) (sqlast.SQLStmt, error) {
+	var indexName *sqlast.SQLIdent
+	ok, _ := p.parseKeyword("ON")
+	if !ok {
+		if n, err := p.parseIdentifier(); err != nil {
+			return nil, errors.Errorf("parseIdentifier failed: %w", err)
+		} else {
+			indexName = n
+		}
+		p.expectKeyword("ON")
+	}
+
+	tableName, err := p.parseObjectName()
+	if err != nil {
+		return nil, errors.Errorf("parseObjectName failed: %w", err)
+	}
+	var methodName *sqlast.SQLIdent
+
+	if ok, _ := p.parseKeyword("USING"); ok {
+		m, err := p.parseIdentifier()
+		if err != nil {
+			return nil, errors.Errorf("parseIdentifier failed: %w", err)
+		}
+		methodName = m
+	}
+
+	var columns []*sqlast.SQLIdent
+	if ok, _ := p.consumeToken(LParen); ok {
+		columns, err = p.parseColumnNames()
+		if err != nil {
+			return nil, errors.Errorf("parseColumnNames failed: %w", err)
+		}
+		p.expectToken(RParen)
+	}
+
+	var selection sqlast.ASTNode
+	if ok, _ := p.parseKeyword("WHERE"); ok {
+		s, err := p.ParseExpr()
+		if err != nil {
+			return nil, errors.Errorf("ParseExpr failed: %w", err)
+		}
+		selection = s
+	}
+
+	return &sqlast.SQLCreateIndex{
+		IsUnique:    unique,
+		IndexName:   indexName,
+		TableName:   tableName,
+		MethodName:  methodName,
+		ColumnNames: columns,
+		Selection:   selection,
+	}, nil
 }
 
 func (p *Parser) parseElements() ([]sqlast.TableElement, error) {
