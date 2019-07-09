@@ -38,6 +38,10 @@ func TestParseQuery(t *testing.T) {
 			name: "DROP TABLE",
 			dir:  "drop_table",
 		},
+		{
+			name: "CREATE INDEX",
+			dir:  "create_index",
+		},
 	}
 
 	for _, c := range cases {

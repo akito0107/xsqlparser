@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX customers_idx ON customers (name, email);
