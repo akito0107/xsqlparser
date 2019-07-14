@@ -7,9 +7,10 @@ import (
 	"strconv"
 	"strings"
 
+	errors "golang.org/x/xerrors"
+
 	"github.com/akito0107/xsqlparser/dialect"
 	"github.com/akito0107/xsqlparser/sqlast"
-	errors "golang.org/x/xerrors"
 )
 
 type Parser struct {
@@ -1029,7 +1030,19 @@ func (p *Parser) parseAlter() (sqlast.SQLStmt, error) {
 }
 
 func (p *Parser) parseDrop() (sqlast.SQLStmt, error) {
-	p.expectKeyword("TABLE")
+	ok, _ := p.parseKeyword("TABLE")
+
+	if !ok {
+		p.expectKeyword("INDEX")
+		idents, err := p.parseColumnNames()
+		if err != nil {
+			return nil, errors.Errorf("parseColumnNames of DROP INDEX failed: %w", err)
+		}
+
+		return &sqlast.SQLDropIndex{
+			IndexNames: idents,
+		}, nil
+	}
 	exists, _ := p.parseKeywords("IF", "EXISTS")
 	tableName, err := p.parseObjectName()
 	if err != nil {

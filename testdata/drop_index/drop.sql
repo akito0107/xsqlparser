@@ -1,0 +1,1 @@
+DROP INDEX title_idx,title_idx2,title_idx3;

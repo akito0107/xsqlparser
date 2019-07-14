@@ -505,3 +505,12 @@ func (s *SQLCreateIndex) ToSQLString() string {
 
 	return str
 }
+
+type SQLDropIndex struct {
+	sqlStmt
+	IndexNames []*SQLIdent
+}
+
+func (s *SQLDropIndex) ToSQLString() string {
+	return fmt.Sprintf("DROP INDEX %s", commaSeparatedString(s.IndexNames))
+}
