@@ -21,14 +21,12 @@ func (s *SQLInsert) ToSQLString() string {
 		str += fmt.Sprintf(" (%s)", commaSeparatedString(s.Columns))
 	}
 	if len(s.Values) != 0 {
-
-		if len(s.Values) == 1 {
-			var valuestrs []string
-			for _, v := range s.Values {
-				str := commaSeparatedString(v)
-				valuestrs = append(valuestrs, fmt.Sprintf("(%s)", str))
-			}
-			str += fmt.Sprintf(" VALUES %s", strings.Join(valuestrs, ", "))
+		var valuestrs []string
+		for _, v := range s.Values {
+			str := commaSeparatedString(v)
+			valuestrs = append(valuestrs, fmt.Sprintf("(%s)", str))
+		}
+		str += fmt.Sprintf(" VALUES %s", strings.Join(valuestrs, ", "))
 	}
 
 	return str

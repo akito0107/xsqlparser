@@ -29,7 +29,7 @@ func TestSQLInsert_ToSQLString(t *testing.T) {
 					},
 				},
 			},
-			out: "INSERT INTO customers (customer_name, contract_name) VALUES('Cardinal', 'Tom B. Erichsen')",
+			out: "INSERT INTO customers (customer_name, contract_name) VALUES ('Cardinal', 'Tom B. Erichsen')",
 		},
 	}
 	for _, c := range cases {
