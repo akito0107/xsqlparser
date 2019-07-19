@@ -21,11 +21,14 @@ func (s *SQLInsert) ToSQLString() string {
 		str += fmt.Sprintf(" (%s)", commaSeparatedString(s.Columns))
 	}
 	if len(s.Values) != 0 {
-		var valuestrs []string
-		for _, v := range s.Values {
-			valuestrs = append(valuestrs, commaSeparatedString(v))
-		}
-		str += fmt.Sprintf(" VALUES(%s)", strings.Join(valuestrs, ", "))
+
+		if len(s.Values) == 1 {
+			var valuestrs []string
+			for _, v := range s.Values {
+				str := commaSeparatedString(v)
+				valuestrs = append(valuestrs, fmt.Sprintf("(%s)", str))
+			}
+			str += fmt.Sprintf(" VALUES %s", strings.Join(valuestrs, ", "))
 	}
 
 	return str
@@ -483,7 +486,6 @@ func (s *SQLCreateIndex) ToSQLString() string {
 	var uniqueStr string
 	if s.IsUnique {
 		uniqueStr = "UNIQUE "
-
 	}
 	str := fmt.Sprintf("CREATE %sINDEX", uniqueStr)
 
