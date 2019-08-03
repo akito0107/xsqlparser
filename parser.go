@@ -2445,7 +2445,7 @@ func (p *Parser) parseKeyword(expected string) (bool, error) {
 	return false, nil
 }
 
-func (p *Parser) debug() {
+func (p *Parser) Debug() {
 	for i := 0; i < int(p.index); i++ {
 		fmt.Printf("%v", p.tokens[i].Value)
 	}
