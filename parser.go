@@ -915,14 +915,14 @@ func (p *Parser) parseInsert() (sqlast.SQLStmt, error) {
 	tableName, err := p.parseObjectName()
 
 	if err != nil {
-		return nil, errors.Errorf("parseObjectName failed: %w", err)
+		return nil, errors.Errorf("invalid table name: %w", err)
 	}
 	var columns []*sqlast.SQLIdent
 
 	if ok, _ := p.consumeToken(LParen); ok {
 		columns, err = p.parseColumnNames()
 		if err != nil {
-			return nil, errors.Errorf("parseColumnNames failed: %w", err)
+			return nil, errors.Errorf("invalid column names: %w", err)
 		}
 		p.expectToken(RParen)
 	}
@@ -934,7 +934,7 @@ func (p *Parser) parseInsert() (sqlast.SQLStmt, error) {
 		p.expectToken(LParen)
 		v, err := p.parseExprList()
 		if err != nil {
-			return nil, errors.Errorf("parseExprList failed: %w", err)
+			return nil, errors.Errorf("invalid insert value assign: %w", err)
 		}
 		values = append(values, v)
 		p.expectToken(RParen)
@@ -943,10 +943,20 @@ func (p *Parser) parseInsert() (sqlast.SQLStmt, error) {
 		}
 	}
 
+	var assigns []*sqlast.SQLAssignment
+	if ok, _ := p.parseKeywords("ON", "DUPLICATE", "KEY", "UPDATE"); ok {
+		assignments, err := p.parseAssignments()
+		if err != nil {
+			return nil, errors.Errorf("invalid DUPLICATE KEY UPDATE assignments: %w", err)
+		}
+		assigns = assignments
+	}
+
 	return &sqlast.SQLInsert{
-		TableName: tableName,
-		Columns:   columns,
-		Values:    values,
+		TableName:         tableName,
+		Columns:           columns,
+		Values:            values,
+		UpdateAssignments: assigns,
 	}, nil
 }
 

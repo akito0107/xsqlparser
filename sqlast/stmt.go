@@ -10,9 +10,10 @@ import (
 
 type SQLInsert struct {
 	sqlStmt
-	TableName *SQLObjectName
-	Columns   []*SQLIdent
-	Values    [][]ASTNode
+	TableName         *SQLObjectName
+	Columns           []*SQLIdent
+	Values            [][]ASTNode
+	UpdateAssignments []*SQLAssignment // MySQL only (ON DUPLICATED KEYS)
 }
 
 func (s *SQLInsert) ToSQLString() string {
@@ -27,6 +28,10 @@ func (s *SQLInsert) ToSQLString() string {
 			valuestrs = append(valuestrs, fmt.Sprintf("(%s)", str))
 		}
 		str += fmt.Sprintf(" VALUES %s", strings.Join(valuestrs, ", "))
+	}
+
+	if len(s.UpdateAssignments) != 0 {
+		str += " ON DUPLICATE KEY UPDATE " + commaSeparatedString(s.UpdateAssignments)
 	}
 
 	return str
