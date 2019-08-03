@@ -65,7 +65,9 @@ func Walk(v Visitor, node ASTNode) {
 	case *SQLFunction:
 		Walk(v, n.Name)
 		walkASTNodeLists(v, n.Args)
-		Walk(v, n.Over)
+		if n.Over != nil {
+			Walk(v, n.Over)
+		}
 	case *SQLCase:
 		Walk(v, n.Operand)
 	case *SQLExists:
@@ -79,11 +81,15 @@ func Walk(v Visitor, node ASTNode) {
 		for _, o := range n.OrderBy {
 			Walk(v, o)
 		}
-		Walk(v, n.WindowsFrame)
+		if n.WindowsFrame != nil {
+			Walk(v, n.WindowsFrame)
+		}
 	case *SQLWindowFrame:
 		Walk(v, n.Units)
 		Walk(v, n.StartBound)
-		Walk(v, n.EndBound)
+		if n.EndBound != nil {
+			Walk(v, n.EndBound)
+		}
 	case *CurrentRow:
 		// nothing to do
 	case *UnboundedPreceding:
@@ -102,7 +108,9 @@ func Walk(v Visitor, node ASTNode) {
 		for _, o := range n.OrderBy {
 			Walk(v, o)
 		}
-		Walk(v, n.Limit)
+		if n.Limit != nil {
+			Walk(v, n.Limit)
+		}
 	case *CTE:
 		Walk(v, n.Query)
 		Walk(v, n.Alias)
@@ -124,53 +132,104 @@ func Walk(v Visitor, node ASTNode) {
 		for _, p := range n.Projection {
 			Walk(v, p)
 		}
-		Walk(v, n.Relation)
+		if n.Relation != nil {
+			Walk(v, n.Relation)
+		}
 		for _, j := range n.Joins {
 			Walk(v, j)
 		}
-		Walk(v, n.Selection)
+		if n.Selection != nil {
+			Walk(v, n.Selection)
+		}
 		walkASTNodeLists(v, n.GroupBy)
-		Walk(v, n.Having)
+		if n.Having != nil {
+			Walk(v, n.Having)
+		}
 	case *Table:
 		Walk(v, n.Name)
-		Walk(v, n.Alias)
+		if n.Alias != nil {
+			Walk(v, n.Alias)
+		}
 		walkASTNodeLists(v, n.Args)
 		walkASTNodeLists(v, n.WithHints)
 	case *Derived:
+		Walk(v, n.SubQuery)
+		if n.Alias != nil {
+			Walk(v, n.Alias)
+		}
 	case *UnnamedExpression:
+		Walk(v, n.Node)
 	case *ExpressionWithAlias:
+		Walk(v, n.Expr)
+		Walk(v, n.Alias)
 	case *QualifiedWildcard:
+		Walk(v, n.Prefix)
 	case *Wildcard:
+		// nothing to do
 	case *Join:
+		log.Println("JOIN is not implemented yet")
+		// TODO
 	// case *OnJoinConstant:
 	// case *UsingConstant:
 	// case *NaturalConstant:
 	case *SQLOrderByExpr:
+		Walk(v, n.Expr)
 	case *LimitExpr:
+		if !n.All {
+			Walk(v, n.LimitValue)
+		}
+		if n.OffsetValue != nil {
+			Walk(v, n.OffsetValue)
+		}
 	case *CharType:
+		// nothing to do
 	case *VarcharType:
+		// nothing to do
 	case *UUID:
+		// nothing to do
 	case *Clob:
+		// nothing to do
 	case *Binary:
+		// nothing to do
 	case *Varbinary:
+		// nothing to do
 	case *Blob:
+		// nothing to do
 	case *Decimal:
+		// nothing to do
 	case *Float:
+		// nothing to do
 	case *SmallInt:
+		// nothing to do
 	case *Int:
+		// nothing to do
 	case *BigInt:
+		// nothing to do
 	case *Real:
+		// nothing to do
 	case *Double:
+		// nothing to do
 	case *Boolean:
+		// nothing to do
 	case *Date:
+		// nothing to do
 	case *Time:
+		// nothing to do
 	case *Timestamp:
+		// nothing to do
 	case *Regclass:
+		// nothing to do
 	case *Text:
+		// nothing to do
 	case *Bytea:
+		// nothing to do
 	case *Array:
+		// nothing to do
 	case *Custom:
+		// nothing to do
 	case *SQLInsert:
+		Walk(v, n.TableName)
+		walkIdentLists(v, n.Columns)
 	case *SQLCopy:
 	case *SQLUpdate:
 	case *SQLDelete:
