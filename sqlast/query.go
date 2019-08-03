@@ -10,7 +10,7 @@ type SQLQuery struct {
 	CTEs    []*CTE
 	Body    SQLSetExpr
 	OrderBy []*SQLOrderByExpr
-	Limit   ASTNode
+	Limit   *LimitExpr
 }
 
 func (s *SQLQuery) ToSQLString() string {
@@ -32,7 +32,7 @@ func (s *SQLQuery) ToSQLString() string {
 	}
 
 	if s.Limit != nil {
-		q += fmt.Sprintf(" LIMIT %s", s.Limit.ToSQLString())
+		q += " " + s.Limit.ToSQLString()
 	}
 
 	return q
@@ -326,4 +326,25 @@ func (s *SQLOrderByExpr) ToSQLString() string {
 		return fmt.Sprintf("%s ASC", s.Expr.ToSQLString())
 	}
 	return fmt.Sprintf("%s DESC", s.Expr.ToSQLString())
+}
+
+type LimitExpr struct {
+	All         bool
+	LimitValue  *LongValue
+	OffsetValue *LongValue
+}
+
+func (l *LimitExpr) ToSQLString() string {
+	str := "LIMIT"
+	if l.All {
+		str += " ALL"
+	} else {
+		str += " " + l.LimitValue.ToSQLString()
+	}
+
+	if l.OffsetValue != nil {
+		str += " OFFSET " + l.OffsetValue.ToSQLString()
+	}
+
+	return str
 }

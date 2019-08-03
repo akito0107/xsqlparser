@@ -46,6 +46,10 @@ func TestParseQuery(t *testing.T) {
 			name: "DROP INDEX",
 			dir:  "drop_index",
 		},
+		{
+			name: "INSERT",
+			dir:  "insert",
+		},
 	}
 
 	for _, c := range cases {
@@ -78,6 +82,7 @@ func TestParseQuery(t *testing.T) {
 
 					parser, err = xsqlparser.NewParser(bytes.NewBufferString(recovered), &dialect.GenericSQLDialect{})
 					if err != nil {
+						t.Log(recovered)
 						t.Fatalf("%+v", err)
 					}
 

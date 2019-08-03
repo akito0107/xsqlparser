@@ -87,6 +87,12 @@ func (p *Parser) ParseStatement() (sqlast.SQLStmt, error) {
 		return p.parseUpdate()
 	case "DROP":
 		return p.parseDrop()
+	case "EXPLAIN":
+		stmt, err := p.ParseStatement()
+		if err != nil {
+			return nil, err
+		}
+		return &sqlast.SQLExplain{Stmt: stmt}, nil
 	default:
 		return nil, errors.Errorf("unexpected (or unsupported) keyword %s", word.Keyword)
 	}
@@ -226,11 +232,11 @@ func (p *Parser) parseQuery() (*sqlast.SQLQuery, error) {
 		orderBy = o
 	}
 
-	var limit sqlast.ASTNode
+	var limit *sqlast.LimitExpr
 	if ok, _ := p.parseKeyword("LIMIT"); ok {
 		l, err := p.parseLimit()
 		if err != nil {
-			return nil, errors.Errorf("parseLimit failed: %w", err)
+			return nil, errors.Errorf("invalid limit expression: %w", err)
 		}
 		limit = l
 	}
@@ -909,14 +915,14 @@ func (p *Parser) parseInsert() (sqlast.SQLStmt, error) {
 	tableName, err := p.parseObjectName()
 
 	if err != nil {
-		return nil, errors.Errorf("parseObjectName failed: %w", err)
+		return nil, errors.Errorf("invalid table name: %w", err)
 	}
 	var columns []*sqlast.SQLIdent
 
 	if ok, _ := p.consumeToken(LParen); ok {
 		columns, err = p.parseColumnNames()
 		if err != nil {
-			return nil, errors.Errorf("parseColumnNames failed: %w", err)
+			return nil, errors.Errorf("invalid column names: %w", err)
 		}
 		p.expectToken(RParen)
 	}
@@ -928,7 +934,7 @@ func (p *Parser) parseInsert() (sqlast.SQLStmt, error) {
 		p.expectToken(LParen)
 		v, err := p.parseExprList()
 		if err != nil {
-			return nil, errors.Errorf("parseExprList failed: %w", err)
+			return nil, errors.Errorf("invalid insert value assign: %w", err)
 		}
 		values = append(values, v)
 		p.expectToken(RParen)
@@ -937,10 +943,20 @@ func (p *Parser) parseInsert() (sqlast.SQLStmt, error) {
 		}
 	}
 
+	var assigns []*sqlast.SQLAssignment
+	if ok, _ := p.parseKeywords("ON", "DUPLICATE", "KEY", "UPDATE"); ok {
+		assignments, err := p.parseAssignments()
+		if err != nil {
+			return nil, errors.Errorf("invalid DUPLICATE KEY UPDATE assignments: %w", err)
+		}
+		assigns = assignments
+	}
+
 	return &sqlast.SQLInsert{
-		TableName: tableName,
-		Columns:   columns,
-		Values:    values,
+		TableName:         tableName,
+		Columns:           columns,
+		Values:            values,
+		UpdateAssignments: assigns,
 	}, nil
 }
 
@@ -1440,17 +1456,29 @@ func (p *Parser) parseTableFactor() (sqlast.TableFactor, error) {
 
 }
 
-func (p *Parser) parseLimit() (sqlast.ASTNode, error) {
+func (p *Parser) parseLimit() (*sqlast.LimitExpr, error) {
 	if ok, _ := p.parseKeyword("ALL"); ok {
-		return nil, nil
+		return &sqlast.LimitExpr{All: true}, nil
 	}
 
 	i, err := p.parseLiteralInt()
 	if err != nil {
-		return nil, errors.Errorf("parseLiteralInt failed: %w", err)
+		return nil, errors.Errorf("invalid limit value: %w", err)
 	}
 
-	return sqlast.NewLongValue(int64(i)), nil
+	var offset *sqlast.LongValue
+	if ok, _ := p.parseKeyword("OFFSET"); ok {
+		o, err := p.parseLiteralInt()
+		if err != nil {
+			return nil, errors.Errorf("invalid offset value: %w", err)
+		}
+		offset = sqlast.NewLongValue(int64(o))
+	}
+
+	return &sqlast.LimitExpr{
+		LimitValue:  sqlast.NewLongValue(int64(i)),
+		OffsetValue: offset,
+	}, nil
 }
 
 func (p *Parser) parseIdentifier() (*sqlast.SQLIdent, error) {
@@ -2425,6 +2453,13 @@ func (p *Parser) parseKeyword(expected string) (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+func (p *Parser) Debug() {
+	for i := 0; i < int(p.index); i++ {
+		fmt.Printf("%v", p.tokens[i].Value)
+	}
+	fmt.Println()
 }
 
 func containsStr(strmap map[string]struct{}, t string) bool {

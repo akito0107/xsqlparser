@@ -280,7 +280,7 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 				OrderBy: []*SQLOrderByExpr{
 					{Expr: NewSQLIdentifier(NewSQLIdent("product_units"))},
 				},
-				Limit: NewLongValue(100),
+				Limit: &LimitExpr{LimitValue: NewLongValue(100)},
 			},
 			out: "SELECT product, SUM(quantity) AS product_units " +
 				"FROM orders " +
