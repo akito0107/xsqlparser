@@ -87,6 +87,12 @@ func (p *Parser) ParseStatement() (sqlast.SQLStmt, error) {
 		return p.parseUpdate()
 	case "DROP":
 		return p.parseDrop()
+	case "EXPLAIN":
+		stmt, err := p.ParseStatement()
+		if err != nil {
+			return nil, err
+		}
+		return &sqlast.SQLExplain{Stmt: stmt}, nil
 	default:
 		return nil, errors.Errorf("unexpected (or unsupported) keyword %s", word.Keyword)
 	}

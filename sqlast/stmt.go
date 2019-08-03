@@ -514,3 +514,12 @@ type SQLDropIndex struct {
 func (s *SQLDropIndex) ToSQLString() string {
 	return fmt.Sprintf("DROP INDEX %s", commaSeparatedString(s.IndexNames))
 }
+
+type SQLExplain struct {
+	sqlStmt
+	Stmt SQLStmt
+}
+
+func (s *SQLExplain) ToSQLString() string {
+	return fmt.Sprintf("EXPLAIN %s", s.Stmt.ToSQLString())
+}
