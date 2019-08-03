@@ -78,6 +78,7 @@ func TestParseQuery(t *testing.T) {
 
 					parser, err = xsqlparser.NewParser(bytes.NewBufferString(recovered), &dialect.GenericSQLDialect{})
 					if err != nil {
+						t.Log(recovered)
 						t.Fatalf("%+v", err)
 					}
 

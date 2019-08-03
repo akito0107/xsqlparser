@@ -198,7 +198,9 @@ func TestParser_ParseStatement(t *testing.T) {
 					OrderBy: []*sqlast.SQLOrderByExpr{
 						{Expr: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("product_units"))},
 					},
-					Limit: sqlast.NewLongValue(100),
+					Limit: &sqlast.LimitExpr{
+						LimitValue: sqlast.NewLongValue(100),
+					},
 				},
 				in: "SELECT product, SUM(quantity) AS product_units " +
 					"FROM orders " +

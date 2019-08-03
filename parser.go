@@ -232,11 +232,11 @@ func (p *Parser) parseQuery() (*sqlast.SQLQuery, error) {
 		orderBy = o
 	}
 
-	var limit sqlast.ASTNode
+	var limit *sqlast.LimitExpr
 	if ok, _ := p.parseKeyword("LIMIT"); ok {
 		l, err := p.parseLimit()
 		if err != nil {
-			return nil, errors.Errorf("parseLimit failed: %w", err)
+			return nil, errors.Errorf("invalid limit expression: %w", err)
 		}
 		limit = l
 	}
@@ -1446,17 +1446,29 @@ func (p *Parser) parseTableFactor() (sqlast.TableFactor, error) {
 
 }
 
-func (p *Parser) parseLimit() (sqlast.ASTNode, error) {
+func (p *Parser) parseLimit() (*sqlast.LimitExpr, error) {
 	if ok, _ := p.parseKeyword("ALL"); ok {
-		return nil, nil
+		return &sqlast.LimitExpr{All: true}, nil
 	}
 
 	i, err := p.parseLiteralInt()
 	if err != nil {
-		return nil, errors.Errorf("parseLiteralInt failed: %w", err)
+		return nil, errors.Errorf("invalid limit value: %w", err)
 	}
 
-	return sqlast.NewLongValue(int64(i)), nil
+	var offset *sqlast.LongValue
+	if ok, _ := p.parseKeyword("OFFSET"); ok {
+		o, err := p.parseLiteralInt()
+		if err != nil {
+			return nil, errors.Errorf("invalid offset value: %w", err)
+		}
+		offset = sqlast.NewLongValue(int64(o))
+	}
+
+	return &sqlast.LimitExpr{
+		LimitValue:  sqlast.NewLongValue(int64(i)),
+		OffsetValue: offset,
+	}, nil
 }
 
 func (p *Parser) parseIdentifier() (*sqlast.SQLIdent, error) {
@@ -2431,6 +2443,13 @@ func (p *Parser) parseKeyword(expected string) (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+func (p *Parser) debug() {
+	for i := 0; i < int(p.index); i++ {
+		fmt.Printf("%v", p.tokens[i].Value)
+	}
+	fmt.Println()
 }
 
 func containsStr(strmap map[string]struct{}, t string) bool {
