@@ -26,6 +26,8 @@ func Walk(v Visitor, node ASTNode) {
 	}
 
 	switch n := node.(type) {
+	case *SQLIdent:
+		// nothing to do
 	case *SQLIdentifier:
 		Walk(v, n.Ident)
 	case *SQLWildcard:
@@ -90,6 +92,8 @@ func Walk(v Visitor, node ASTNode) {
 		if n.EndBound != nil {
 			Walk(v, n.EndBound)
 		}
+	case SQLWindowFrameUnits:
+		// nothing to do
 	case *CurrentRow:
 		// nothing to do
 	case *UnboundedPreceding:
@@ -254,7 +258,9 @@ func Walk(v Visitor, node ASTNode) {
 		Walk(v, n.ID)
 		Walk(v, n.Value)
 	case *TableConstraint:
-		Walk(v, n.Name)
+		if n.Name != nil {
+			Walk(v, n.Name)
+		}
 		Walk(v, n.Spec)
 	case *UniqueTableConstraint:
 		walkIdentLists(v, n.Columns)
@@ -269,12 +275,16 @@ func Walk(v Visitor, node ASTNode) {
 	case *SQLColumnDef:
 		Walk(v, n.Name)
 		Walk(v, n.DataType)
-		Walk(v, n.Default)
+		if n.Default != nil {
+			Walk(v, n.Default)
+		}
 		for _, c := range n.Constraints {
 			Walk(v, c)
 		}
 	case *ColumnConstraint:
-		Walk(v, n.Name)
+		if n.Name != nil {
+			Walk(v, n.Name)
+		}
 		Walk(v, n.Spec)
 	case *NotNullColumnSpec:
 		// nothing to do
@@ -315,19 +325,49 @@ func Walk(v Visitor, node ASTNode) {
 		}
 	case *SQLCreateIndex:
 		Walk(v, n.TableName)
-		Walk(v, n.IndexName)
-		Walk(v, n.MethodName)
+		if n.IndexName != nil {
+			Walk(v, n.IndexName)
+		}
+		if n.MethodName != nil {
+			Walk(v, n.MethodName)
+		}
 		walkIdentLists(v, n.ColumnNames)
-		Walk(v, n.Selection)
+		if n.Selection != nil {
+			Walk(v, n.Selection)
+		}
 	case *SQLDropIndex:
 		walkIdentLists(v, n.IndexNames)
 	case *SQLExplain:
 		Walk(v, n.Stmt)
-	case *NullValue:
+	case SQLOperator:
+		// nothing to do
+	case *NullValue,
+		*LongValue,
+		*DoubleValue,
+		*SingleQuotedString,
+		*NationalStringLiteral,
+		*BooleanValue,
+		*DateValue,
+		*TimeValue,
+		*DateTimeValue,
+		*TimestampValue:
 		// nothing to do
 	default:
-		log.Fatalf("not implemented type %s", node.ToSQLString())
+		log.Fatalf("not implemented type %T: %+v", node, node)
 	}
 
 	v.Visit(nil)
+}
+
+type inspector func(node ASTNode) bool
+
+func (f inspector) Visit(node ASTNode) Visitor {
+	if f(node) {
+		return f
+	}
+	return nil
+}
+
+func Inspect(node ASTNode, f func(node ASTNode) bool) {
+	Walk(inspector(f), node)
 }
