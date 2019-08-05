@@ -314,11 +314,7 @@ func (s *SQLWindowSpec) ToSQLString() string {
 	}
 
 	if s.WindowsFrame != nil {
-		if s.WindowsFrame.EndBound != nil {
-			clauses = append(clauses, fmt.Sprintf("%s BETWEEN %s AND %s", s.WindowsFrame.Units.ToSQLString(), s.WindowsFrame.StartBound.ToSQLString(), s.WindowsFrame.EndBound.ToSQLString()))
-		} else {
-			clauses = append(clauses, fmt.Sprintf("%s %s", s.WindowsFrame.Units.ToSQLString(), s.WindowsFrame.StartBound.ToSQLString()))
-		}
+		clauses = append(clauses, s.WindowsFrame.ToSQLString())
 	}
 
 	return strings.Join(clauses, " ")
@@ -330,6 +326,14 @@ type SQLWindowFrame struct {
 	EndBound   SQLWindowFrameBound
 }
 
+func (s *SQLWindowFrame) ToSQLString() string {
+	if s.EndBound != nil {
+		return fmt.Sprintf("%s BETWEEN %s AND %s", s.Units.ToSQLString(), s.StartBound.ToSQLString(), s.EndBound.ToSQLString())
+	} else {
+		return fmt.Sprintf("%s %s", s.Units.ToSQLString(), s.StartBound.ToSQLString())
+	}
+}
+
 type SQLWindowFrameUnits int
 
 const (
@@ -338,8 +342,8 @@ const (
 	GroupsUnit
 )
 
-func (s *SQLWindowFrameUnits) ToSQLString() string {
-	switch *s {
+func (s SQLWindowFrameUnits) ToSQLString() string {
+	switch s {
 	case RowsUnit:
 		return "ROWS"
 	case RangeUnit:

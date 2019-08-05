@@ -22,8 +22,8 @@ const (
 	None
 )
 
-func (s *SQLOperator) ToSQLString() string {
-	switch *s {
+func (s SQLOperator) ToSQLString() string {
+	switch s {
 	case Plus:
 		return "+"
 	case Minus:

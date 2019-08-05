@@ -20,7 +20,7 @@ func (s *SQLQuery) ToSQLString() string {
 		q += "WITH "
 		ctestrs := make([]string, 0, len(s.CTEs))
 		for _, cte := range s.CTEs {
-			ctestrs = append(ctestrs, fmt.Sprintf("%s AS (%s)", cte.Alias.ToSQLString(), cte.Query.ToSQLString()))
+			ctestrs = append(ctestrs, cte.ToSQLString())
 		}
 		q += strings.Join(ctestrs, ", ") + " "
 	}
@@ -41,6 +41,10 @@ func (s *SQLQuery) ToSQLString() string {
 type CTE struct {
 	Alias *SQLIdent
 	Query *SQLQuery
+}
+
+func (c *CTE) ToSQLString() string {
+	return fmt.Sprintf("%s AS (%s)", c.Alias.ToSQLString(), c.Query.ToSQLString())
 }
 
 //go:generate genmark -t SQLSetExpr -e ASTNode
