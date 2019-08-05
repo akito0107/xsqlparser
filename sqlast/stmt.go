@@ -39,8 +39,8 @@ func (s *SQLInsert) ToSQLString() string {
 
 type SQLCopy struct {
 	sqlStmt
-	TableName SQLObjectName
-	Columns   []SQLIdent
+	TableName *SQLObjectName
+	Columns   []*SQLIdent
 	Values    []*string
 }
 

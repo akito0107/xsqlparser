@@ -231,38 +231,100 @@ func Walk(v Visitor, node ASTNode) {
 		Walk(v, n.TableName)
 		walkIdentLists(v, n.Columns)
 	case *SQLCopy:
+		Walk(v, n.TableName)
+		walkIdentLists(v, n.Columns)
 	case *SQLUpdate:
+		Walk(v, n.TableName)
+		for _, a := range n.Assignments {
+			Walk(v, a)
+		}
+		Walk(v, n.Selection)
 	case *SQLDelete:
+		Walk(v, n.TableName)
+		Walk(v, n.Selection)
 	case *SQLCreateView:
+		Walk(v, n.Name)
+		Walk(v, n.Query)
 	case *SQLCreateTable:
+		Walk(v, n.Name)
+		for _, e := range n.Elements {
+			Walk(v, e)
+		}
 	case *SQLAssignment:
+		Walk(v, n.ID)
+		Walk(v, n.Value)
 	case *TableConstraint:
+		Walk(v, n.Name)
+		Walk(v, n.Spec)
 	case *UniqueTableConstraint:
+		walkIdentLists(v, n.Columns)
 	case *ReferentialTableConstraint:
+		walkIdentLists(v, n.Columns)
+		Walk(v, n.KeyExpr)
 	case *ReferenceKeyExpr:
+		Walk(v, n.TableName)
+		walkIdentLists(v, n.Columns)
 	case *CheckTableConstraint:
+		Walk(v, n.Expr)
 	case *SQLColumnDef:
+		Walk(v, n.Name)
+		Walk(v, n.DataType)
+		Walk(v, n.Default)
+		for _, c := range n.Constraints {
+			Walk(v, c)
+		}
 	case *ColumnConstraint:
+		Walk(v, n.Name)
+		Walk(v, n.Spec)
 	case *NotNullColumnSpec:
+		// nothing to do
 	case *UniqueColumnSpec:
+		// nothing to do
 	case *ReferencesColumnSpec:
+		Walk(v, n.TableName)
+		walkIdentLists(v, n.Columns)
 	case *CheckColumnSpec:
+		Walk(v, n.Expr)
 	case *SQLAlterTable:
+		Walk(v, n.TableName)
+		Walk(v, n.Action)
 	case *AddColumnTableAction:
+		Walk(v, n.Column)
 	case *AlterColumnTableAction:
+		Walk(v, n.ColumnName)
+		Walk(v, n.Action)
 	case *SetDefaultColumnAction:
+		Walk(v, n.Default)
 	case *DropDefaultColumnAction:
+		// nothing to do
 	case *PGAlterDataTypeColumnAction:
+		Walk(v, n.DataType)
 	case *PGSetNotNullColumnAction:
+		// nothing to do
 	case *PGDropNotNullColumnAction:
+		// nothing to do
 	case *RemoveColumnTableAction:
+		Walk(v, n.Name)
 	case *AddConstraintTableAction:
+		Walk(v, n.Constraint)
 	case *DropConstraintTableAction:
+		Walk(v, n.Name)
 	case *SQLDropTable:
+		for _, t := range n.TableNames {
+			Walk(v, t)
+		}
 	case *SQLCreateIndex:
+		Walk(v, n.TableName)
+		Walk(v, n.IndexName)
+		Walk(v, n.MethodName)
+		walkIdentLists(v, n.ColumnNames)
+		Walk(v, n.Selection)
 	case *SQLDropIndex:
+		walkIdentLists(v, n.IndexNames)
 	case *SQLExplain:
+		Walk(v, n.Stmt)
 	case *NullValue:
+		// nothing to do
 	default:
 		log.Fatalf("not implemented type %s", node.ToSQLString())
 	}
