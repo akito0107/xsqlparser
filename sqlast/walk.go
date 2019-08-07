@@ -136,18 +136,18 @@ func Walk(v Visitor, node ASTNode) {
 		for _, p := range n.Projection {
 			Walk(v, p)
 		}
-		if n.Relation != nil {
-			Walk(v, n.Relation)
+		if n.FromClause != nil {
+			Walk(v, n.FromClause)
 		}
 		for _, j := range n.Joins {
 			Walk(v, j)
 		}
-		if n.Selection != nil {
-			Walk(v, n.Selection)
+		if n.WhereClause != nil {
+			Walk(v, n.WhereClause)
 		}
-		walkASTNodeLists(v, n.GroupBy)
-		if n.Having != nil {
-			Walk(v, n.Having)
+		walkASTNodeLists(v, n.GroupByClause)
+		if n.HavingClause != nil {
+			Walk(v, n.HavingClause)
 		}
 	case *Table:
 		Walk(v, n.Name)

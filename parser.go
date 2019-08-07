@@ -377,13 +377,13 @@ func (p *Parser) parseSelect() (*sqlast.SQLSelect, error) {
 	}
 
 	return &sqlast.SQLSelect{
-		Distinct:   distinct,
-		Projection: projection,
-		Selection:  selection,
-		Relation:   relation,
-		Joins:      joins,
-		GroupBy:    groupBy,
-		Having:     having,
+		Distinct:      distinct,
+		Projection:    projection,
+		WhereClause:   selection,
+		FromClause:    relation,
+		Joins:         joins,
+		GroupByClause: groupBy,
+		HavingClause:  having,
 	}, nil
 
 }

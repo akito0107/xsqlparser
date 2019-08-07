@@ -112,13 +112,12 @@ func (IntersectOperator) ToSQLString() string {
 
 type SQLSelect struct {
 	sqlSetExpr
-	Distinct   bool
-	Projection []SQLSelectItem
-	Relation   TableFactor
-	Joins      []*Join
-	Selection  ASTNode
-	GroupBy    []ASTNode
-	Having     ASTNode
+	Distinct      bool
+	Projection    []SQLSelectItem
+	FromClause    []TableReference
+	WhereClause   ASTNode
+	GroupByClause []ASTNode
+	HavingClause  ASTNode
 }
 
 func (s *SQLSelect) ToSQLString() string {
@@ -128,24 +127,20 @@ func (s *SQLSelect) ToSQLString() string {
 	}
 	q += commaSeparatedString(s.Projection)
 
-	if s.Relation != nil {
-		q += fmt.Sprintf(" FROM %s", s.Relation.ToSQLString())
+	if len(s.FromClause) != 0 {
+		q += fmt.Sprintf(" FROM %s", commaSeparatedString(s.FromClause))
 	}
 
-	for _, j := range s.Joins {
-		q += j.ToSQLString()
+	if s.WhereClause != nil {
+		q += fmt.Sprintf(" WHERE %s", s.WhereClause.ToSQLString())
 	}
 
-	if s.Selection != nil {
-		q += fmt.Sprintf(" WHERE %s", s.Selection.ToSQLString())
+	if len(s.GroupByClause) != 0 {
+		q += fmt.Sprintf(" GROUP BY %s", commaSeparatedString(s.GroupByClause))
 	}
 
-	if len(s.GroupBy) != 0 {
-		q += fmt.Sprintf(" GROUP BY %s", commaSeparatedString(s.GroupBy))
-	}
-
-	if s.Having != nil {
-		q += fmt.Sprintf(" HAVING %s", s.Having.ToSQLString())
+	if s.HavingClause != nil {
+		q += fmt.Sprintf(" HAVING %s", s.HavingClause.ToSQLString())
 	}
 
 	return q
@@ -339,89 +334,6 @@ func (j JoinType) ToSQLString() string {
 	}
 	return ""
 }
-
-type Join struct {
-	Relation TableFactor
-	Op       JoinOperator
-	Constant JoinConstant
-}
-
-func (j *Join) ToSQLString() string {
-	switch j.Op {
-	case Inner:
-		return fmt.Sprintf(" %sJOIN %s%s", j.Constant.Prefix(), j.Relation.ToSQLString(), j.Constant.Suffix())
-	case Cross:
-		return fmt.Sprintf(" CROSS JOIN%s", j.Relation.ToSQLString())
-	case Implicit:
-		return fmt.Sprintf(", %s", j.Relation.ToSQLString())
-	case LeftOuter:
-		return fmt.Sprintf(" %sLEFT JOIN %s%s", j.Constant.Prefix(), j.Relation.ToSQLString(), j.Constant.Suffix())
-	case RightOuter:
-		return fmt.Sprintf(" %sRIGHT JOIN %s%s", j.Constant.Prefix(), j.Relation.ToSQLString(), j.Constant.Suffix())
-	case FullOuter:
-		return fmt.Sprintf(" %sFULL JOIN %s%s", j.Constant.Prefix(), j.Relation.ToSQLString(), j.Constant.Suffix())
-	default:
-		return ""
-	}
-}
-
-type JoinOperator int
-
-const (
-	Inner JoinOperator = iota
-	LeftOuter
-	RightOuter
-	FullOuter
-	Implicit
-	Cross
-)
-
-/** JoinConstant **/
-type JoinConstant interface {
-	Prefix() string
-	Suffix() string
-}
-
-type OnJoinConstant struct {
-	Node ASTNode
-}
-
-func (*OnJoinConstant) Prefix() string {
-	return ""
-}
-
-func (o *OnJoinConstant) Suffix() string {
-	return fmt.Sprintf(" ON %s", o.Node.ToSQLString())
-}
-
-type UsingConstant struct {
-	Idents []*SQLIdent
-}
-
-func (*UsingConstant) Prefix() string {
-	return ""
-}
-
-func (u *UsingConstant) Suffix() string {
-	var str []string
-	for _, i := range u.Idents {
-		str = append(str, string(*i))
-	}
-	return fmt.Sprintf(" USING(%s)", strings.Join(str, ", "))
-}
-
-type NaturalConstant struct {
-}
-
-func (*NaturalConstant) Prefix() string {
-	return "NATURAL "
-}
-
-func (*NaturalConstant) Suffix() string {
-	return ""
-}
-
-/** JoinConstant end **/
 
 type SQLOrderByExpr struct {
 	Expr ASTNode

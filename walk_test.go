@@ -74,7 +74,7 @@ func TestInspect(t *testing.T) {
 						t.Fatalf("%+v", err)
 					}
 					sqlast.Inspect(stmt, func(node sqlast.ASTNode) bool {
-						fmt.Printf("%T\n", node)
+						// fmt.Printf("%T\n", node)
 						return true
 					})
 				})
