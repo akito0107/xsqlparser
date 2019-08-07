@@ -2,6 +2,7 @@ package sqlast
 
 import (
 	"fmt"
+	"log"
 	"strings"
 )
 
@@ -150,10 +151,13 @@ func (s *SQLSelect) ToSQLString() string {
 	return q
 }
 
-//go:generate genmark -t TableFactor -e ASTNode
+//go:generate genmark -t TableReference -e ASTNode
+
+//go:generate genmark -t TableFactor -e TableReference
 
 type Table struct {
 	tableFactor
+	tableReference
 	Name      *SQLObjectName
 	Alias     *SQLIdent
 	Args      []ASTNode
@@ -176,6 +180,7 @@ func (t *Table) ToSQLString() string {
 
 type Derived struct {
 	tableFactor
+	tableReference
 	Lateral  bool
 	SubQuery *SQLQuery
 	Alias    *SQLIdent
@@ -232,6 +237,107 @@ type Wildcard struct {
 
 func (w *Wildcard) ToSQLString() string {
 	return "*"
+}
+
+//go:generate genmark -t JoinedTable -e TableReference
+
+type CrossJoin struct {
+	joinedTable
+	Reference TableReference
+	Factor    TableFactor
+}
+
+func (c *CrossJoin) ToSQLString() string {
+	return fmt.Sprintf("%s CROSS JOIN %s", c.Reference.ToSQLString(), c.Factor.ToSQLString())
+}
+
+//go:generate genmark -t JoinElement -e ASTNode
+
+type TableJoinElement struct {
+	joinElement
+	Ref TableReference
+}
+
+func (t *TableJoinElement) ToSQLString() string {
+	return t.Ref.ToSQLString()
+}
+
+type PartitionedJoinTable struct {
+	joinElement
+	Factor     TableFactor
+	ColumnList []*SQLIdent
+}
+
+func (p *PartitionedJoinTable) ToSQLString() string {
+	return fmt.Sprintf("%s PARTITION BY (%s)", p.Factor.ToSQLString(), commaSeparatedString(p.ColumnList))
+}
+
+type QualifiedJoin struct {
+	joinedTable
+	LeftElement  TableJoinElement
+	Type         JoinType
+	RightElement TableJoinElement
+	Spec         JoinSpec
+}
+
+func (q *QualifiedJoin) ToSQLString() string {
+	return fmt.Sprintf("%s %s JOIN %s %s", q.LeftElement.ToSQLString(), q.Type.ToSQLString(), q.RightElement.ToSQLString(), q.Spec.ToSQLString())
+}
+
+type NaturalJoin struct {
+	joinedTable
+	LeftElement  TableJoinElement
+	Type         JoinType
+	RightElement TableJoinElement
+}
+
+func (n *NaturalJoin) ToSQLString() string {
+	return fmt.Sprintf("%s NATURAL %s JOIN %s", n.LeftElement.ToSQLString(), n.Type.ToSQLString(), n.RightElement.ToSQLString())
+}
+
+//go:generate genmark -t JoinSpec -e ASTNode
+
+type NamedColumnsJoin struct {
+	joinSpec
+	ColumnList []*SQLIdent
+}
+
+func (n *NamedColumnsJoin) ToSQLString() string {
+	return fmt.Sprintf("USING (%s)", commaSeparatedString(n.ColumnList))
+}
+
+type JoinCondition struct {
+	joinSpec
+	SearchCondition ASTNode
+}
+
+func (j *JoinCondition) ToSQLString() string {
+	return fmt.Sprintf("ON %s", j.SearchCondition.ToSQLString())
+}
+
+type JoinType int
+
+const (
+	INNER JoinType = iota
+	LEFTOUTER
+	RIGHTOUTER
+	FULLOUTER
+)
+
+func (j JoinType) ToSQLString() string {
+	switch j {
+	case INNER:
+		return "INNER"
+	case LEFTOUTER:
+		return "LEFT OUTER"
+	case RIGHTOUTER:
+		return "RIGHT OUTER"
+	case FULLOUTER:
+		return "FULL OUTER"
+	default:
+		log.Fatalf("unknown join type %d", j)
+	}
+	return ""
 }
 
 type Join struct {

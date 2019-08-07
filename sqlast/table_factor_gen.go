@@ -3,7 +3,7 @@ package sqlast
 
 type TableFactor interface {
 	tableFactorMarker()
-	ASTNode
+	TableReference
 }
 type tableFactor struct{}
 
