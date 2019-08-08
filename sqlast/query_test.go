@@ -46,7 +46,7 @@ func TestSQLSelect_ToSQLString(t *testing.T) {
 						Type: IMPLICIT,
 						RightElement: &TableJoinElement{
 							Ref: &Table{
-								Name: NewSQLObjectName("test_table"),
+								Name: NewSQLObjectName("test_table2"),
 							},
 						},
 					},

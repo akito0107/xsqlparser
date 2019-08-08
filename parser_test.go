@@ -38,8 +38,10 @@ func TestParser_ParseStatement(t *testing.T) {
 								Node: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("test")),
 							},
 						},
-						FromClause: &sqlast.Table{
-							Name: sqlast.NewSQLObjectName("test_table"),
+						FromClause: []sqlast.TableReference{
+							&sqlast.Table{
+								Name: sqlast.NewSQLObjectName("test_table"),
+							},
 						},
 					},
 				},
@@ -54,8 +56,10 @@ func TestParser_ParseStatement(t *testing.T) {
 								Node: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("test")),
 							},
 						},
-						FromClause: &sqlast.Table{
-							Name: sqlast.NewSQLObjectName("test_table"),
+						FromClause: []sqlast.TableReference{
+							&sqlast.Table{
+								Name: sqlast.NewSQLObjectName("test_table"),
+							},
 						},
 						WhereClause: &sqlast.SQLBinaryExpr{
 							Left: &sqlast.SQLCompoundIdentifier{
@@ -83,19 +87,23 @@ func TestParser_ParseStatement(t *testing.T) {
 								Alias: sqlast.NewSQLIdent("c"),
 							},
 						},
-						FromClause: &sqlast.Table{
-							Name:  sqlast.NewSQLObjectName("test_table"),
-							Alias: sqlast.NewSQLIdent("t1"),
-						},
-						Joins: []*sqlast.Join{
-							{
-								Relation: &sqlast.Table{
-									Name:  sqlast.NewSQLObjectName("test_table2"),
-									Alias: sqlast.NewSQLIdent("t2"),
+						FromClause: []sqlast.TableReference{
+							&sqlast.QualifiedJoin{
+								LeftElement: &sqlast.TableJoinElement{
+									Ref: &sqlast.Table{
+										Name:  sqlast.NewSQLObjectName("test_table"),
+										Alias: sqlast.NewSQLIdent("t1"),
+									},
 								},
-								Op: sqlast.LeftOuter,
-								Constant: &sqlast.OnJoinConstant{
-									Node: &sqlast.SQLBinaryExpr{
+								Type: sqlast.LEFT,
+								RightElement: &sqlast.TableJoinElement{
+									Ref: &sqlast.Table{
+										Name:  sqlast.NewSQLObjectName("test_table2"),
+										Alias: sqlast.NewSQLIdent("t2"),
+									},
+								},
+								Spec: &sqlast.JoinCondition{
+									SearchCondition: &sqlast.SQLBinaryExpr{
 										Left: &sqlast.SQLCompoundIdentifier{
 											Idents: []*sqlast.SQLIdent{sqlast.NewSQLIdent("t1"), sqlast.NewSQLIdent("id")},
 										},
@@ -126,8 +134,10 @@ func TestParser_ParseStatement(t *testing.T) {
 								Prefix: sqlast.NewSQLObjectName("country"),
 							},
 						},
-						FromClause: &sqlast.Table{
-							Name: sqlast.NewSQLObjectName("customers"),
+						FromClause: []sqlast.TableReference{
+							&sqlast.Table{
+								Name: sqlast.NewSQLObjectName("customers"),
+							},
 						},
 						GroupByClause: []sqlast.ASTNode{sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("country"))},
 					},
@@ -149,8 +159,10 @@ func TestParser_ParseStatement(t *testing.T) {
 								Node: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("country")),
 							},
 						},
-						FromClause: &sqlast.Table{
-							Name: sqlast.NewSQLObjectName("customers"),
+						FromClause: []sqlast.TableReference{
+							&sqlast.Table{
+								Name: sqlast.NewSQLObjectName("customers"),
+							},
 						},
 						GroupByClause: []sqlast.ASTNode{sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("country"))},
 						HavingClause: &sqlast.SQLBinaryExpr{
@@ -178,8 +190,10 @@ func TestParser_ParseStatement(t *testing.T) {
 								},
 							},
 						},
-						FromClause: &sqlast.Table{
-							Name: sqlast.NewSQLObjectName("orders"),
+						FromClause: []sqlast.TableReference{
+							&sqlast.Table{
+								Name: sqlast.NewSQLObjectName("orders"),
+							},
 						},
 						WhereClause: &sqlast.SQLInSubQuery{
 							Expr: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("region")),
@@ -188,8 +202,10 @@ func TestParser_ParseStatement(t *testing.T) {
 									Projection: []sqlast.SQLSelectItem{
 										&sqlast.UnnamedExpression{Node: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("region"))},
 									},
-									FromClause: &sqlast.Table{
-										Name: sqlast.NewSQLObjectName("top_regions"),
+									FromClause: []sqlast.TableReference{
+										&sqlast.Table{
+											Name: sqlast.NewSQLObjectName("top_regions"),
+										},
 									},
 								},
 							},
@@ -226,8 +242,10 @@ func TestParser_ParseStatement(t *testing.T) {
 											},
 										},
 									},
-									FromClause: &sqlast.Table{
-										Name: sqlast.NewSQLObjectName("orders"),
+									FromClause: []sqlast.TableReference{
+										&sqlast.Table{
+											Name: sqlast.NewSQLObjectName("orders"),
+										},
 									},
 									GroupByClause: []sqlast.ASTNode{sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("region"))},
 								},
@@ -245,8 +263,10 @@ func TestParser_ParseStatement(t *testing.T) {
 								},
 							},
 						},
-						FromClause: &sqlast.Table{
-							Name: sqlast.NewSQLObjectName("orders"),
+						FromClause: []sqlast.TableReference{
+							&sqlast.Table{
+								Name: sqlast.NewSQLObjectName("orders"),
+							},
 						},
 						WhereClause: &sqlast.SQLInSubQuery{
 							Expr: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("region")),
@@ -255,8 +275,10 @@ func TestParser_ParseStatement(t *testing.T) {
 									Projection: []sqlast.SQLSelectItem{
 										&sqlast.UnnamedExpression{Node: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("region"))},
 									},
-									FromClause: &sqlast.Table{
-										Name: sqlast.NewSQLObjectName("top_regions"),
+									FromClause: []sqlast.TableReference{
+										&sqlast.Table{
+											Name: sqlast.NewSQLObjectName("top_regions"),
+										},
 									},
 								},
 							},
@@ -284,8 +306,10 @@ func TestParser_ParseStatement(t *testing.T) {
 								Node: &sqlast.SQLWildcard{},
 							},
 						},
-						FromClause: &sqlast.Table{
-							Name: sqlast.NewSQLObjectName("user"),
+						FromClause: []sqlast.TableReference{
+							&sqlast.Table{
+								Name: sqlast.NewSQLObjectName("user"),
+							},
 						},
 						WhereClause: &sqlast.SQLExists{
 							Negated: true,
@@ -296,8 +320,10 @@ func TestParser_ParseStatement(t *testing.T) {
 											Node: &sqlast.SQLWildcard{},
 										},
 									},
-									FromClause: &sqlast.Table{
-										Name: sqlast.NewSQLObjectName("user_sub"),
+									FromClause: []sqlast.TableReference{
+										&sqlast.Table{
+											Name: sqlast.NewSQLObjectName("user_sub"),
+										},
 									},
 									WhereClause: &sqlast.SQLBinaryExpr{
 										Op: sqlast.And,
@@ -363,8 +389,10 @@ func TestParser_ParseStatement(t *testing.T) {
 								Alias: sqlast.NewSQLIdent("alias"),
 							},
 						},
-						FromClause: &sqlast.Table{
-							Name: sqlast.NewSQLObjectName("user"),
+						FromClause: []sqlast.TableReference{
+							&sqlast.Table{
+								Name: sqlast.NewSQLObjectName("user"),
+							},
 						},
 						WhereClause: &sqlast.SQLBetween{
 							Expr: sqlast.NewSQLIdentifier(sqlast.NewSQLIdent("id")),
@@ -626,8 +654,10 @@ func TestParser_ParseStatement(t *testing.T) {
 					Query: &sqlast.SQLQuery{
 						Body: &sqlast.SQLSelect{
 							Projection: []sqlast.SQLSelectItem{&sqlast.UnnamedExpression{Node: &sqlast.SQLWildcard{}}},
-							FromClause: &sqlast.Table{
-								Name: sqlast.NewSQLObjectName("films"),
+							FromClause: []sqlast.TableReference{
+								&sqlast.Table{
+									Name: sqlast.NewSQLObjectName("films"),
+								},
 							},
 							WhereClause: &sqlast.SQLBinaryExpr{
 								Op:    sqlast.Eq,

@@ -134,10 +134,12 @@ func TestSQLCreateView_ToSQLString(t *testing.T) {
 									Node: NewSQLIdent("contract_name"),
 								},
 							},
-							FromClause: &Table{
-								Name: &SQLObjectName{
-									Idents: []*SQLIdent{
-										NewSQLIdent("customers"),
+							FromClause: []TableReference{
+								&Table{
+									Name: &SQLObjectName{
+										Idents: []*SQLIdent{
+											NewSQLIdent("customers"),
+										},
 									},
 								},
 							},

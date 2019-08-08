@@ -333,20 +333,13 @@ func (p *Parser) parseSelect() (*sqlast.SQLSelect, error) {
 	if err != nil {
 		return nil, errors.Errorf("parseSelectList failed: %w", err)
 	}
-	var relation sqlast.TableFactor
-	var joins []*sqlast.Join
+	var tableRefs []sqlast.TableReference
 
 	if ok, _ := p.parseKeyword("FROM"); ok {
-		t, err := p.parseTableFactor()
+		tableRefs, err = p.parseFromClause()
 		if err != nil {
-			return nil, errors.Errorf("parseTableFactor failed: %w", err)
+			return nil, errors.Errorf("parse from clause failed: %w", err)
 		}
-		relation = t
-		j, err := p.parseJoins()
-		if err != nil {
-			return nil, errors.Errorf("parseJoins failed: %w", err)
-		}
-		joins = j
 	}
 
 	var selection sqlast.ASTNode
@@ -380,8 +373,7 @@ func (p *Parser) parseSelect() (*sqlast.SQLSelect, error) {
 		Distinct:      distinct,
 		Projection:    projection,
 		WhereClause:   selection,
-		FromClause:    relation,
-		Joins:         joins,
+		FromClause:    tableRefs,
 		GroupByClause: groupBy,
 		HavingClause:  having,
 	}, nil
@@ -1191,6 +1183,7 @@ func (p *Parser) parseOptionalAlias(reservedKeywords map[string]struct{}) *sqlas
 	return nil
 }
 
+/*
 func (p *Parser) parseJoins() ([]*sqlast.Join, error) {
 	var joins []*sqlast.Join
 	var natural bool
@@ -1374,6 +1367,7 @@ func (p *Parser) parseJoinConstraint(natural bool) (sqlast.JoinConstant, error) 
 	return nil, nil
 }
 
+*/
 func (p *Parser) parseCTEList() ([]*sqlast.CTE, error) {
 	var ctes []*sqlast.CTE
 
@@ -1398,6 +1392,31 @@ func (p *Parser) parseCTEList() ([]*sqlast.CTE, error) {
 		}
 	}
 	return ctes, nil
+}
+
+func (p *Parser) parseFromClause() ([]sqlast.TableReference, error) {
+	var res []sqlast.TableReference
+
+	table, err := p.parseTableFactor()
+	if err != nil {
+		return nil, errors.Errorf("parseTable failed: %w", err)
+	}
+
+	res = append(res, table)
+
+	for {
+		ok, _ := p.parseKeyword(",")
+		if !ok {
+			break
+		}
+		table, err := p.parseTableFactor()
+		if err != nil {
+			return nil, errors.Errorf("parseTable failed: %w", err)
+		}
+		res = append(res, table)
+	}
+
+	return res, nil
 }
 
 func (p *Parser) parseTableFactor() (sqlast.TableFactor, error) {

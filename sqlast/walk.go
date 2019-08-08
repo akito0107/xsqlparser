@@ -137,10 +137,7 @@ func Walk(v Visitor, node ASTNode) {
 			Walk(v, p)
 		}
 		if n.FromClause != nil {
-			Walk(v, n.FromClause)
-		}
-		for _, j := range n.Joins {
-			Walk(v, j)
+			// Walk(v, n.FromClause)
 		}
 		if n.WhereClause != nil {
 			Walk(v, n.WhereClause)
@@ -170,12 +167,6 @@ func Walk(v Visitor, node ASTNode) {
 		Walk(v, n.Prefix)
 	case *Wildcard:
 		// nothing to do
-	case *Join:
-		log.Println("JOIN is not implemented yet")
-		// TODO
-	// case *OnJoinConstant:
-	// case *UsingConstant:
-	// case *NaturalConstant:
 	case *SQLOrderByExpr:
 		Walk(v, n.Expr)
 	case *LimitExpr:
