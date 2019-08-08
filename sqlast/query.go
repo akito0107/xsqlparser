@@ -238,6 +238,7 @@ func (w *Wildcard) ToSQLString() string {
 
 type CrossJoin struct {
 	joinedTable
+	tableReference
 	Reference TableReference
 	Factor    TableFactor
 }
@@ -319,6 +320,7 @@ const (
 	INNER JoinType = iota
 	LEFT
 	RIGHT
+	FULL
 	LEFTOUTER
 	RIGHTOUTER
 	FULLOUTER
@@ -333,6 +335,8 @@ func (j JoinType) ToSQLString() string {
 		return "LEFT "
 	case RIGHT:
 		return "RIGHT "
+	case FULL:
+		return "FULL "
 	case LEFTOUTER:
 		return "LEFT OUTER "
 	case RIGHTOUTER:

@@ -1160,7 +1160,6 @@ func (p *Parser) parseDefaultExpr(precedence uint) (sqlast.ASTNode, error) {
 	return expr, nil
 }
 
-// TODO add tests
 func (p *Parser) parseOptionalAlias(reservedKeywords map[string]struct{}) *sqlast.SQLIdent {
 	afterAs, _ := p.parseKeyword("AS")
 	maybeAlias, _ := p.nextToken()
@@ -1183,191 +1182,6 @@ func (p *Parser) parseOptionalAlias(reservedKeywords map[string]struct{}) *sqlas
 	return nil
 }
 
-/*
-func (p *Parser) parseJoins() ([]*sqlast.Join, error) {
-	var joins []*sqlast.Join
-	var natural bool
-
-JOIN_LOOP:
-	for {
-		tok, _ := p.peekToken()
-
-		if tok == nil {
-			return joins, nil
-		}
-
-		switch tok.Tok {
-		case Comma:
-			p.mustNextToken()
-			relation, err := p.parseTableFactor()
-			if err != nil {
-				return nil, errors.Errorf("parseTableFactor failed: %w", err)
-			}
-			join := &sqlast.Join{
-				Relation: relation,
-				Op:       sqlast.Implicit,
-			}
-			joins = append(joins, join)
-			continue
-		case SQLKeyword:
-			word := tok.Value.(*SQLWord)
-
-			switch word.Keyword {
-			case "CROSS":
-				p.mustNextToken()
-				p.expectKeyword("JOIN")
-				relation, err := p.parseTableFactor()
-				if err != nil {
-					return nil, errors.Errorf("parseTableFactor failed: %w", err)
-				}
-				join := &sqlast.Join{
-					Relation: relation,
-					Op:       sqlast.Cross,
-				}
-				joins = append(joins, join)
-				continue
-			case "NATURAL":
-				p.mustNextToken()
-				natural = true
-			}
-		default:
-			natural = false
-		}
-
-		t, _ := p.peekToken()
-		if t.Tok != SQLKeyword {
-			break
-		}
-
-		word := t.Value.(*SQLWord)
-
-		var join *sqlast.Join
-		switch word.Keyword {
-		case "INNER":
-			p.mustNextToken()
-			p.expectKeyword("JOIN")
-			relation, err := p.parseTableFactor()
-			if err != nil {
-				return nil, errors.Errorf("parseTableFactor failed: %w", err)
-			}
-			constraint, err := p.parseJoinConstraint(natural)
-			if err != nil {
-				return nil, errors.Errorf("parseJoinConstraint failed: %w", err)
-			}
-			join = &sqlast.Join{
-				Op:       sqlast.Inner,
-				Relation: relation,
-				Constant: constraint,
-			}
-		case "JOIN":
-			p.mustNextToken()
-			relation, err := p.parseTableFactor()
-			if err != nil {
-				return nil, errors.Errorf("parseTableFactor failed: %w", err)
-			}
-			constraint, err := p.parseJoinConstraint(natural)
-			if err != nil {
-				return nil, errors.Errorf("parseJoinConstraint failed: %w", err)
-			}
-			join = &sqlast.Join{
-				Op:       sqlast.Inner,
-				Relation: relation,
-				Constant: constraint,
-			}
-		case "LEFT":
-			p.mustNextToken()
-			if _, err := p.parseKeyword("OUTER"); err != nil {
-				return nil, errors.Errorf("parseKeyword failed: %w", err)
-			}
-			p.expectKeyword("JOIN")
-			relation, err := p.parseTableFactor()
-			if err != nil {
-				return nil, errors.Errorf("parseTableFactor failed: %w", err)
-			}
-			constraint, err := p.parseJoinConstraint(natural)
-			if err != nil {
-				return nil, errors.Errorf("parseJoinConstraint failed: %w", err)
-			}
-			join = &sqlast.Join{
-				Relation: relation,
-				Op:       sqlast.LeftOuter,
-				Constant: constraint,
-			}
-		case "RIGHT":
-			p.mustNextToken()
-			if _, err := p.parseKeyword("OUTER"); err != nil {
-				return nil, errors.Errorf("parseKeyword failed: %w", err)
-			}
-			p.expectKeyword("JOIN")
-			relation, err := p.parseTableFactor()
-			if err != nil {
-				return nil, errors.Errorf("parseTableFactor failed: %w", err)
-			}
-			constraint, err := p.parseJoinConstraint(natural)
-			if err != nil {
-				return nil, errors.Errorf("parseJoinConstraint failed: %w", err)
-			}
-			join = &sqlast.Join{
-				Relation: relation,
-				Op:       sqlast.RightOuter,
-				Constant: constraint,
-			}
-		case "FULL":
-			p.mustNextToken()
-			if _, err := p.parseKeyword("OUTER"); err != nil {
-				return nil, errors.Errorf("parseKeyword failed: %w", err)
-			}
-			p.expectKeyword("JOIN")
-			relation, err := p.parseTableFactor()
-			if err != nil {
-				return nil, errors.Errorf("parseTableFactor failed: %w", err)
-			}
-			constraint, err := p.parseJoinConstraint(natural)
-			if err != nil {
-				return nil, errors.Errorf("parseJoinConstraint failed: %w", err)
-			}
-			join = &sqlast.Join{
-				Relation: relation,
-				Op:       sqlast.FullOuter,
-				Constant: constraint,
-			}
-		default:
-			break JOIN_LOOP
-		}
-		joins = append(joins, join)
-	}
-
-	return joins, nil
-}
-
-func (p *Parser) parseJoinConstraint(natural bool) (sqlast.JoinConstant, error) {
-	if natural {
-		return &sqlast.NaturalConstant{}, nil
-	} else if ok, _ := p.parseKeyword("ON"); ok {
-		constraint, err := p.ParseExpr()
-		if err != nil {
-			return nil, errors.Errorf("ParseExpr failed: %w", err)
-		}
-		return &sqlast.OnJoinConstant{
-			Node: constraint,
-		}, nil
-	} else if ok, _ := p.parseKeyword("USING"); ok {
-		p.expectToken(LParen)
-		attrs, err := p.parseColumnNames()
-		if err != nil {
-			return nil, errors.Errorf("parseColumnNames failed: %w", err)
-		}
-		p.expectToken(RParen)
-		return &sqlast.UsingConstant{
-			Idents: attrs,
-		}, nil
-	}
-
-	log.Fatal("OR, or USING after JOIN")
-	return nil, nil
-}
-
-*/
 func (p *Parser) parseCTEList() ([]*sqlast.CTE, error) {
 	var ctes []*sqlast.CTE
 
@@ -1397,7 +1211,7 @@ func (p *Parser) parseCTEList() ([]*sqlast.CTE, error) {
 func (p *Parser) parseFromClause() ([]sqlast.TableReference, error) {
 	var res []sqlast.TableReference
 
-	table, err := p.parseTableFactor()
+	table, err := p.parseTableReference()
 	if err != nil {
 		return nil, errors.Errorf("parseTable failed: %w", err)
 	}
@@ -1405,11 +1219,11 @@ func (p *Parser) parseFromClause() ([]sqlast.TableReference, error) {
 	res = append(res, table)
 
 	for {
-		ok, _ := p.parseKeyword(",")
+		ok, _ := p.consumeToken(Comma)
 		if !ok {
 			break
 		}
-		table, err := p.parseTableFactor()
+		table, err := p.parseTableReference()
 		if err != nil {
 			return nil, errors.Errorf("parseTable failed: %w", err)
 		}
@@ -1417,6 +1231,206 @@ func (p *Parser) parseFromClause() ([]sqlast.TableReference, error) {
 	}
 
 	return res, nil
+}
+
+func (p *Parser) parseTableReference() (sqlast.TableReference, error) {
+	leftElem, err := p.parseTableFactor()
+	if err != nil {
+		return nil, errors.Errorf("parse joined table left element failed: %w", err)
+	}
+
+	e := sqlast.TableReference(leftElem)
+
+	for {
+		right, err := p.parseTableReferenceRight()
+		if err != nil {
+			return nil, errors.Errorf("parse table reference right failed: %w", err)
+		}
+
+		if right == nil {
+			break
+		}
+
+		switch rtp := right.(type) {
+		case *sqlast.NaturalJoin:
+			rtp.LeftElement = &sqlast.TableJoinElement{
+				Ref: e,
+			}
+			e = rtp
+		case *sqlast.CrossJoin:
+			rtp.Reference = leftElem
+			e = rtp
+		case *sqlast.QualifiedJoin:
+			rtp.LeftElement = &sqlast.TableJoinElement{
+				Ref: e,
+			}
+			e = rtp
+		default:
+			return nil, errors.Errorf("unknown join")
+		}
+	}
+
+	return e, nil
+}
+
+func (p *Parser) parseTableReferenceRight() (sqlast.TableReference, error) {
+	if ok, _ := p.consumeToken(Comma); ok {
+		p.prevToken()
+		return nil, nil
+	}
+
+	tok, err := p.nextToken()
+	if err != nil {
+		return nil, nil
+	}
+	word, ok := tok.Value.(*SQLWord)
+	if !ok {
+		p.prevToken()
+		return nil, nil
+	}
+
+	switch word.Keyword {
+	case "NATURAL":
+		tp, err := p.parseJoinType()
+		if err != nil {
+			return nil, errors.Errorf("parse natural join type failed: %w", err)
+		}
+		p.expectKeyword("JOIN")
+		rightElem, err := p.parseTableReference()
+		if err != nil {
+			return nil, errors.Errorf("parse natural join right element failed: %w", err)
+		}
+
+		return &sqlast.NaturalJoin{
+			Type: tp,
+			RightElement: &sqlast.TableJoinElement{
+				Ref: rightElem,
+			},
+		}, nil
+	case "CROSS":
+		p.expectKeyword("JOIN")
+		rightElem, err := p.parseTableFactor()
+		if err != nil {
+			return nil, errors.Errorf("parse cross join right element failed: %w", err)
+		}
+
+		return &sqlast.CrossJoin{
+			Factor: rightElem,
+		}, nil
+	case "INNER":
+		p.expectKeyword("JOIN")
+		ref, err := p.parseTableReference()
+		if err != nil {
+			return nil, errors.Errorf("parse inner join right elem filed: %w", err)
+		}
+		spec, err := p.parseJoinSpec()
+		if err != nil {
+			return nil, errors.Errorf("parse inner join spec filed: %w", err)
+		}
+
+		return &sqlast.QualifiedJoin{
+			RightElement: &sqlast.TableJoinElement{
+				Ref: ref,
+			},
+			Spec: spec,
+			Type: sqlast.INNER,
+		}, nil
+	case "LEFT", "RIGHT", "FULL", "JOIN":
+		p.prevToken()
+		tp, err := p.parseJoinType()
+		if err != nil {
+			return nil, errors.Errorf("parse qualified join type failed: %w", err)
+		}
+		p.expectKeyword("JOIN")
+		ref, err := p.parseTableReference()
+		if err != nil {
+			return nil, errors.Errorf("parse qualified join right elem failed: %w", err)
+		}
+
+		spec, err := p.parseJoinSpec()
+		if err != nil {
+			return nil, errors.Errorf("parse qualified join spec failed: %w", err)
+		}
+
+		return &sqlast.QualifiedJoin{
+			RightElement: &sqlast.TableJoinElement{
+				Ref: ref,
+			},
+			Type: tp,
+			Spec: spec,
+		}, nil
+
+	default:
+		p.prevToken()
+		return nil, nil
+	}
+
+	return nil, nil
+}
+
+func (p *Parser) parseJoinType() (sqlast.JoinType, error) {
+	tok, _ := p.nextToken()
+	word, ok := tok.Value.(*SQLWord)
+	if !ok {
+		return 0, errors.Errorf("unknown join type %v", tok)
+	}
+
+	switch word.Keyword {
+	case "INNER":
+		return sqlast.INNER, nil
+	case "LEFT":
+		outer, _ := p.parseKeyword("OUTER")
+		if outer {
+			return sqlast.LEFTOUTER, nil
+		}
+		return sqlast.LEFT, nil
+	case "RIGHT":
+		outer, _ := p.parseKeyword("OUTER")
+		if outer {
+			return sqlast.RIGHTOUTER, nil
+		}
+		return sqlast.RIGHT, nil
+	case "FULL":
+		outer, _ := p.parseKeyword("OUTER")
+		if outer {
+			return sqlast.FULLOUTER, nil
+		}
+		return sqlast.FULL, nil
+	case "JOIN":
+		p.prevToken()
+		return sqlast.IMPLICIT, nil
+	default:
+		return 0, errors.Errorf("unknown join type: %v", word)
+	}
+}
+
+func (p *Parser) parseJoinSpec() (sqlast.JoinSpec, error) {
+	if ok, _ := p.parseKeyword("ON"); ok {
+		expr, err := p.ParseExpr()
+		if err != nil {
+			return nil, errors.Errorf("parse join condition failed: %w", err)
+		}
+		return &sqlast.JoinCondition{
+			SearchCondition: expr,
+		}, nil
+	}
+
+	ok, _ := p.parseKeyword("USING")
+	if !ok {
+		tok, _ := p.nextToken()
+		return nil, errors.Errorf("unknown join spec need USING or ON but: %v", tok)
+	}
+
+	p.expectToken(LParen)
+	idents, err := p.parseListOfIds(Comma)
+	if err != nil {
+		return nil, errors.Errorf("parse named columns join list failed: %w", err)
+	}
+	p.expectToken(RParen)
+
+	return &sqlast.NamedColumnsJoin{
+		ColumnList: idents,
+	}, nil
 }
 
 func (p *Parser) parseTableFactor() (sqlast.TableFactor, error) {
