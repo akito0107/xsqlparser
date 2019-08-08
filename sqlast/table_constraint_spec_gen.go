@@ -3,7 +3,7 @@ package sqlast
 
 type TableConstraintSpec interface {
 	tableConstraintSpecMarker()
-	ASTNode
+	Node
 }
 type tableConstraintSpec struct{}
 

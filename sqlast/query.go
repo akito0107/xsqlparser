@@ -40,7 +40,7 @@ func (s *SQLQuery) ToSQLString() string {
 }
 
 type CTE struct {
-	Alias *SQLIdent
+	Alias *Ident
 	Query *SQLQuery
 }
 
@@ -48,7 +48,7 @@ func (c *CTE) ToSQLString() string {
 	return fmt.Sprintf("%s AS (%s)", c.Alias.ToSQLString(), c.Query.ToSQLString())
 }
 
-//go:generate genmark -t SQLSetExpr -e ASTNode
+//go:generate genmark -t SQLSetExpr -e Node
 
 type SelectExpr struct {
 	sqlSetExpr
@@ -84,7 +84,7 @@ func (s *SetOperationExpr) ToSQLString() string {
 	return fmt.Sprintf("%s %s%s %s", s.Left.ToSQLString(), s.Op.ToSQLString(), allStr, s.Right.ToSQLString())
 }
 
-//go:generate genmark -t SQLSetOperator -e ASTNode
+//go:generate genmark -t SQLSetOperator -e Node
 
 type UnionOperator struct {
 	sqlSetOperator
@@ -115,9 +115,9 @@ type SQLSelect struct {
 	Distinct      bool
 	Projection    []SQLSelectItem
 	FromClause    []TableReference
-	WhereClause   ASTNode
-	GroupByClause []ASTNode
-	HavingClause  ASTNode
+	WhereClause   Node
+	GroupByClause []Node
+	HavingClause  Node
 }
 
 func (s *SQLSelect) ToSQLString() string {
@@ -146,7 +146,7 @@ func (s *SQLSelect) ToSQLString() string {
 	return q
 }
 
-//go:generate genmark -t TableReference -e ASTNode
+//go:generate genmark -t TableReference -e Node
 
 //go:generate genmark -t TableFactor -e TableReference
 
@@ -154,9 +154,9 @@ type Table struct {
 	tableFactor
 	tableReference
 	Name      *SQLObjectName
-	Alias     *SQLIdent
-	Args      []ASTNode
-	WithHints []ASTNode
+	Alias     *Ident
+	Args      []Node
+	WithHints []Node
 }
 
 func (t *Table) ToSQLString() string {
@@ -178,7 +178,7 @@ type Derived struct {
 	tableReference
 	Lateral  bool
 	SubQuery *SQLQuery
-	Alias    *SQLIdent
+	Alias    *Ident
 }
 
 func (d *Derived) ToSQLString() string {
@@ -195,11 +195,11 @@ func (d *Derived) ToSQLString() string {
 	return s
 }
 
-//go:generate genmark -t SQLSelectItem -e ASTNode
+//go:generate genmark -t SQLSelectItem -e Node
 
 type UnnamedExpression struct {
 	sqlSelectItem
-	Node ASTNode
+	Node Node
 }
 
 func (u *UnnamedExpression) ToSQLString() string {
@@ -208,8 +208,8 @@ func (u *UnnamedExpression) ToSQLString() string {
 
 type ExpressionWithAlias struct {
 	sqlSelectItem
-	Expr  ASTNode
-	Alias *SQLIdent
+	Expr  Node
+	Alias *Ident
 }
 
 func (e *ExpressionWithAlias) ToSQLString() string {
@@ -244,7 +244,7 @@ func (c *CrossJoin) ToSQLString() string {
 	return fmt.Sprintf("%s CROSS JOIN %s", c.Reference.ToSQLString(), c.Factor.ToSQLString())
 }
 
-//go:generate genmark -t JoinElement -e ASTNode
+//go:generate genmark -t JoinElement -e Node
 
 type TableJoinElement struct {
 	joinElement
@@ -259,7 +259,7 @@ type PartitionedJoinTable struct {
 	joinElement
 	tableReference
 	Factor     TableFactor
-	ColumnList []*SQLIdent
+	ColumnList []*Ident
 }
 
 func (p *PartitionedJoinTable) ToSQLString() string {
@@ -289,11 +289,11 @@ func (n *NaturalJoin) ToSQLString() string {
 	return fmt.Sprintf("%s NATURAL %sJOIN %s", n.LeftElement.ToSQLString(), n.Type.ToSQLString(), n.RightElement.ToSQLString())
 }
 
-//go:generate genmark -t JoinSpec -e ASTNode
+//go:generate genmark -t JoinSpec -e Node
 
 type NamedColumnsJoin struct {
 	joinSpec
-	ColumnList []*SQLIdent
+	ColumnList []*Ident
 }
 
 func (n *NamedColumnsJoin) ToSQLString() string {
@@ -302,7 +302,7 @@ func (n *NamedColumnsJoin) ToSQLString() string {
 
 type JoinCondition struct {
 	joinSpec
-	SearchCondition ASTNode
+	SearchCondition Node
 }
 
 func (j *JoinCondition) ToSQLString() string {
@@ -347,7 +347,7 @@ func (j JoinType) ToSQLString() string {
 }
 
 type SQLOrderByExpr struct {
-	Expr ASTNode
+	Expr Node
 	ASC  *bool
 }
 

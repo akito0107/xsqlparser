@@ -5,31 +5,29 @@ import (
 )
 
 type Visitor interface {
-	Visit(node ASTNode) Visitor
+	Visit(node Node) Visitor
 }
 
-func walkIdentLists(v Visitor, list []*SQLIdent) {
+func walkIdentLists(v Visitor, list []*Ident) {
 	for _, i := range list {
 		Walk(v, i)
 	}
 }
 
-func walkASTNodeLists(v Visitor, list []ASTNode) {
+func walkASTNodeLists(v Visitor, list []Node) {
 	for _, l := range list {
 		Walk(v, l)
 	}
 }
 
-func Walk(v Visitor, node ASTNode) {
+func Walk(v Visitor, node Node) {
 	if v := v.Visit(node); v == nil {
 		return
 	}
 
 	switch n := node.(type) {
-	case *SQLIdent:
+	case *Ident:
 		// nothing to do
-	case *SQLIdentifier:
-		Walk(v, n.Ident)
 	case *SQLWildcard:
 		// nothing to do
 	case *SQLQualifiedWildcard:
@@ -370,15 +368,15 @@ func Walk(v Visitor, node ASTNode) {
 	v.Visit(nil)
 }
 
-type inspector func(node ASTNode) bool
+type inspector func(node Node) bool
 
-func (f inspector) Visit(node ASTNode) Visitor {
+func (f inspector) Visit(node Node) Visitor {
 	if f(node) {
 		return f
 	}
 	return nil
 }
 
-func Inspect(node ASTNode, f func(node ASTNode) bool) {
+func Inspect(node Node, f func(node Node) bool) {
 	Walk(inspector(f), node)
 }

@@ -6,34 +6,19 @@ import (
 	"strings"
 )
 
-type SQLIdent string
+type Ident string
 
-func NewSQLIdent(str string) *SQLIdent {
-	s := SQLIdent(str)
+func NewIdent(str string) *Ident {
+	s := Ident(str)
 	return &s
 }
 
-func (s *SQLIdent) ToSQLString() string {
+func (s *Ident) ToSQLString() string {
 	return string(*s)
 }
 
-type ASTNode interface {
+type Node interface {
 	ToSQLString() string
-}
-
-// Identifier e.g. table name or column name
-type SQLIdentifier struct {
-	Ident *SQLIdent
-}
-
-func NewSQLIdentifier(ident *SQLIdent) *SQLIdentifier {
-	return &SQLIdentifier{
-		Ident: ident,
-	}
-}
-
-func (s *SQLIdentifier) ToSQLString() string {
-	return string(*s.Ident)
 }
 
 // *
@@ -45,7 +30,7 @@ func (s SQLWildcard) ToSQLString() string {
 
 // table.*, schema.table.*
 type SQLQualifiedWildcard struct {
-	Idents []*SQLIdent
+	Idents []*Ident
 }
 
 func (s *SQLQualifiedWildcard) ToSQLString() string {
@@ -58,7 +43,7 @@ func (s *SQLQualifiedWildcard) ToSQLString() string {
 
 // table.column / schema.table.column
 type SQLCompoundIdentifier struct {
-	Idents []*SQLIdent
+	Idents []*Ident
 }
 
 func (s *SQLCompoundIdentifier) ToSQLString() string {
@@ -70,7 +55,7 @@ func (s *SQLCompoundIdentifier) ToSQLString() string {
 }
 
 type SQLIsNull struct {
-	X ASTNode
+	X Node
 }
 
 func (s *SQLIsNull) ToSQLString() string {
@@ -78,7 +63,7 @@ func (s *SQLIsNull) ToSQLString() string {
 }
 
 type SQLIsNotNull struct {
-	X ASTNode
+	X Node
 }
 
 func (s *SQLIsNotNull) ToSQLString() string {
@@ -86,8 +71,8 @@ func (s *SQLIsNotNull) ToSQLString() string {
 }
 
 type SQLInList struct {
-	Expr    ASTNode
-	List    []ASTNode
+	Expr    Node
+	List    []Node
 	Negated bool
 }
 
@@ -97,7 +82,7 @@ func (s *SQLInList) ToSQLString() string {
 
 //[ NOT ] IN (SELECT ...)
 type SQLInSubQuery struct {
-	Expr     ASTNode
+	Expr     Node
 	SubQuery *SQLQuery
 	Negated  bool
 }
@@ -107,10 +92,10 @@ func (s *SQLInSubQuery) ToSQLString() string {
 }
 
 type SQLBetween struct {
-	Expr    ASTNode
+	Expr    Node
 	Negated bool
-	Low     ASTNode
-	High    ASTNode
+	Low     Node
+	High    Node
 }
 
 func (s *SQLBetween) ToSQLString() string {
@@ -118,9 +103,9 @@ func (s *SQLBetween) ToSQLString() string {
 }
 
 type SQLBinaryExpr struct {
-	Left  ASTNode
+	Left  Node
 	Op    SQLOperator
-	Right ASTNode
+	Right Node
 }
 
 func (s *SQLBinaryExpr) ToSQLString() string {
@@ -128,7 +113,7 @@ func (s *SQLBinaryExpr) ToSQLString() string {
 }
 
 type SQLCast struct {
-	Expr     ASTNode
+	Expr     Node
 	DateType SQLType
 }
 
@@ -137,7 +122,7 @@ func (s *SQLCast) ToSQLString() string {
 }
 
 type SQLNested struct {
-	AST ASTNode
+	AST Node
 }
 
 func (s *SQLNested) ToSQLString() string {
@@ -146,7 +131,7 @@ func (s *SQLNested) ToSQLString() string {
 
 type SQLUnary struct {
 	Operator SQLOperator
-	Expr     ASTNode
+	Expr     Node
 }
 
 func (s *SQLUnary) ToSQLString() string {
@@ -163,7 +148,7 @@ func (s *SQLValue) ToSQLString() string {
 
 type SQLFunction struct {
 	Name *SQLObjectName
-	Args []ASTNode
+	Args []Node
 	Over *SQLWindowSpec
 }
 
@@ -178,10 +163,10 @@ func (s *SQLFunction) ToSQLString() string {
 }
 
 type SQLCase struct {
-	Operand    ASTNode
-	Conditions []ASTNode
-	Results    []ASTNode
-	ElseResult ASTNode
+	Operand    Node
+	Conditions []Node
+	Results    []Node
+	ElseResult Node
 }
 
 func (s *SQLCase) ToSQLString() string {
@@ -220,14 +205,14 @@ func (s *SQLSubquery) ToSQLString() string {
 }
 
 type SQLObjectName struct {
-	Idents []*SQLIdent
+	Idents []*Ident
 }
 
 func NewSQLObjectName(strs ...string) *SQLObjectName {
-	idents := make([]*SQLIdent, 0, len(strs))
+	idents := make([]*Ident, 0, len(strs))
 
 	for _, s := range strs {
-		idents = append(idents, NewSQLIdent(s))
+		idents = append(idents, NewIdent(s))
 	}
 
 	return &SQLObjectName{
@@ -246,7 +231,7 @@ func (s *SQLObjectName) ToSQLString() string {
 func commaSeparatedString(list interface{}) string {
 	var strs []string
 	switch s := list.(type) {
-	case []ASTNode:
+	case []Node:
 		for _, l := range s {
 			strs = append(strs, l.ToSQLString())
 		}
@@ -266,7 +251,7 @@ func commaSeparatedString(list interface{}) string {
 		for _, l := range s {
 			strs = append(strs, l.ToSQLString())
 		}
-	case []*SQLIdent:
+	case []*Ident:
 		for _, l := range s {
 			strs = append(strs, l.ToSQLString())
 		}
@@ -303,7 +288,7 @@ func negatedString(negated bool) string {
 }
 
 type SQLWindowSpec struct {
-	PartitionBy  []ASTNode
+	PartitionBy  []Node
 	OrderBy      []*SQLOrderByExpr
 	WindowsFrame *SQLWindowFrame
 }
@@ -370,7 +355,7 @@ func (SQLWindowFrameUnits) FromStr(str string) SQLWindowFrameUnits {
 	return 0
 }
 
-//go:generate genmark -t SQLWindowFrameBound -e ASTNode
+//go:generate genmark -t SQLWindowFrameBound -e Node
 
 type CurrentRow struct {
 	sqlWindowFrameBound

@@ -5,7 +5,7 @@ import (
 )
 
 type SQLType interface {
-	ASTNode
+	Node
 }
 
 type CharType struct {

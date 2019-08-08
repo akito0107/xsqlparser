@@ -27,8 +27,8 @@ func (s *SQLWord) String() string {
 	return ""
 }
 
-func (s *SQLWord) AsSQLIdent() *sqlast.SQLIdent {
-	return sqlast.NewSQLIdent(s.String())
+func (s *SQLWord) AsSQLIdent() *sqlast.Ident {
+	return sqlast.NewIdent(s.String())
 }
 
 func matchingEndQuote(quoteStyle rune) rune {

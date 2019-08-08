@@ -3,7 +3,7 @@ package sqlast
 
 type SQLSelectItem interface {
 	sqlSelectItemMarker()
-	ASTNode
+	Node
 }
 type sqlSelectItem struct{}
 

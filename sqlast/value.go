@@ -7,7 +7,7 @@ import (
 
 type Value interface {
 	Value() interface{}
-	ASTNode
+	Node
 }
 
 type LongValue int64

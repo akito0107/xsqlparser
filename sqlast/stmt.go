@@ -6,13 +6,13 @@ import (
 	"strings"
 )
 
-//go:generate genmark -t SQLStmt -e ASTNode
+//go:generate genmark -t SQLStmt -e Node
 
 type SQLInsert struct {
 	sqlStmt
 	TableName         *SQLObjectName
-	Columns           []*SQLIdent
-	Values            [][]ASTNode
+	Columns           []*Ident
+	Values            [][]Node
 	UpdateAssignments []*SQLAssignment // MySQL only (ON DUPLICATED KEYS)
 }
 
@@ -40,7 +40,7 @@ func (s *SQLInsert) ToSQLString() string {
 type SQLCopy struct {
 	sqlStmt
 	TableName *SQLObjectName
-	Columns   []*SQLIdent
+	Columns   []*Ident
 	Values    []*string
 }
 
@@ -71,7 +71,7 @@ type SQLUpdate struct {
 	sqlStmt
 	TableName   *SQLObjectName
 	Assignments []*SQLAssignment
-	Selection   ASTNode
+	Selection   Node
 }
 
 func (s *SQLUpdate) ToSQLString() string {
@@ -89,7 +89,7 @@ func (s *SQLUpdate) ToSQLString() string {
 type SQLDelete struct {
 	sqlStmt
 	TableName *SQLObjectName
-	Selection ASTNode
+	Selection Node
 }
 
 func (s *SQLDelete) ToSQLString() string {
@@ -140,19 +140,19 @@ func (s *SQLCreateTable) ToSQLString() string {
 }
 
 type SQLAssignment struct {
-	ID    *SQLIdent
-	Value ASTNode
+	ID    *Ident
+	Value Node
 }
 
 func (s *SQLAssignment) ToSQLString() string {
 	return fmt.Sprintf("%s = %s", s.ID.ToSQLString(), s.Value.ToSQLString())
 }
 
-//go:generate genmark -t TableElement -e ASTNode
+//go:generate genmark -t TableElement -e Node
 
 type TableConstraint struct {
 	tableElement
-	Name *SQLIdentifier
+	Name *Ident
 	Spec TableConstraintSpec
 }
 
@@ -168,12 +168,12 @@ func (t *TableConstraint) ToSQLString() string {
 	return str
 }
 
-//go:generate genmark -t TableConstraintSpec -e ASTNode
+//go:generate genmark -t TableConstraintSpec -e Node
 
 type UniqueTableConstraint struct {
 	tableConstraintSpec
 	IsPrimary bool
-	Columns   []*SQLIdent
+	Columns   []*Ident
 }
 
 func (u *UniqueTableConstraint) ToSQLString() string {
@@ -185,7 +185,7 @@ func (u *UniqueTableConstraint) ToSQLString() string {
 
 type ReferentialTableConstraint struct {
 	tableConstraintSpec
-	Columns []*SQLIdent
+	Columns []*Ident
 	KeyExpr *ReferenceKeyExpr
 }
 
@@ -194,8 +194,8 @@ func (r *ReferentialTableConstraint) ToSQLString() string {
 }
 
 type ReferenceKeyExpr struct {
-	TableName *SQLIdentifier
-	Columns   []*SQLIdent
+	TableName *Ident
+	Columns   []*Ident
 }
 
 func (r *ReferenceKeyExpr) ToSQLString() string {
@@ -204,7 +204,7 @@ func (r *ReferenceKeyExpr) ToSQLString() string {
 
 type CheckTableConstraint struct {
 	tableConstraintSpec
-	Expr ASTNode
+	Expr Node
 }
 
 func (c *CheckTableConstraint) ToSQLString() string {
@@ -213,9 +213,9 @@ func (c *CheckTableConstraint) ToSQLString() string {
 
 type SQLColumnDef struct {
 	tableElement
-	Name        *SQLIdent
+	Name        *Ident
 	DataType    SQLType
-	Default     ASTNode
+	Default     Node
 	Constraints []*ColumnConstraint
 }
 
@@ -232,7 +232,7 @@ func (s *SQLColumnDef) ToSQLString() string {
 }
 
 type ColumnConstraint struct {
-	Name *SQLIdentifier
+	Name *Ident
 	Spec ColumnConstraintSpec
 }
 
@@ -246,7 +246,7 @@ func (c *ColumnConstraint) ToSQLString() string {
 
 // https://jakewheat.github.io/sql-overview/sql-2008-foundation-grammar.html#column-constraint
 type ColumnConstraintSpec interface {
-	ASTNode
+	Node
 }
 
 type NotNullColumnSpec struct {
@@ -270,7 +270,7 @@ func (u *UniqueColumnSpec) ToSQLString() string {
 
 type ReferencesColumnSpec struct {
 	TableName *SQLObjectName
-	Columns   []*SQLIdent
+	Columns   []*Ident
 }
 
 func (r *ReferencesColumnSpec) ToSQLString() string {
@@ -278,7 +278,7 @@ func (r *ReferencesColumnSpec) ToSQLString() string {
 }
 
 type CheckColumnSpec struct {
-	Expr ASTNode
+	Expr Node
 }
 
 func (c *CheckColumnSpec) ToSQLString() string {
@@ -348,7 +348,7 @@ func (s *SQLAlterTable) ToSQLString() string {
 	return fmt.Sprintf("ALTER TABLE %s %s", s.TableName.ToSQLString(), s.Action.ToSQLString())
 }
 
-//go:generate genmark -t AlterTableAction -e ASTNode
+//go:generate genmark -t AlterTableAction -e Node
 
 type AddColumnTableAction struct {
 	alterTableAction
@@ -361,7 +361,7 @@ func (a *AddColumnTableAction) ToSQLString() string {
 
 type AlterColumnTableAction struct {
 	alterTableAction
-	ColumnName *SQLIdent
+	ColumnName *Ident
 	Action     AlterColumnAction
 }
 
@@ -369,14 +369,14 @@ func (a *AlterColumnTableAction) ToSQLString() string {
 	return fmt.Sprintf("ALTER COLUMN %s %s", a.ColumnName.ToSQLString(), a.Action.ToSQLString())
 }
 
-//go:generate genmark -t AlterColumnAction -e ASTNode
+//go:generate genmark -t AlterColumnAction -e Node
 
 // TODO add column scope / drop column scope / alter identity column spec
 // https://jakewheat.github.io/sql-overview/sql-2008-foundation-grammar.html#alter-column-definition
 
 type SetDefaultColumnAction struct {
 	alterColumnAction
-	Default ASTNode
+	Default Node
 }
 
 func (s *SetDefaultColumnAction) ToSQLString() string {
@@ -419,7 +419,7 @@ func (p *PGDropNotNullColumnAction) ToSQLString() string {
 
 type RemoveColumnTableAction struct {
 	alterTableAction
-	Name    *SQLIdent
+	Name    *Ident
 	Cascade bool
 }
 
@@ -442,7 +442,7 @@ func (a *AddConstraintTableAction) ToSQLString() string {
 
 type DropConstraintTableAction struct {
 	alterTableAction
-	Name    *SQLIdent
+	Name    *Ident
 	Cascade bool
 }
 
@@ -479,10 +479,10 @@ type SQLCreateIndex struct {
 	sqlStmt
 	TableName   *SQLObjectName
 	IsUnique    bool
-	IndexName   *SQLIdent
-	MethodName  *SQLIdent
-	ColumnNames []*SQLIdent
-	Selection   ASTNode
+	IndexName   *Ident
+	MethodName  *Ident
+	ColumnNames []*Ident
+	Selection   Node
 }
 
 func (s *SQLCreateIndex) ToSQLString() string {
@@ -513,7 +513,7 @@ func (s *SQLCreateIndex) ToSQLString() string {
 
 type SQLDropIndex struct {
 	sqlStmt
-	IndexNames []*SQLIdent
+	IndexNames []*Ident
 }
 
 func (s *SQLDropIndex) ToSQLString() string {

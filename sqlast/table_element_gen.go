@@ -3,7 +3,7 @@ package sqlast
 
 type TableElement interface {
 	tableElementMarker()
-	ASTNode
+	Node
 }
 type tableElement struct{}
 
