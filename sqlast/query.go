@@ -2,6 +2,7 @@ package sqlast
 
 import (
 	"fmt"
+	"log"
 	"strings"
 )
 
@@ -111,13 +112,12 @@ func (IntersectOperator) ToSQLString() string {
 
 type SQLSelect struct {
 	sqlSetExpr
-	Distinct   bool
-	Projection []SQLSelectItem
-	Relation   TableFactor
-	Joins      []*Join
-	Selection  ASTNode
-	GroupBy    []ASTNode
-	Having     ASTNode
+	Distinct      bool
+	Projection    []SQLSelectItem
+	FromClause    []TableReference
+	WhereClause   ASTNode
+	GroupByClause []ASTNode
+	HavingClause  ASTNode
 }
 
 func (s *SQLSelect) ToSQLString() string {
@@ -127,33 +127,32 @@ func (s *SQLSelect) ToSQLString() string {
 	}
 	q += commaSeparatedString(s.Projection)
 
-	if s.Relation != nil {
-		q += fmt.Sprintf(" FROM %s", s.Relation.ToSQLString())
+	if len(s.FromClause) != 0 {
+		q += fmt.Sprintf(" FROM %s", commaSeparatedString(s.FromClause))
 	}
 
-	for _, j := range s.Joins {
-		q += j.ToSQLString()
+	if s.WhereClause != nil {
+		q += fmt.Sprintf(" WHERE %s", s.WhereClause.ToSQLString())
 	}
 
-	if s.Selection != nil {
-		q += fmt.Sprintf(" WHERE %s", s.Selection.ToSQLString())
+	if len(s.GroupByClause) != 0 {
+		q += fmt.Sprintf(" GROUP BY %s", commaSeparatedString(s.GroupByClause))
 	}
 
-	if len(s.GroupBy) != 0 {
-		q += fmt.Sprintf(" GROUP BY %s", commaSeparatedString(s.GroupBy))
-	}
-
-	if s.Having != nil {
-		q += fmt.Sprintf(" HAVING %s", s.Having.ToSQLString())
+	if s.HavingClause != nil {
+		q += fmt.Sprintf(" HAVING %s", s.HavingClause.ToSQLString())
 	}
 
 	return q
 }
 
-//go:generate genmark -t TableFactor -e ASTNode
+//go:generate genmark -t TableReference -e ASTNode
+
+//go:generate genmark -t TableFactor -e TableReference
 
 type Table struct {
 	tableFactor
+	tableReference
 	Name      *SQLObjectName
 	Alias     *SQLIdent
 	Args      []ASTNode
@@ -176,6 +175,7 @@ func (t *Table) ToSQLString() string {
 
 type Derived struct {
 	tableFactor
+	tableReference
 	Lateral  bool
 	SubQuery *SQLQuery
 	Alias    *SQLIdent
@@ -234,88 +234,117 @@ func (w *Wildcard) ToSQLString() string {
 	return "*"
 }
 
-type Join struct {
-	Relation TableFactor
-	Op       JoinOperator
-	Constant JoinConstant
+type CrossJoin struct {
+	tableReference
+	Reference TableReference
+	Factor    TableFactor
 }
 
-func (j *Join) ToSQLString() string {
-	switch j.Op {
-	case Inner:
-		return fmt.Sprintf(" %sJOIN %s%s", j.Constant.Prefix(), j.Relation.ToSQLString(), j.Constant.Suffix())
-	case Cross:
-		return fmt.Sprintf(" CROSS JOIN%s", j.Relation.ToSQLString())
-	case Implicit:
-		return fmt.Sprintf(", %s", j.Relation.ToSQLString())
-	case LeftOuter:
-		return fmt.Sprintf(" %sLEFT JOIN %s%s", j.Constant.Prefix(), j.Relation.ToSQLString(), j.Constant.Suffix())
-	case RightOuter:
-		return fmt.Sprintf(" %sRIGHT JOIN %s%s", j.Constant.Prefix(), j.Relation.ToSQLString(), j.Constant.Suffix())
-	case FullOuter:
-		return fmt.Sprintf(" %sFULL JOIN %s%s", j.Constant.Prefix(), j.Relation.ToSQLString(), j.Constant.Suffix())
-	default:
-		return ""
-	}
+func (c *CrossJoin) ToSQLString() string {
+	return fmt.Sprintf("%s CROSS JOIN %s", c.Reference.ToSQLString(), c.Factor.ToSQLString())
 }
 
-type JoinOperator int
+//go:generate genmark -t JoinElement -e ASTNode
+
+type TableJoinElement struct {
+	joinElement
+	Ref TableReference
+}
+
+func (t *TableJoinElement) ToSQLString() string {
+	return t.Ref.ToSQLString()
+}
+
+type PartitionedJoinTable struct {
+	joinElement
+	tableReference
+	Factor     TableFactor
+	ColumnList []*SQLIdent
+}
+
+func (p *PartitionedJoinTable) ToSQLString() string {
+	return fmt.Sprintf("%s PARTITION BY (%s)", p.Factor.ToSQLString(), commaSeparatedString(p.ColumnList))
+}
+
+type QualifiedJoin struct {
+	tableReference
+	LeftElement  *TableJoinElement
+	Type         JoinType
+	RightElement *TableJoinElement
+	Spec         JoinSpec
+}
+
+func (q *QualifiedJoin) ToSQLString() string {
+	return fmt.Sprintf("%s %sJOIN %s %s", q.LeftElement.ToSQLString(), q.Type.ToSQLString(), q.RightElement.ToSQLString(), q.Spec.ToSQLString())
+}
+
+type NaturalJoin struct {
+	tableReference
+	LeftElement  *TableJoinElement
+	Type         JoinType
+	RightElement *TableJoinElement
+}
+
+func (n *NaturalJoin) ToSQLString() string {
+	return fmt.Sprintf("%s NATURAL %sJOIN %s", n.LeftElement.ToSQLString(), n.Type.ToSQLString(), n.RightElement.ToSQLString())
+}
+
+//go:generate genmark -t JoinSpec -e ASTNode
+
+type NamedColumnsJoin struct {
+	joinSpec
+	ColumnList []*SQLIdent
+}
+
+func (n *NamedColumnsJoin) ToSQLString() string {
+	return fmt.Sprintf("USING (%s)", commaSeparatedString(n.ColumnList))
+}
+
+type JoinCondition struct {
+	joinSpec
+	SearchCondition ASTNode
+}
+
+func (j *JoinCondition) ToSQLString() string {
+	return fmt.Sprintf("ON %s", j.SearchCondition.ToSQLString())
+}
+
+type JoinType int
 
 const (
-	Inner JoinOperator = iota
-	LeftOuter
-	RightOuter
-	FullOuter
-	Implicit
-	Cross
+	INNER JoinType = iota
+	LEFT
+	RIGHT
+	FULL
+	LEFTOUTER
+	RIGHTOUTER
+	FULLOUTER
+	IMPLICIT
 )
 
-/** JoinConstant **/
-type JoinConstant interface {
-	Prefix() string
-	Suffix() string
-}
-
-type OnJoinConstant struct {
-	Node ASTNode
-}
-
-func (*OnJoinConstant) Prefix() string {
-	return ""
-}
-
-func (o *OnJoinConstant) Suffix() string {
-	return fmt.Sprintf(" ON %s", o.Node.ToSQLString())
-}
-
-type UsingConstant struct {
-	Idents []*SQLIdent
-}
-
-func (*UsingConstant) Prefix() string {
-	return ""
-}
-
-func (u *UsingConstant) Suffix() string {
-	var str []string
-	for _, i := range u.Idents {
-		str = append(str, string(*i))
+func (j JoinType) ToSQLString() string {
+	switch j {
+	case INNER:
+		return "INNER "
+	case LEFT:
+		return "LEFT "
+	case RIGHT:
+		return "RIGHT "
+	case FULL:
+		return "FULL "
+	case LEFTOUTER:
+		return "LEFT OUTER "
+	case RIGHTOUTER:
+		return "RIGHT OUTER "
+	case FULLOUTER:
+		return "FULL OUTER "
+	case IMPLICIT:
+		return ""
+	default:
+		log.Fatalf("unknown join type %d", j)
 	}
-	return fmt.Sprintf(" USING(%s)", strings.Join(str, ", "))
-}
-
-type NaturalConstant struct {
-}
-
-func (*NaturalConstant) Prefix() string {
-	return "NATURAL "
-}
-
-func (*NaturalConstant) Suffix() string {
 	return ""
 }
-
-/** JoinConstant end **/
 
 type SQLOrderByExpr struct {
 	Expr ASTNode

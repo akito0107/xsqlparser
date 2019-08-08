@@ -134,14 +134,16 @@ func TestSQLCreateView_ToSQLString(t *testing.T) {
 									Node: NewSQLIdent("contract_name"),
 								},
 							},
-							Relation: &Table{
-								Name: &SQLObjectName{
-									Idents: []*SQLIdent{
-										NewSQLIdent("customers"),
+							FromClause: []TableReference{
+								&Table{
+									Name: &SQLObjectName{
+										Idents: []*SQLIdent{
+											NewSQLIdent("customers"),
+										},
 									},
 								},
 							},
-							Selection: &SQLBinaryExpr{
+							WhereClause: &SQLBinaryExpr{
 								Op:    Eq,
 								Left:  NewSQLIdent("country"),
 								Right: NewSingleQuotedString("Brazil"),

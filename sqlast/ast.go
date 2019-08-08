@@ -282,6 +282,10 @@ func commaSeparatedString(list interface{}) string {
 		for _, l := range s {
 			strs = append(strs, l.ToSQLString())
 		}
+	case []TableReference:
+		for _, l := range s {
+			strs = append(strs, l.ToSQLString())
+		}
 	default:
 		log.Fatalf("unexpected type array %+v", list)
 	}

@@ -36,4 +36,6 @@ func main() {
 	}
 
 	pp.Println(stmt)
+
+	log.Println(stmt.ToSQLString())
 }

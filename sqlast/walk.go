@@ -136,19 +136,36 @@ func Walk(v Visitor, node ASTNode) {
 		for _, p := range n.Projection {
 			Walk(v, p)
 		}
-		if n.Relation != nil {
-			Walk(v, n.Relation)
+		if len(n.FromClause) != 0 {
+			for _, f := range n.FromClause {
+				Walk(v, f)
+			}
 		}
-		for _, j := range n.Joins {
-			Walk(v, j)
+		if n.WhereClause != nil {
+			Walk(v, n.WhereClause)
 		}
-		if n.Selection != nil {
-			Walk(v, n.Selection)
+		walkASTNodeLists(v, n.GroupByClause)
+		if n.HavingClause != nil {
+			Walk(v, n.HavingClause)
 		}
-		walkASTNodeLists(v, n.GroupBy)
-		if n.Having != nil {
-			Walk(v, n.Having)
-		}
+	case *QualifiedJoin:
+		Walk(v, n.LeftElement)
+		Walk(v, n.Type)
+		Walk(v, n.RightElement)
+		Walk(v, n.Spec)
+	case *TableJoinElement:
+		Walk(v, n.Ref)
+	case JoinType:
+	// nothing to do
+	case *JoinCondition:
+		Walk(v, n.SearchCondition)
+	case *NaturalJoin:
+		Walk(v, n.LeftElement)
+		Walk(v, n.Type)
+		Walk(v, n.RightElement)
+	case *CrossJoin:
+		Walk(v, n.Factor)
+		Walk(v, n.Reference)
 	case *Table:
 		Walk(v, n.Name)
 		if n.Alias != nil {
@@ -170,12 +187,6 @@ func Walk(v Visitor, node ASTNode) {
 		Walk(v, n.Prefix)
 	case *Wildcard:
 		// nothing to do
-	case *Join:
-		log.Println("JOIN is not implemented yet")
-		// TODO
-	// case *OnJoinConstant:
-	// case *UsingConstant:
-	// case *NaturalConstant:
 	case *SQLOrderByExpr:
 		Walk(v, n.Expr)
 	case *LimitExpr:

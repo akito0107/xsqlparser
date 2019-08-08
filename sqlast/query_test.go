@@ -20,8 +20,10 @@ func TestSQLSelect_ToSQLString(t *testing.T) {
 						Node: NewSQLIdentifier(NewSQLIdent("test")),
 					},
 				},
-				Relation: &Table{
-					Name: NewSQLObjectName("test_table"),
+				FromClause: []TableReference{
+					&Table{
+						Name: NewSQLObjectName("test_table"),
+					},
 				},
 			},
 			out: "SELECT test FROM test_table",
@@ -34,16 +36,19 @@ func TestSQLSelect_ToSQLString(t *testing.T) {
 						Node: NewSQLObjectName("test"),
 					},
 				},
-				Relation: &Table{
-					Name: NewSQLObjectName("test_table"),
-				},
-				Joins: []*Join{
-					{
-						Relation: &Table{
-							Name: NewSQLObjectName("test_table2"),
+				FromClause: []TableReference{
+					&NaturalJoin{
+						LeftElement: &TableJoinElement{
+							Ref: &Table{
+								Name: NewSQLObjectName("test_table"),
+							},
 						},
-						Op:       Inner,
-						Constant: &NaturalConstant{},
+						Type: IMPLICIT,
+						RightElement: &TableJoinElement{
+							Ref: &Table{
+								Name: NewSQLObjectName("test_table2"),
+							},
+						},
 					},
 				},
 			},
@@ -57,10 +62,12 @@ func TestSQLSelect_ToSQLString(t *testing.T) {
 						Node: NewSQLIdentifier(NewSQLIdent("test")),
 					},
 				},
-				Relation: &Table{
-					Name: NewSQLObjectName("test_table"),
+				FromClause: []TableReference{
+					&Table{
+						Name: NewSQLObjectName("test_table"),
+					},
 				},
-				Selection: &SQLBinaryExpr{
+				WhereClause: &SQLBinaryExpr{
 					Left: &SQLCompoundIdentifier{
 						Idents: []*SQLIdent{NewSQLIdent("test_table"), NewSQLIdent("column1")},
 					},
@@ -84,19 +91,23 @@ func TestSQLSelect_ToSQLString(t *testing.T) {
 						Alias: NewSQLIdent("c"),
 					},
 				},
-				Relation: &Table{
-					Name:  NewSQLObjectName("test_table"),
-					Alias: NewSQLIdent("t1"),
-				},
-				Joins: []*Join{
-					{
-						Relation: &Table{
-							Name:  NewSQLObjectName("test_table2"),
-							Alias: NewSQLIdent("t2"),
+				FromClause: []TableReference{
+					&QualifiedJoin{
+						LeftElement: &TableJoinElement{
+							Ref: &Table{
+								Name:  NewSQLObjectName("test_table"),
+								Alias: NewSQLIdent("t1"),
+							},
 						},
-						Op: LeftOuter,
-						Constant: &OnJoinConstant{
-							Node: &SQLBinaryExpr{
+						Type: LEFT,
+						RightElement: &TableJoinElement{
+							Ref: &Table{
+								Name:  NewSQLObjectName("test_table2"),
+								Alias: NewSQLIdent("t2"),
+							},
+						},
+						Spec: &JoinCondition{
+							SearchCondition: &SQLBinaryExpr{
 								Left: &SQLCompoundIdentifier{
 									Idents: []*SQLIdent{NewSQLIdent("t1"), NewSQLIdent("id")},
 								},
@@ -125,10 +136,12 @@ func TestSQLSelect_ToSQLString(t *testing.T) {
 						Prefix: NewSQLObjectName("country"),
 					},
 				},
-				Relation: &Table{
-					Name: NewSQLObjectName("customers"),
+				FromClause: []TableReference{
+					&Table{
+						Name: NewSQLObjectName("customers"),
+					},
 				},
-				GroupBy: []ASTNode{NewSQLIdentifier(NewSQLIdent("country"))},
+				GroupByClause: []ASTNode{NewSQLIdentifier(NewSQLIdent("country"))},
 			},
 			out: "SELECT COUNT(customer_id), country.* FROM customers GROUP BY country",
 		},
@@ -146,11 +159,13 @@ func TestSQLSelect_ToSQLString(t *testing.T) {
 						Node: NewSQLIdentifier(NewSQLIdent("country")),
 					},
 				},
-				Relation: &Table{
-					Name: NewSQLObjectName("customers"),
+				FromClause: []TableReference{
+					&Table{
+						Name: NewSQLObjectName("customers"),
+					},
 				},
-				GroupBy: []ASTNode{NewSQLIdentifier(NewSQLIdent("country"))},
-				Having: &SQLBinaryExpr{
+				GroupByClause: []ASTNode{NewSQLIdentifier(NewSQLIdent("country"))},
+				HavingClause: &SQLBinaryExpr{
 					Op: Gt,
 					Left: &SQLFunction{
 						Name: NewSQLObjectName("COUNT"),
@@ -200,10 +215,12 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 										},
 									},
 								},
-								Relation: &Table{
-									Name: NewSQLObjectName("orders"),
+								FromClause: []TableReference{
+									&Table{
+										Name: NewSQLObjectName("orders"),
+									},
 								},
-								GroupBy: []ASTNode{NewSQLIdentifier(NewSQLIdent("region"))},
+								GroupByClause: []ASTNode{NewSQLIdentifier(NewSQLIdent("region"))},
 							},
 						},
 					},
@@ -219,23 +236,27 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 							},
 						},
 					},
-					Relation: &Table{
-						Name: NewSQLObjectName("orders"),
+					FromClause: []TableReference{
+						&Table{
+							Name: NewSQLObjectName("orders"),
+						},
 					},
-					Selection: &SQLInSubQuery{
+					WhereClause: &SQLInSubQuery{
 						Expr: NewSQLIdentifier(NewSQLIdent("region")),
 						SubQuery: &SQLQuery{
 							Body: &SQLSelect{
 								Projection: []SQLSelectItem{
 									&UnnamedExpression{Node: NewSQLIdentifier(NewSQLIdent("region"))},
 								},
-								Relation: &Table{
-									Name: NewSQLObjectName("top_regions"),
+								FromClause: []TableReference{
+									&Table{
+										Name: NewSQLObjectName("top_regions"),
+									},
 								},
 							},
 						},
 					},
-					GroupBy: []ASTNode{NewSQLIdentifier(NewSQLIdent("region")), NewSQLIdentifier(NewSQLIdent("product"))},
+					GroupByClause: []ASTNode{NewSQLIdentifier(NewSQLIdent("region")), NewSQLIdentifier(NewSQLIdent("product"))},
 				},
 			},
 			out: "WITH regional_sales AS (" +
@@ -260,18 +281,22 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 							},
 						},
 					},
-					Relation: &Table{
-						Name: NewSQLObjectName("orders"),
+					FromClause: []TableReference{
+						&Table{
+							Name: NewSQLObjectName("orders"),
+						},
 					},
-					Selection: &SQLInSubQuery{
+					WhereClause: &SQLInSubQuery{
 						Expr: NewSQLIdentifier(NewSQLIdent("region")),
 						SubQuery: &SQLQuery{
 							Body: &SQLSelect{
 								Projection: []SQLSelectItem{
 									&UnnamedExpression{Node: NewSQLIdentifier(NewSQLIdent("region"))},
 								},
-								Relation: &Table{
-									Name: NewSQLObjectName("top_regions"),
+								FromClause: []TableReference{
+									&Table{
+										Name: NewSQLObjectName("top_regions"),
+									},
 								},
 							},
 						},
@@ -296,10 +321,12 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 							Node: &SQLWildcard{},
 						},
 					},
-					Relation: &Table{
-						Name: NewSQLObjectName("user"),
+					FromClause: []TableReference{
+						&Table{
+							Name: NewSQLObjectName("user"),
+						},
 					},
-					Selection: &SQLExists{
+					WhereClause: &SQLExists{
 						Negated: true,
 						Query: &SQLQuery{
 							Body: &SQLSelect{
@@ -308,10 +335,12 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 										Node: &SQLWildcard{},
 									},
 								},
-								Relation: &Table{
-									Name: NewSQLObjectName("user_sub"),
+								FromClause: []TableReference{
+									&Table{
+										Name: NewSQLObjectName("user_sub"),
+									},
 								},
-								Selection: &SQLBinaryExpr{
+								WhereClause: &SQLBinaryExpr{
 									Op: And,
 									Left: &SQLBinaryExpr{
 										Op: Eq,
@@ -376,10 +405,12 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 							Alias: NewSQLIdent("alias"),
 						},
 					},
-					Relation: &Table{
-						Name: NewSQLObjectName("user"),
+					FromClause: []TableReference{
+						&Table{
+							Name: NewSQLObjectName("user"),
+						},
 					},
-					Selection: &SQLBetween{
+					WhereClause: &SQLBetween{
 						Expr: NewSQLIdentifier(NewSQLIdent("id")),
 						High: NewLongValue(2),
 						Low:  NewLongValue(1),
