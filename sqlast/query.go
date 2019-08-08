@@ -234,10 +234,7 @@ func (w *Wildcard) ToSQLString() string {
 	return "*"
 }
 
-//go:generate genmark -t JoinedTable -e TableReference
-
 type CrossJoin struct {
-	joinedTable
 	tableReference
 	Reference TableReference
 	Factor    TableFactor
@@ -270,7 +267,6 @@ func (p *PartitionedJoinTable) ToSQLString() string {
 }
 
 type QualifiedJoin struct {
-	joinedTable
 	tableReference
 	LeftElement  *TableJoinElement
 	Type         JoinType
@@ -283,7 +279,6 @@ func (q *QualifiedJoin) ToSQLString() string {
 }
 
 type NaturalJoin struct {
-	joinedTable
 	tableReference
 	LeftElement  *TableJoinElement
 	Type         JoinType

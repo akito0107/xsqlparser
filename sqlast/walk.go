@@ -136,8 +136,10 @@ func Walk(v Visitor, node ASTNode) {
 		for _, p := range n.Projection {
 			Walk(v, p)
 		}
-		if n.FromClause != nil {
-			// Walk(v, n.FromClause)
+		if len(n.FromClause) != 0 {
+			for _, f := range n.FromClause {
+				Walk(v, f)
+			}
 		}
 		if n.WhereClause != nil {
 			Walk(v, n.WhereClause)
@@ -146,6 +148,24 @@ func Walk(v Visitor, node ASTNode) {
 		if n.HavingClause != nil {
 			Walk(v, n.HavingClause)
 		}
+	case *QualifiedJoin:
+		Walk(v, n.LeftElement)
+		Walk(v, n.Type)
+		Walk(v, n.RightElement)
+		Walk(v, n.Spec)
+	case *TableJoinElement:
+		Walk(v, n.Ref)
+	case JoinType:
+	// nothing to do
+	case *JoinCondition:
+		Walk(v, n.SearchCondition)
+	case *NaturalJoin:
+		Walk(v, n.LeftElement)
+		Walk(v, n.Type)
+		Walk(v, n.RightElement)
+	case *CrossJoin:
+		Walk(v, n.Factor)
+		Walk(v, n.Reference)
 	case *Table:
 		Walk(v, n.Name)
 		if n.Alias != nil {
