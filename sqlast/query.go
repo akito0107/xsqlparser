@@ -259,6 +259,7 @@ func (t *TableJoinElement) ToSQLString() string {
 
 type PartitionedJoinTable struct {
 	joinElement
+	tableReference
 	Factor     TableFactor
 	ColumnList []*SQLIdent
 }
@@ -269,25 +270,27 @@ func (p *PartitionedJoinTable) ToSQLString() string {
 
 type QualifiedJoin struct {
 	joinedTable
-	LeftElement  TableJoinElement
+	tableReference
+	LeftElement  *TableJoinElement
 	Type         JoinType
-	RightElement TableJoinElement
+	RightElement *TableJoinElement
 	Spec         JoinSpec
 }
 
 func (q *QualifiedJoin) ToSQLString() string {
-	return fmt.Sprintf("%s %s JOIN %s %s", q.LeftElement.ToSQLString(), q.Type.ToSQLString(), q.RightElement.ToSQLString(), q.Spec.ToSQLString())
+	return fmt.Sprintf("%s %sJOIN %s %s", q.LeftElement.ToSQLString(), q.Type.ToSQLString(), q.RightElement.ToSQLString(), q.Spec.ToSQLString())
 }
 
 type NaturalJoin struct {
 	joinedTable
-	LeftElement  TableJoinElement
+	tableReference
+	LeftElement  *TableJoinElement
 	Type         JoinType
-	RightElement TableJoinElement
+	RightElement *TableJoinElement
 }
 
 func (n *NaturalJoin) ToSQLString() string {
-	return fmt.Sprintf("%s NATURAL %s JOIN %s", n.LeftElement.ToSQLString(), n.Type.ToSQLString(), n.RightElement.ToSQLString())
+	return fmt.Sprintf("%s NATURAL %sJOIN %s", n.LeftElement.ToSQLString(), n.Type.ToSQLString(), n.RightElement.ToSQLString())
 }
 
 //go:generate genmark -t JoinSpec -e ASTNode
@@ -314,21 +317,30 @@ type JoinType int
 
 const (
 	INNER JoinType = iota
+	LEFT
+	RIGHT
 	LEFTOUTER
 	RIGHTOUTER
 	FULLOUTER
+	IMPLICIT
 )
 
 func (j JoinType) ToSQLString() string {
 	switch j {
 	case INNER:
-		return "INNER"
+		return "INNER "
+	case LEFT:
+		return "LEFT "
+	case RIGHT:
+		return "RIGHT "
 	case LEFTOUTER:
-		return "LEFT OUTER"
+		return "LEFT OUTER "
 	case RIGHTOUTER:
-		return "RIGHT OUTER"
+		return "RIGHT OUTER "
 	case FULLOUTER:
-		return "FULL OUTER"
+		return "FULL OUTER "
+	case IMPLICIT:
+		return ""
 	default:
 		log.Fatalf("unknown join type %d", j)
 	}
