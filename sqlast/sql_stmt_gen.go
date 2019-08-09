@@ -3,7 +3,7 @@ package sqlast
 
 type SQLStmt interface {
 	sqlStmtMarker()
-	ASTNode
+	Node
 }
 type sqlStmt struct{}
 

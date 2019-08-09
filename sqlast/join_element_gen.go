@@ -3,7 +3,7 @@ package sqlast
 
 type JoinElement interface {
 	joinElementMarker()
-	ASTNode
+	Node
 }
 type joinElement struct{}
 

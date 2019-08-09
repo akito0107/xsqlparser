@@ -3,7 +3,7 @@ package sqlast
 
 type SQLSetExpr interface {
 	sqlSetExprMarker()
-	ASTNode
+	Node
 }
 type sqlSetExpr struct{}
 

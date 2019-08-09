@@ -1,9 +1,9 @@
 package sqlast
 
-type SQLOperator int
+type Operator int
 
 const (
-	Plus SQLOperator = iota
+	Plus Operator = iota
 	Minus
 	Multiply
 	Divide
@@ -22,7 +22,7 @@ const (
 	None
 )
 
-func (s SQLOperator) ToSQLString() string {
+func (s Operator) ToSQLString() string {
 	switch s {
 	case Plus:
 		return "+"

@@ -3,7 +3,7 @@ package sqlast
 
 type TableReference interface {
 	tableReferenceMarker()
-	ASTNode
+	Node
 }
 type tableReference struct{}
 

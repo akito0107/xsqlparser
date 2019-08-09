@@ -3,7 +3,7 @@ package sqlast
 
 type SQLSetOperator interface {
 	sqlSetOperatorMarker()
-	ASTNode
+	Node
 }
 type sqlSetOperator struct{}
 

@@ -5,80 +5,76 @@ import (
 )
 
 type Visitor interface {
-	Visit(node ASTNode) Visitor
+	Visit(node Node) Visitor
 }
 
-func walkIdentLists(v Visitor, list []*SQLIdent) {
+func walkIdentLists(v Visitor, list []*Ident) {
 	for _, i := range list {
 		Walk(v, i)
 	}
 }
 
-func walkASTNodeLists(v Visitor, list []ASTNode) {
+func walkASTNodeLists(v Visitor, list []Node) {
 	for _, l := range list {
 		Walk(v, l)
 	}
 }
 
-func Walk(v Visitor, node ASTNode) {
+func Walk(v Visitor, node Node) {
 	if v := v.Visit(node); v == nil {
 		return
 	}
 
 	switch n := node.(type) {
-	case *SQLIdent:
+	case *Ident:
 		// nothing to do
-	case *SQLIdentifier:
-		Walk(v, n.Ident)
-	case *SQLWildcard:
+	case *Wildcard:
 		// nothing to do
-	case *SQLQualifiedWildcard:
+	case *QualifiedWildcard:
 		walkIdentLists(v, n.Idents)
-	case *SQLCompoundIdentifier:
+	case *CompoundIdent:
 		walkIdentLists(v, n.Idents)
-	case *SQLIsNull:
+	case *IsNull:
 		Walk(v, n.X)
-	case *SQLIsNotNull:
+	case *IsNotNull:
 		Walk(v, n.X)
-	case *SQLInList:
+	case *InList:
 		Walk(v, n.Expr)
 		walkASTNodeLists(v, n.List)
-	case *SQLInSubQuery:
+	case *InSubQuery:
 		Walk(v, n.Expr)
 		Walk(v, n.SubQuery)
-	case *SQLBetween:
+	case *Between:
 		Walk(v, n.Expr)
 		Walk(v, n.Low)
 		Walk(v, n.High)
-	case *SQLBinaryExpr:
+	case *BinaryExpr:
 		Walk(v, n.Left)
 		Walk(v, n.Op)
 		Walk(v, n.Right)
-	case *SQLCast:
+	case *Cast:
 		Walk(v, n.Expr)
 		Walk(v, n.DateType)
-	case *SQLNested:
+	case *Nested:
 		Walk(v, n.AST)
-	case *SQLUnary:
+	case *Unary:
 		Walk(v, n.Operator)
 		Walk(v, n.Expr)
-	case *SQLValue:
-		Walk(v, n.Value)
-	case *SQLFunction:
+	case *Function:
 		Walk(v, n.Name)
 		walkASTNodeLists(v, n.Args)
 		if n.Over != nil {
 			Walk(v, n.Over)
 		}
-	case *SQLCase:
+	case *CaseExpr:
 		Walk(v, n.Operand)
-	case *SQLExists:
+	case *Exists:
 		Walk(v, n.Query)
-	case *SQLSubquery:
+	case *SubQuery:
 		Walk(v, n.Query)
-	case *SQLObjectName:
+	case *ObjectName:
 		walkIdentLists(v, n.Idents)
-	case *SQLWindowSpec:
+	case *WindowSpec:
 		walkASTNodeLists(v, n.PartitionBy)
 		for _, o := range n.OrderBy {
 			Walk(v, o)
@@ -86,13 +82,13 @@ func Walk(v Visitor, node ASTNode) {
 		if n.WindowsFrame != nil {
 			Walk(v, n.WindowsFrame)
 		}
-	case *SQLWindowFrame:
+	case *WindowFrame:
 		Walk(v, n.Units)
 		Walk(v, n.StartBound)
 		if n.EndBound != nil {
 			Walk(v, n.EndBound)
 		}
-	case SQLWindowFrameUnits:
+	case WindowFrameUnits:
 		// nothing to do
 	case *CurrentRow:
 		// nothing to do
@@ -178,14 +174,14 @@ func Walk(v Visitor, node ASTNode) {
 		if n.Alias != nil {
 			Walk(v, n.Alias)
 		}
-	case *UnnamedExpression:
+	case *UnnamedSelectItem:
 		Walk(v, n.Node)
-	case *ExpressionWithAlias:
+	case *AliasSelectItem:
 		Walk(v, n.Expr)
 		Walk(v, n.Alias)
-	case *QualifiedWildcard:
+	case *QualifiedWildcardSelectItem:
 		Walk(v, n.Prefix)
-	case *Wildcard:
+	case *WildcardSelectItem:
 		// nothing to do
 	case *SQLOrderByExpr:
 		Walk(v, n.Expr)
@@ -242,30 +238,30 @@ func Walk(v Visitor, node ASTNode) {
 		// nothing to do
 	case *Custom:
 		// nothing to do
-	case *SQLInsert:
+	case *InsertStmt:
 		Walk(v, n.TableName)
 		walkIdentLists(v, n.Columns)
-	case *SQLCopy:
+	case *CopyStmt:
 		Walk(v, n.TableName)
 		walkIdentLists(v, n.Columns)
-	case *SQLUpdate:
+	case *UpdateStmt:
 		Walk(v, n.TableName)
 		for _, a := range n.Assignments {
 			Walk(v, a)
 		}
 		Walk(v, n.Selection)
-	case *SQLDelete:
+	case *DeleteStmt:
 		Walk(v, n.TableName)
 		Walk(v, n.Selection)
-	case *SQLCreateView:
+	case *CreateViewStmt:
 		Walk(v, n.Name)
 		Walk(v, n.Query)
-	case *SQLCreateTable:
+	case *CreateTableStmt:
 		Walk(v, n.Name)
 		for _, e := range n.Elements {
 			Walk(v, e)
 		}
-	case *SQLAssignment:
+	case *Assignment:
 		Walk(v, n.ID)
 		Walk(v, n.Value)
 	case *TableConstraint:
@@ -283,7 +279,7 @@ func Walk(v Visitor, node ASTNode) {
 		walkIdentLists(v, n.Columns)
 	case *CheckTableConstraint:
 		Walk(v, n.Expr)
-	case *SQLColumnDef:
+	case *ColumnDef:
 		Walk(v, n.Name)
 		Walk(v, n.DataType)
 		if n.Default != nil {
@@ -306,7 +302,7 @@ func Walk(v Visitor, node ASTNode) {
 		walkIdentLists(v, n.Columns)
 	case *CheckColumnSpec:
 		Walk(v, n.Expr)
-	case *SQLAlterTable:
+	case *AlterTableStmt:
 		Walk(v, n.TableName)
 		Walk(v, n.Action)
 	case *AddColumnTableAction:
@@ -330,11 +326,11 @@ func Walk(v Visitor, node ASTNode) {
 		Walk(v, n.Constraint)
 	case *DropConstraintTableAction:
 		Walk(v, n.Name)
-	case *SQLDropTable:
+	case *DropTableStmt:
 		for _, t := range n.TableNames {
 			Walk(v, t)
 		}
-	case *SQLCreateIndex:
+	case *CreateIndexStmt:
 		Walk(v, n.TableName)
 		if n.IndexName != nil {
 			Walk(v, n.IndexName)
@@ -346,11 +342,11 @@ func Walk(v Visitor, node ASTNode) {
 		if n.Selection != nil {
 			Walk(v, n.Selection)
 		}
-	case *SQLDropIndex:
+	case *DropIndexStmt:
 		walkIdentLists(v, n.IndexNames)
-	case *SQLExplain:
+	case *ExplainStmt:
 		Walk(v, n.Stmt)
-	case SQLOperator:
+	case Operator:
 		// nothing to do
 	case *NullValue,
 		*LongValue,
@@ -370,15 +366,15 @@ func Walk(v Visitor, node ASTNode) {
 	v.Visit(nil)
 }
 
-type inspector func(node ASTNode) bool
+type inspector func(node Node) bool
 
-func (f inspector) Visit(node ASTNode) Visitor {
+func (f inspector) Visit(node Node) Visitor {
 	if f(node) {
 		return f
 	}
 	return nil
 }
 
-func Inspect(node ASTNode, f func(node ASTNode) bool) {
+func Inspect(node Node, f func(node Node) bool) {
 	Walk(inspector(f), node)
 }

@@ -5,7 +5,7 @@ import (
 )
 
 type SQLType interface {
-	ASTNode
+	Node
 }
 
 type CharType struct {
@@ -172,7 +172,7 @@ func (a *Array) ToSQLString() string {
 }
 
 type Custom struct {
-	Ty *SQLObjectName
+	Ty *ObjectName
 }
 
 func (c *Custom) ToSQLString() string {

@@ -3,7 +3,7 @@ package sqlast
 
 type SQLWindowFrameBound interface {
 	sqlWindowFrameBoundMarker()
-	ASTNode
+	Node
 }
 type sqlWindowFrameBound struct{}
 

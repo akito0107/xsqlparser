@@ -3,7 +3,7 @@ package sqlast
 
 type AlterTableAction interface {
 	alterTableActionMarker()
-	ASTNode
+	Node
 }
 type alterTableAction struct{}
 

@@ -3,7 +3,7 @@ package sqlast
 
 type AlterColumnAction interface {
 	alterColumnActionMarker()
-	ASTNode
+	Node
 }
 type alterColumnAction struct{}
 
