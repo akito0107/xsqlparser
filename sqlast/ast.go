@@ -83,7 +83,7 @@ func (s *InList) ToSQLString() string {
 //[ NOT ] IN (SELECT ...)
 type InSubQuery struct {
 	Expr     Node
-	SubQuery *SQLQuery
+	SubQuery *Query
 	Negated  bool
 }
 
@@ -114,7 +114,7 @@ func (s *BinaryExpr) ToSQLString() string {
 
 type Cast struct {
 	Expr     Node
-	DateType SQLType
+	DateType Type
 }
 
 func (s *Cast) ToSQLString() string {
@@ -181,7 +181,7 @@ func (s *CaseExpr) ToSQLString() string {
 
 type Exists struct {
 	Negated bool
-	Query   *SQLQuery
+	Query   *Query
 }
 
 func (s *Exists) ToSQLString() string {
@@ -189,7 +189,7 @@ func (s *Exists) ToSQLString() string {
 }
 
 type SubQuery struct {
-	Query *SQLQuery
+	Query *Query
 }
 
 func (s *SubQuery) ToSQLString() string {
@@ -247,7 +247,7 @@ func commaSeparatedString(list interface{}) string {
 		for _, l := range s {
 			strs = append(strs, l.ToSQLString())
 		}
-	case []*SQLOrderByExpr:
+	case []*OrderByExpr:
 		for _, l := range s {
 			strs = append(strs, l.ToSQLString())
 		}
@@ -281,7 +281,7 @@ func negatedString(negated bool) string {
 
 type WindowSpec struct {
 	PartitionBy  []Node
-	OrderBy      []*SQLOrderByExpr
+	OrderBy      []*OrderByExpr
 	WindowsFrame *WindowFrame
 }
 

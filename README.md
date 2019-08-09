@@ -20,7 +20,7 @@ $ go get -u github.com/akito0107/xsqlparser/...
 ```
 
 ### How to use
-__Currently supports `SELECT`,`CREATE TABLE`,`CREATE VIEW`,`INSERT`,`UPDATE`,`DELETE`.__
+__Currently supports `SELECT`,`CREATE TABLE`, `DROP TABLE`, `CREATE VIEW`,`INSERT`,`UPDATE`,`DELETE`, `ALTER TABLE`, `CREATE INDEX`, `DROP INDEX`, `EXPLAIN`.
 
 - simple case
 ```go
@@ -51,31 +51,37 @@ pp.Println(stmt)
 got:
 ```
 &sqlast.SQLQuery{
-  CTEs: []*sqlast.CTE{},
-  Body: &sqlast.SQLSelect{
+  sqlStmt: sqlast.sqlStmt{},
+  CTEs:    []*sqlast.CTE{},
+  Body:    &sqlast.SQLSelect{
+    sqlSetExpr: sqlast.sqlSetExpr{},
     Distinct:   false,
     Projection: []sqlast.SQLSelectItem{
-      &sqlast.UnnamedExpression{
-        Node: &sqlast.SQLWildcard{},
+      &sqlast.UnnamedSelectItem{
+        sqlSelectItem: sqlast.sqlSelectItem{},
+        Node:          &sqlast.Wildcard{},
       },
     },
-    Relation: &sqlast.Table{
-      Name: &sqlast.SQLObjectName{
-        Idents: []*sqlast.SQLIdent{
-          &"test_table",
+    FromClause: []sqlast.TableReference{
+      &sqlast.Table{
+        tableFactor:    sqlast.tableFactor{},
+        tableReference: sqlast.tableReference{},
+        Name:           &sqlast.ObjectName{
+          Idents: []*sqlast.Ident{
+            &"test_table",
+          },
         },
+        Alias:     (*sqlast.Ident)(nil),
+        Args:      []sqlast.Node{},
+        WithHints: []sqlast.Node{},
       },
-      Alias:     (*sqlast.SQLIdent)(nil),
-      Args:      []sqlast.ASTNode{},
-      WithHints: []sqlast.ASTNode{},
     },
-    Joins:     []*sqlast.Join{},
-    Selection: nil,
-    GroupBy:   []sqlast.ASTNode{},
-    Having:    nil,
+    WhereClause:   nil,
+    GroupByClause: []sqlast.Node{},
+    HavingClause:  nil,
   },
   OrderBy: []*sqlast.SQLOrderByExpr{},
-  Limit:   nil,
+  Limit:   (*sqlast.LimitExpr)(nil),
 }
 ```
 

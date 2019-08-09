@@ -6,10 +6,10 @@ import (
 	"strings"
 )
 
-//go:generate genmark -t SQLStmt -e Node
+//go:generate genmark -t Stmt -e Node
 
 type InsertStmt struct {
-	sqlStmt
+	stmt
 	TableName         *ObjectName
 	Columns           []*Ident
 	Values            [][]Node
@@ -38,7 +38,7 @@ func (s *InsertStmt) ToSQLString() string {
 }
 
 type CopyStmt struct {
-	sqlStmt
+	stmt
 	TableName *ObjectName
 	Columns   []*Ident
 	Values    []*string
@@ -68,7 +68,7 @@ func (s *CopyStmt) ToSQLString() string {
 }
 
 type UpdateStmt struct {
-	sqlStmt
+	stmt
 	TableName   *ObjectName
 	Assignments []*Assignment
 	Selection   Node
@@ -87,7 +87,7 @@ func (s *UpdateStmt) ToSQLString() string {
 }
 
 type DeleteStmt struct {
-	sqlStmt
+	stmt
 	TableName *ObjectName
 	Selection Node
 }
@@ -103,9 +103,9 @@ func (s *DeleteStmt) ToSQLString() string {
 }
 
 type CreateViewStmt struct {
-	sqlStmt
+	stmt
 	Name         *ObjectName
-	Query        *SQLQuery
+	Query        *Query
 	Materialized bool
 }
 
@@ -118,7 +118,7 @@ func (s *CreateViewStmt) ToSQLString() string {
 }
 
 type CreateTableStmt struct {
-	sqlStmt
+	stmt
 	Name       *ObjectName
 	Elements   []TableElement
 	External   bool
@@ -214,7 +214,7 @@ func (c *CheckTableConstraint) ToSQLString() string {
 type ColumnDef struct {
 	tableElement
 	Name        *Ident
-	DataType    SQLType
+	DataType    Type
 	Default     Node
 	Constraints []*ColumnConstraint
 }
@@ -339,7 +339,7 @@ func (FileFormat) FromStr(str string) FileFormat {
 }
 
 type AlterTableStmt struct {
-	sqlStmt
+	stmt
 	TableName *ObjectName
 	Action    AlterTableAction
 }
@@ -394,7 +394,7 @@ func (*DropDefaultColumnAction) ToSQLString() string {
 // postgres only
 type PGAlterDataTypeColumnAction struct {
 	alterColumnAction
-	DataType SQLType
+	DataType Type
 }
 
 func (p *PGAlterDataTypeColumnAction) ToSQLString() string {
@@ -455,7 +455,7 @@ func (d *DropConstraintTableAction) ToSQLString() string {
 }
 
 type DropTableStmt struct {
-	sqlStmt
+	stmt
 	TableNames []*ObjectName
 	Cascade    bool
 	IfExists   bool
@@ -476,7 +476,7 @@ func (s *DropTableStmt) ToSQLString() string {
 }
 
 type CreateIndexStmt struct {
-	sqlStmt
+	stmt
 	TableName   *ObjectName
 	IsUnique    bool
 	IndexName   *Ident
@@ -512,7 +512,7 @@ func (s *CreateIndexStmt) ToSQLString() string {
 }
 
 type DropIndexStmt struct {
-	sqlStmt
+	stmt
 	IndexNames []*Ident
 }
 
@@ -521,8 +521,8 @@ func (s *DropIndexStmt) ToSQLString() string {
 }
 
 type ExplainStmt struct {
-	sqlStmt
-	Stmt SQLStmt
+	stmt
+	Stmt Stmt
 }
 
 func (s *ExplainStmt) ToSQLString() string {

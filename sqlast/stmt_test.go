@@ -123,7 +123,7 @@ func TestSQLCreateView_ToSQLString(t *testing.T) {
 			name: "simple case",
 			in: &CreateViewStmt{
 				Name: NewSQLObjectName("customers_view"),
-				Query: &SQLQuery{
+				Query: &Query{
 					Body: &SelectExpr{
 						Select: &SQLSelect{
 							Projection: []SQLSelectItem{

@@ -6,15 +6,15 @@ import (
 	"strings"
 )
 
-type SQLQuery struct {
-	sqlStmt
+type Query struct {
+	stmt
 	CTEs    []*CTE
 	Body    SQLSetExpr
-	OrderBy []*SQLOrderByExpr
+	OrderBy []*OrderByExpr
 	Limit   *LimitExpr
 }
 
-func (s *SQLQuery) ToSQLString() string {
+func (s *Query) ToSQLString() string {
 	var q string
 
 	if len(s.CTEs) != 0 {
@@ -41,7 +41,7 @@ func (s *SQLQuery) ToSQLString() string {
 
 type CTE struct {
 	Alias *Ident
-	Query *SQLQuery
+	Query *Query
 }
 
 func (c *CTE) ToSQLString() string {
@@ -61,7 +61,7 @@ func (s *SelectExpr) ToSQLString() string {
 
 type QueryExpr struct {
 	sqlSetExpr
-	Query *SQLQuery
+	Query *Query
 }
 
 func (q *QueryExpr) ToSQLString() string {
@@ -177,7 +177,7 @@ type Derived struct {
 	tableFactor
 	tableReference
 	Lateral  bool
-	SubQuery *SQLQuery
+	SubQuery *Query
 	Alias    *Ident
 }
 
@@ -346,12 +346,12 @@ func (j JoinType) ToSQLString() string {
 	return ""
 }
 
-type SQLOrderByExpr struct {
+type OrderByExpr struct {
 	Expr Node
 	ASC  *bool
 }
 
-func (s *SQLOrderByExpr) ToSQLString() string {
+func (s *OrderByExpr) ToSQLString() string {
 	if s.ASC == nil {
 		return s.Expr.ToSQLString()
 	}
