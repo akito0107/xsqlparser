@@ -25,7 +25,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		cases := []struct {
 			name string
 			in   string
-			out  sqlast.SQLStmt
+			out  sqlast.Stmt
 			skip bool
 		}{
 			{
@@ -430,7 +430,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		cases := []struct {
 			name string
 			in   string
-			out  sqlast.SQLStmt
+			out  sqlast.Stmt
 			skip bool
 		}{
 			{
@@ -696,7 +696,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		cases := []struct {
 			name string
 			in   string
-			out  sqlast.SQLStmt
+			out  sqlast.Stmt
 			skip bool
 		}{
 			{
@@ -739,7 +739,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		cases := []struct {
 			name string
 			in   string
-			out  sqlast.SQLStmt
+			out  sqlast.Stmt
 			skip bool
 		}{
 			{
@@ -810,7 +810,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		cases := []struct {
 			name string
 			in   string
-			out  sqlast.SQLStmt
+			out  sqlast.Stmt
 			skip bool
 		}{
 			{
@@ -931,7 +931,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		cases := []struct {
 			name string
 			in   string
-			out  sqlast.SQLStmt
+			out  sqlast.Stmt
 			skip bool
 		}{
 			{
