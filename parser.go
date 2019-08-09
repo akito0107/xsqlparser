@@ -28,8 +28,8 @@ func NewParser(src io.Reader, dialect dialect.Dialect) (*Parser, error) {
 	return &Parser{tokens: set, index: 0}, nil
 }
 
-func (p *Parser) ParseSQL() ([]sqlast.SQLStmt, error) {
-	var stmts []sqlast.SQLStmt
+func (p *Parser) ParseSQL() ([]sqlast.Stmt, error) {
+	var stmts []sqlast.Stmt
 	var expectingDelimiter bool
 
 	for {
@@ -61,7 +61,7 @@ func (p *Parser) ParseSQL() ([]sqlast.SQLStmt, error) {
 	return stmts, nil
 }
 
-func (p *Parser) ParseStatement() (sqlast.SQLStmt, error) {
+func (p *Parser) ParseStatement() (sqlast.Stmt, error) {
 	tok, err := p.nextToken()
 	if err != nil {
 		return nil, err
@@ -98,7 +98,7 @@ func (p *Parser) ParseStatement() (sqlast.SQLStmt, error) {
 	}
 }
 
-func (p *Parser) ParseDataType() (sqlast.SQLType, error) {
+func (p *Parser) ParseDataType() (sqlast.Type, error) {
 	tok, err := p.nextToken()
 	if err != nil {
 		return nil, errors.Errorf("nextToken failed: %w", err)
@@ -207,7 +207,7 @@ func (p *Parser) ParseExpr() (sqlast.Node, error) {
 	return p.parseSubexpr(0)
 }
 
-func (p *Parser) parseQuery() (*sqlast.SQLQuery, error) {
+func (p *Parser) parseQuery() (*sqlast.Query, error) {
 	hasCTE, _ := p.parseKeyword("WITH")
 	var ctes []*sqlast.CTE
 	if hasCTE {
@@ -223,7 +223,7 @@ func (p *Parser) parseQuery() (*sqlast.SQLQuery, error) {
 		return nil, errors.Errorf("parseQueryBody failed: %w", err)
 	}
 
-	var orderBy []*sqlast.SQLOrderByExpr
+	var orderBy []*sqlast.OrderByExpr
 	if ok, _ := p.parseKeywords("ORDER", "BY"); ok {
 		o, err := p.parseOrderByExprList()
 		if err != nil {
@@ -241,7 +241,7 @@ func (p *Parser) parseQuery() (*sqlast.SQLQuery, error) {
 		limit = l
 	}
 
-	return &sqlast.SQLQuery{
+	return &sqlast.Query{
 		CTEs:    ctes,
 		Body:    body,
 		Limit:   limit,
@@ -420,7 +420,7 @@ func (p *Parser) parseSelectList() ([]sqlast.SQLSelectItem, error) {
 	return projections, nil
 }
 
-func (p *Parser) parseCreate() (sqlast.SQLStmt, error) {
+func (p *Parser) parseCreate() (sqlast.Stmt, error) {
 	if ok, _ := p.parseKeyword("TABLE"); ok {
 		return p.parseCreateTable()
 	}
@@ -445,7 +445,7 @@ func (p *Parser) parseCreate() (sqlast.SQLStmt, error) {
 	return nil, nil
 }
 
-func (p *Parser) parseCreateTable() (sqlast.SQLStmt, error) {
+func (p *Parser) parseCreateTable() (sqlast.Stmt, error) {
 	name, err := p.parseObjectName()
 	if err != nil {
 		return nil, errors.Errorf("parseObjectName failed: %w", err)
@@ -463,7 +463,7 @@ func (p *Parser) parseCreateTable() (sqlast.SQLStmt, error) {
 	}, nil
 }
 
-func (p *Parser) parseCreateView() (sqlast.SQLStmt, error) {
+func (p *Parser) parseCreateView() (sqlast.Stmt, error) {
 	materialized, _ := p.parseKeyword("MATERIALIZED")
 	p.expectKeyword("VIEW")
 	name, err := p.parseObjectName()
@@ -484,7 +484,7 @@ func (p *Parser) parseCreateView() (sqlast.SQLStmt, error) {
 
 }
 
-func (p *Parser) parseCreateIndex(unique bool) (sqlast.SQLStmt, error) {
+func (p *Parser) parseCreateIndex(unique bool) (sqlast.Stmt, error) {
 	var indexName *sqlast.Ident
 	ok, _ := p.parseKeyword("ON")
 	if !ok {
@@ -822,7 +822,7 @@ CONSTRAINT_LOOP:
 	return constraints, nil
 }
 
-func (p *Parser) parseDelete() (sqlast.SQLStmt, error) {
+func (p *Parser) parseDelete() (sqlast.Stmt, error) {
 	p.expectKeyword("FROM")
 	tableName, err := p.parseObjectName()
 	if err != nil {
@@ -843,7 +843,7 @@ func (p *Parser) parseDelete() (sqlast.SQLStmt, error) {
 	}, nil
 }
 
-func (p *Parser) parseUpdate() (sqlast.SQLStmt, error) {
+func (p *Parser) parseUpdate() (sqlast.Stmt, error) {
 	tableName, err := p.parseObjectName()
 	if err != nil {
 		return nil, errors.Errorf("parseObjectName failed: %w", err)
@@ -902,7 +902,7 @@ func (p *Parser) parseAssignments() ([]*sqlast.Assignment, error) {
 	return assignments, nil
 }
 
-func (p *Parser) parseInsert() (sqlast.SQLStmt, error) {
+func (p *Parser) parseInsert() (sqlast.Stmt, error) {
 	p.expectKeyword("INTO")
 	tableName, err := p.parseObjectName()
 
@@ -952,7 +952,7 @@ func (p *Parser) parseInsert() (sqlast.SQLStmt, error) {
 	}, nil
 }
 
-func (p *Parser) parseAlter() (sqlast.SQLStmt, error) {
+func (p *Parser) parseAlter() (sqlast.Stmt, error) {
 	p.expectKeyword("TABLE")
 
 	tableName, err := p.parseObjectName()
@@ -1037,7 +1037,7 @@ func (p *Parser) parseAlter() (sqlast.SQLStmt, error) {
 	return nil, errors.Errorf("unknown alter operation %v", t)
 }
 
-func (p *Parser) parseDrop() (sqlast.SQLStmt, error) {
+func (p *Parser) parseDrop() (sqlast.Stmt, error) {
 	ok, _ := p.parseKeyword("TABLE")
 
 	if !ok {
@@ -1966,7 +1966,7 @@ func (p *Parser) parseFunction(name *sqlast.ObjectName) (sqlast.Node, error) {
 			partitionBy = el
 		}
 
-		var orderBy []*sqlast.SQLOrderByExpr
+		var orderBy []*sqlast.OrderByExpr
 		if ok, _ := p.parseKeywords("ORDER", "BY"); ok {
 			el, err := p.parseOrderByExprList()
 			if err != nil {
@@ -2008,8 +2008,8 @@ func (p *Parser) parseOptionalArgs() ([]sqlast.Node, error) {
 	}
 }
 
-func (p *Parser) parseOrderByExprList() ([]*sqlast.SQLOrderByExpr, error) {
-	var exprList []*sqlast.SQLOrderByExpr
+func (p *Parser) parseOrderByExprList() ([]*sqlast.OrderByExpr, error) {
+	var exprList []*sqlast.OrderByExpr
 
 	for {
 		expr, err := p.ParseExpr()
@@ -2026,7 +2026,7 @@ func (p *Parser) parseOrderByExprList() ([]*sqlast.SQLOrderByExpr, error) {
 			asc = &b
 		}
 
-		exprList = append(exprList, &sqlast.SQLOrderByExpr{
+		exprList = append(exprList, &sqlast.OrderByExpr{
 			Expr: expr,
 			ASC:  asc,
 		})

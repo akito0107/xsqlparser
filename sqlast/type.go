@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-type SQLType interface {
+type Type interface {
 	Node
 }
 
@@ -164,7 +164,7 @@ func (*Bytea) ToSQLString() string {
 }
 
 type Array struct {
-	Ty SQLType
+	Ty Type
 }
 
 func (a *Array) ToSQLString() string {

@@ -193,17 +193,17 @@ func TestSQLSelect_ToSQLString(t *testing.T) {
 func TestSQLQuery_ToSQLString(t *testing.T) {
 	cases := []struct {
 		name string
-		in   *SQLQuery
+		in   *Query
 		out  string
 	}{
 		{
 			// from https://www.postgresql.jp/document/9.3/html/queries-with.html
 			name: "with cte",
-			in: &SQLQuery{
+			in: &Query{
 				CTEs: []*CTE{
 					{
 						Alias: NewIdent("regional_sales"),
-						Query: &SQLQuery{
+						Query: &Query{
 							Body: &SQLSelect{
 								Projection: []SQLSelectItem{
 									&UnnamedSelectItem{Node: NewIdent("region")},
@@ -243,7 +243,7 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 					},
 					WhereClause: &InSubQuery{
 						Expr: NewIdent("region"),
-						SubQuery: &SQLQuery{
+						SubQuery: &Query{
 							Body: &SQLSelect{
 								Projection: []SQLSelectItem{
 									&UnnamedSelectItem{Node: NewIdent("region")},
@@ -269,7 +269,7 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 		},
 		{
 			name: "order by and limit",
-			in: &SQLQuery{
+			in: &Query{
 				Body: &SQLSelect{
 					Projection: []SQLSelectItem{
 						&UnnamedSelectItem{Node: NewIdent("product")},
@@ -288,7 +288,7 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 					},
 					WhereClause: &InSubQuery{
 						Expr: NewIdent("region"),
-						SubQuery: &SQLQuery{
+						SubQuery: &Query{
 							Body: &SQLSelect{
 								Projection: []SQLSelectItem{
 									&UnnamedSelectItem{Node: NewIdent("region")},
@@ -302,7 +302,7 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 						},
 					},
 				},
-				OrderBy: []*SQLOrderByExpr{
+				OrderBy: []*OrderByExpr{
 					{Expr: NewIdent("product_units")},
 				},
 				Limit: &LimitExpr{LimitValue: NewLongValue(100)},
@@ -314,7 +314,7 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 		},
 		{
 			name: "exists",
-			in: &SQLQuery{
+			in: &Query{
 				Body: &SQLSelect{
 					Projection: []SQLSelectItem{
 						&UnnamedSelectItem{
@@ -328,7 +328,7 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 					},
 					WhereClause: &Exists{
 						Negated: true,
-						Query: &SQLQuery{
+						Query: &Query{
 							Body: &SQLSelect{
 								Projection: []SQLSelectItem{
 									&UnnamedSelectItem{
@@ -379,7 +379,7 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 		},
 		{
 			name: "between / case",
-			in: &SQLQuery{
+			in: &Query{
 				Body: &SQLSelect{
 					Projection: []SQLSelectItem{
 						&AliasSelectItem{

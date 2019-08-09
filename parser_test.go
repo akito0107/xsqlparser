@@ -25,13 +25,13 @@ func TestParser_ParseStatement(t *testing.T) {
 		cases := []struct {
 			name string
 			in   string
-			out  sqlast.SQLStmt
+			out  sqlast.Stmt
 			skip bool
 		}{
 			{
 				name: "simple select",
 				in:   "SELECT test FROM test_table",
-				out: &sqlast.SQLQuery{
+				out: &sqlast.Query{
 					Body: &sqlast.SQLSelect{
 						Projection: []sqlast.SQLSelectItem{
 							&sqlast.UnnamedSelectItem{
@@ -49,7 +49,7 @@ func TestParser_ParseStatement(t *testing.T) {
 			{
 				name: "where",
 				in:   "SELECT test FROM test_table WHERE test_table.column1 = 'test'",
-				out: &sqlast.SQLQuery{
+				out: &sqlast.Query{
 					Body: &sqlast.SQLSelect{
 						Projection: []sqlast.SQLSelectItem{
 							&sqlast.UnnamedSelectItem{
@@ -74,7 +74,7 @@ func TestParser_ParseStatement(t *testing.T) {
 			{
 				name: "count and join",
 				in:   "SELECT COUNT(t1.id) AS c FROM test_table AS t1 LEFT JOIN test_table2 AS t2 ON t1.id = t2.test_table_id",
-				out: &sqlast.SQLQuery{
+				out: &sqlast.Query{
 					Body: &sqlast.SQLSelect{
 						Projection: []sqlast.SQLSelectItem{
 							&sqlast.AliasSelectItem{
@@ -121,7 +121,7 @@ func TestParser_ParseStatement(t *testing.T) {
 			{
 				name: "group by",
 				in:   "SELECT COUNT(customer_id), country.* FROM customers GROUP BY country",
-				out: &sqlast.SQLQuery{
+				out: &sqlast.Query{
 					Body: &sqlast.SQLSelect{
 						Projection: []sqlast.SQLSelectItem{
 							&sqlast.UnnamedSelectItem{
@@ -146,7 +146,7 @@ func TestParser_ParseStatement(t *testing.T) {
 			{
 				name: "having",
 				in:   "SELECT COUNT(customer_id), country FROM customers GROUP BY country HAVING COUNT(customer_id) > 3",
-				out: &sqlast.SQLQuery{
+				out: &sqlast.Query{
 					Body: &sqlast.SQLSelect{
 						Projection: []sqlast.SQLSelectItem{
 							&sqlast.UnnamedSelectItem{
@@ -178,7 +178,7 @@ func TestParser_ParseStatement(t *testing.T) {
 			},
 			{
 				name: "order by and limit",
-				out: &sqlast.SQLQuery{
+				out: &sqlast.Query{
 					Body: &sqlast.SQLSelect{
 						Projection: []sqlast.SQLSelectItem{
 							&sqlast.UnnamedSelectItem{Node: sqlast.NewIdent("product")},
@@ -197,7 +197,7 @@ func TestParser_ParseStatement(t *testing.T) {
 						},
 						WhereClause: &sqlast.InSubQuery{
 							Expr: sqlast.NewIdent("region"),
-							SubQuery: &sqlast.SQLQuery{
+							SubQuery: &sqlast.Query{
 								Body: &sqlast.SQLSelect{
 									Projection: []sqlast.SQLSelectItem{
 										&sqlast.UnnamedSelectItem{Node: sqlast.NewIdent("region")},
@@ -211,7 +211,7 @@ func TestParser_ParseStatement(t *testing.T) {
 							},
 						},
 					},
-					OrderBy: []*sqlast.SQLOrderByExpr{
+					OrderBy: []*sqlast.OrderByExpr{
 						{Expr: sqlast.NewIdent("product_units")},
 					},
 					Limit: &sqlast.LimitExpr{
@@ -226,11 +226,11 @@ func TestParser_ParseStatement(t *testing.T) {
 			{
 				// from https://www.postgresql.jp/document/9.3/html/queries-with.html
 				name: "with cte",
-				out: &sqlast.SQLQuery{
+				out: &sqlast.Query{
 					CTEs: []*sqlast.CTE{
 						{
 							Alias: sqlast.NewIdent("regional_sales"),
-							Query: &sqlast.SQLQuery{
+							Query: &sqlast.Query{
 								Body: &sqlast.SQLSelect{
 									Projection: []sqlast.SQLSelectItem{
 										&sqlast.UnnamedSelectItem{Node: sqlast.NewIdent("region")},
@@ -270,7 +270,7 @@ func TestParser_ParseStatement(t *testing.T) {
 						},
 						WhereClause: &sqlast.InSubQuery{
 							Expr: sqlast.NewIdent("region"),
-							SubQuery: &sqlast.SQLQuery{
+							SubQuery: &sqlast.Query{
 								Body: &sqlast.SQLSelect{
 									Projection: []sqlast.SQLSelectItem{
 										&sqlast.UnnamedSelectItem{Node: sqlast.NewIdent("region")},
@@ -299,7 +299,7 @@ func TestParser_ParseStatement(t *testing.T) {
 				in: "SELECT * FROM user WHERE NOT EXISTS (" +
 					"SELECT * FROM user_sub WHERE user.id = user_sub.id AND user_sub.job = 'job'" +
 					");",
-				out: &sqlast.SQLQuery{
+				out: &sqlast.Query{
 					Body: &sqlast.SQLSelect{
 						Projection: []sqlast.SQLSelectItem{
 							&sqlast.UnnamedSelectItem{
@@ -313,7 +313,7 @@ func TestParser_ParseStatement(t *testing.T) {
 						},
 						WhereClause: &sqlast.Exists{
 							Negated: true,
-							Query: &sqlast.SQLQuery{
+							Query: &sqlast.Query{
 								Body: &sqlast.SQLSelect{
 									Projection: []sqlast.SQLSelectItem{
 										&sqlast.UnnamedSelectItem{
@@ -363,7 +363,7 @@ func TestParser_ParseStatement(t *testing.T) {
 				name: "between / case",
 				in: "SELECT CASE WHEN expr1 = '1' THEN 'test1' WHEN expr2 = '2' THEN 'test2' ELSE 'other' END AS alias " +
 					"FROM user WHERE id BETWEEN 1 AND 2",
-				out: &sqlast.SQLQuery{
+				out: &sqlast.Query{
 					Body: &sqlast.SQLSelect{
 						Projection: []sqlast.SQLSelectItem{
 							&sqlast.AliasSelectItem{
@@ -430,7 +430,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		cases := []struct {
 			name string
 			in   string
-			out  sqlast.SQLStmt
+			out  sqlast.Stmt
 			skip bool
 		}{
 			{
@@ -651,7 +651,7 @@ func TestParser_ParseStatement(t *testing.T) {
 				in:   "CREATE VIEW comedies AS SELECT * FROM films WHERE kind = 'Comedy'",
 				out: &sqlast.CreateViewStmt{
 					Name: sqlast.NewSQLObjectName("comedies"),
-					Query: &sqlast.SQLQuery{
+					Query: &sqlast.Query{
 						Body: &sqlast.SQLSelect{
 							Projection: []sqlast.SQLSelectItem{&sqlast.UnnamedSelectItem{Node: &sqlast.Wildcard{}}},
 							FromClause: []sqlast.TableReference{
@@ -696,7 +696,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		cases := []struct {
 			name string
 			in   string
-			out  sqlast.SQLStmt
+			out  sqlast.Stmt
 			skip bool
 		}{
 			{
@@ -739,7 +739,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		cases := []struct {
 			name string
 			in   string
-			out  sqlast.SQLStmt
+			out  sqlast.Stmt
 			skip bool
 		}{
 			{
@@ -810,7 +810,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		cases := []struct {
 			name string
 			in   string
-			out  sqlast.SQLStmt
+			out  sqlast.Stmt
 			skip bool
 		}{
 			{
@@ -931,7 +931,7 @@ func TestParser_ParseStatement(t *testing.T) {
 		cases := []struct {
 			name string
 			in   string
-			out  sqlast.SQLStmt
+			out  sqlast.Stmt
 			skip bool
 		}{
 			{

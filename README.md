@@ -20,7 +20,7 @@ $ go get -u github.com/akito0107/xsqlparser/...
 ```
 
 ### How to use
-__Currently supports `SELECT`,`CREATE TABLE`,`CREATE VIEW`,`INSERT`,`UPDATE`,`DELETE`.__
+__Currently supports `SELECT`,`CREATE TABLE`, `DROP TABLE`, `CREATE VIEW`,`INSERT`,`UPDATE`,`DELETE`, `ALTER TABLE`, `CREATE INDEX`, `DROP INDEX`, `EXPLAIN`.
 
 - simple case
 ```go
@@ -50,32 +50,38 @@ pp.Println(stmt)
 
 got:
 ```
-&sqlast.SQLQuery{
+&sqlast.Query{
+  stmt: sqlast.stmt{},
   CTEs: []*sqlast.CTE{},
   Body: &sqlast.SQLSelect{
+    sqlSetExpr: sqlast.sqlSetExpr{},
     Distinct:   false,
     Projection: []sqlast.SQLSelectItem{
-      &sqlast.UnnamedExpression{
-        Node: &sqlast.SQLWildcard{},
+      &sqlast.UnnamedSelectItem{
+        sqlSelectItem: sqlast.sqlSelectItem{},
+        Node:          &sqlast.Wildcard{},
       },
     },
-    Relation: &sqlast.Table{
-      Name: &sqlast.SQLObjectName{
-        Idents: []*sqlast.SQLIdent{
-          &"test_table",
+    FromClause: []sqlast.TableReference{
+      &sqlast.Table{
+        tableFactor:    sqlast.tableFactor{},
+        tableReference: sqlast.tableReference{},
+        Name:           &sqlast.ObjectName{
+          Idents: []*sqlast.Ident{
+            &"test_table",
+          },
         },
+        Alias:     (*sqlast.Ident)(nil),
+        Args:      []sqlast.Node{},
+        WithHints: []sqlast.Node{},
       },
-      Alias:     (*sqlast.SQLIdent)(nil),
-      Args:      []sqlast.ASTNode{},
-      WithHints: []sqlast.ASTNode{},
     },
-    Joins:     []*sqlast.Join{},
-    Selection: nil,
-    GroupBy:   []sqlast.ASTNode{},
-    Having:    nil,
+    WhereClause:   nil,
+    GroupByClause: []sqlast.Node{},
+    HavingClause:  nil,
   },
-  OrderBy: []*sqlast.SQLOrderByExpr{},
-  Limit:   nil,
+  OrderBy: []*sqlast.OrderByExpr{},
+  Limit:   (*sqlast.LimitExpr)(nil),
 }
 ```
 
@@ -110,80 +116,97 @@ pp.Println(stmt)
 
 got:
 ```
-{
+&sqlast.Query{
+  stmt: sqlast.stmt{},
   CTEs: []*sqlast.CTE{},
   Body: &sqlast.SQLSelect{
+    sqlSetExpr: sqlast.sqlSetExpr{},
     Distinct:   false,
     Projection: []sqlast.SQLSelectItem{
-      &sqlast.UnnamedExpression{
-        Node: &sqlast.SQLCompoundIdentifier{
-          Idents: []*sqlast.SQLIdent{
+      &sqlast.UnnamedSelectItem{
+        sqlSelectItem: sqlast.sqlSelectItem{},
+        Node:          &sqlast.CompoundIdent{
+          Idents: []*sqlast.Ident{
             &"orders",
             &"product",
           },
         },
       },
-      &sqlast.ExpressionWithAlias{
-        Expr: &sqlast.SQLFunction{
-          Name: &sqlast.SQLObjectName{
-            Idents: []*sqlast.SQLIdent{
+      &sqlast.AliasSelectItem{
+        sqlSelectItem: sqlast.sqlSelectItem{},
+        Expr:          &sqlast.Function{
+          Name: &sqlast.ObjectName{
+            Idents: []*sqlast.Ident{
               &"SUM",
             },
           },
-          Args: []sqlast.ASTNode{
-            &sqlast.SQLCompoundIdentifier{
-              Idents: []*sqlast.SQLIdent{
+          Args: []sqlast.Node{
+            &sqlast.CompoundIdent{
+              Idents: []*sqlast.Ident{
                 &"orders",
                 &"quantity",
               },
             },
           },
-          Over: (*sqlast.SQLWindowSpec)(nil),
+          Over: (*sqlast.WindowSpec)(nil),
         },
         Alias: &"product_units",
       },
-      &sqlast.QualifiedWildcard{
-        Prefix: &sqlast.SQLObjectName{
-          Idents: []*sqlast.SQLIdent{
+      &sqlast.QualifiedWildcardSelectItem{
+        sqlSelectItem: sqlast.sqlSelectItem{},
+        Prefix:        &sqlast.ObjectName{
+          Idents: []*sqlast.Ident{
             &"accounts",
           },
         },
       },
     },
-    Relation: &sqlast.Table{
-      Name: &sqlast.SQLObjectName{
-        Idents: []*sqlast.SQLIdent{
-          &"orders",
-        },
-      },
-      Alias:     (*sqlast.SQLIdent)(nil),
-      Args:      []sqlast.ASTNode{},
-      WithHints: []sqlast.ASTNode{},
-    },
-    Joins: []*sqlast.Join{
-      &sqlast.Join{
-        Relation: &sqlast.Table{
-          Name: &sqlast.SQLObjectName{
-            Idents: []*sqlast.SQLIdent{
-              &"accounts",
+    FromClause: []sqlast.TableReference{
+      &sqlast.QualifiedJoin{
+        tableReference: sqlast.tableReference{},
+        LeftElement:    &sqlast.TableJoinElement{
+          joinElement: sqlast.joinElement{},
+          Ref:         &sqlast.Table{
+            tableFactor:    sqlast.tableFactor{},
+            tableReference: sqlast.tableReference{},
+            Name:           &sqlast.ObjectName{
+              Idents: []*sqlast.Ident{
+                &"orders",
+              },
             },
+            Alias:     (*sqlast.Ident)(nil),
+            Args:      []sqlast.Node{},
+            WithHints: []sqlast.Node{},
           },
-          Alias:     (*sqlast.SQLIdent)(nil),
-          Args:      []sqlast.ASTNode{},
-          WithHints: []sqlast.ASTNode{},
         },
-        Op:       1,
-        Constant: &sqlast.OnJoinConstant{
-          Node: &sqlast.SQLBinaryExpr{
-            Left: &sqlast.SQLCompoundIdentifier{
-              Idents: []*sqlast.SQLIdent{
+        Type:         1,
+        RightElement: &sqlast.TableJoinElement{
+          joinElement: sqlast.joinElement{},
+          Ref:         &sqlast.Table{
+            tableFactor:    sqlast.tableFactor{},
+            tableReference: sqlast.tableReference{},
+            Name:           &sqlast.ObjectName{
+              Idents: []*sqlast.Ident{
+                &"accounts",
+              },
+            },
+            Alias:     (*sqlast.Ident)(nil),
+            Args:      []sqlast.Node{},
+            WithHints: []sqlast.Node{},
+          },
+        },
+        Spec: &sqlast.JoinCondition{
+          joinSpec:        sqlast.joinSpec{},
+          SearchCondition: &sqlast.BinaryExpr{
+            Left: &sqlast.CompoundIdent{
+              Idents: []*sqlast.Ident{
                 &"orders",
                 &"account_id",
               },
             },
             Op:    9,
-            Right: &sqlast.SQLCompoundIdentifier{
-              Idents: []*sqlast.SQLIdent{
+            Right: &sqlast.CompoundIdent{
+              Idents: []*sqlast.Ident{
                 &"accounts",
                 &"id",
               },
@@ -192,56 +215,62 @@ got:
         },
       },
     },
-    Selection: &sqlast.SQLInSubQuery{
-      Expr: &sqlast.SQLCompoundIdentifier{
-        Idents: []*sqlast.SQLIdent{
+    WhereClause: &sqlast.InSubQuery{
+      Expr: &sqlast.CompoundIdent{
+        Idents: []*sqlast.Ident{
           &"orders",
           &"region",
         },
       },
-      SubQuery: &sqlast.SQLQuery{
+      SubQuery: &sqlast.Query{
+        stmt: sqlast.stmt{},
         CTEs: []*sqlast.CTE{},
         Body: &sqlast.SQLSelect{
+          sqlSetExpr: sqlast.sqlSetExpr{},
           Distinct:   false,
           Projection: []sqlast.SQLSelectItem{
-            &sqlast.UnnamedExpression{
-              Node: &sqlast.SQLIdentifier{
-                Ident: &"region",
-              },
+            &sqlast.UnnamedSelectItem{
+              sqlSelectItem: sqlast.sqlSelectItem{},
+              Node:          &"region",
             },
           },
-          Relation: &sqlast.Table{
-            Name: &sqlast.SQLObjectName{
-              Idents: []*sqlast.SQLIdent{
-                &"top_regions",
+          FromClause: []sqlast.TableReference{
+            &sqlast.Table{
+              tableFactor:    sqlast.tableFactor{},
+              tableReference: sqlast.tableReference{},
+              Name:           &sqlast.ObjectName{
+                Idents: []*sqlast.Ident{
+                  &"top_regions",
+                },
               },
+              Alias:     (*sqlast.Ident)(nil),
+              Args:      []sqlast.Node{},
+              WithHints: []sqlast.Node{},
             },
-            Alias:     (*sqlast.SQLIdent)(nil),
-            Args:      []sqlast.ASTNode{},
-            WithHints: []sqlast.ASTNode{},
           },
-          Joins:     []*sqlast.Join{},
-          Selection: nil,
-          GroupBy:   []sqlast.ASTNode{},
-          Having:    nil,
+          WhereClause:   nil,
+          GroupByClause: []sqlast.Node{},
+          HavingClause:  nil,
         },
-        OrderBy: []*sqlast.SQLOrderByExpr{},
-        Limit:   nil,
+        OrderBy: []*sqlast.OrderByExpr{},
+        Limit:   (*sqlast.LimitExpr)(nil),
       },
       Negated: false,
     },
-    GroupBy: []sqlast.ASTNode{},
-    Having:  nil,
+    GroupByClause: []sqlast.Node{},
+    HavingClause:  nil,
   },
-  OrderBy: []*sqlast.SQLOrderByExpr{
-    &sqlast.SQLOrderByExpr{
-      Expr: &sqlast.SQLIdentifier{
-        Ident: &"product_units",
-      },
-      ASC: (*bool)(nil),
+  OrderBy: []*sqlast.OrderByExpr{
+    &sqlast.OrderByExpr{
+      Expr: &"product_units",
+      ASC:  (*bool)(nil),
     },
   },
-  Limit: &100,
+  Limit: &sqlast.LimitExpr{
+    All:         false,
+    LimitValue:  &100,
+    OffsetValue: (*sqlast.LongValue)(nil),
+  },
 }
 ```
 
@@ -269,144 +298,146 @@ pp.Println(stmt)
 
 got:
 ```
-&sqlast.SQLQuery{
+&sqlast.Query{
+  stmt: sqlast.stmt{},
   CTEs: []*sqlast.CTE{
     &sqlast.CTE{
       Alias: &"regional_sales",
-      Query: &sqlast.SQLQuery{
+      Query: &sqlast.Query{
+        stmt: sqlast.stmt{},
         CTEs: []*sqlast.CTE{},
         Body: &sqlast.SQLSelect{
+          sqlSetExpr: sqlast.sqlSetExpr{},
           Distinct:   false,
           Projection: []sqlast.SQLSelectItem{
-            &sqlast.UnnamedExpression{
-              Node: &sqlast.SQLIdentifier{
-                Ident: &"region",
-              },
+            &sqlast.UnnamedSelectItem{
+              sqlSelectItem: sqlast.sqlSelectItem{},
+              Node:          &"region",
             },
-            &sqlast.ExpressionWithAlias{
-              Expr: &sqlast.SQLFunction{
-                Name: &sqlast.SQLObjectName{
-                  Idents: []*sqlast.SQLIdent{
+            &sqlast.AliasSelectItem{
+              sqlSelectItem: sqlast.sqlSelectItem{},
+              Expr:          &sqlast.Function{
+                Name: &sqlast.ObjectName{
+                  Idents: []*sqlast.Ident{
                     &"SUM",
                   },
                 },
-                Args: []sqlast.ASTNode{
-                  &sqlast.SQLIdentifier{
-                    Ident: &"amount",
-                  },
+                Args: []sqlast.Node{
+                  &"amount",
                 },
-                Over: (*sqlast.SQLWindowSpec)(nil),
+                Over: (*sqlast.WindowSpec)(nil),
               },
               Alias: &"total_sales",
             },
           },
-          Relation: &sqlast.Table{
-            Name: &sqlast.SQLObjectName{
-              Idents: []*sqlast.SQLIdent{
-                &"orders",
+          FromClause: []sqlast.TableReference{
+            &sqlast.Table{
+              tableFactor:    sqlast.tableFactor{},
+              tableReference: sqlast.tableReference{},
+              Name:           &sqlast.ObjectName{
+                Idents: []*sqlast.Ident{
+                  &"orders",
+                },
               },
-            },
-            Alias:     (*sqlast.SQLIdent)(nil),
-            Args:      []sqlast.ASTNode{},
-            WithHints: []sqlast.ASTNode{},
-          },
-          Joins:     []*sqlast.Join{},
-          Selection: nil,
-          GroupBy:   []sqlast.ASTNode{
-            &sqlast.SQLIdentifier{
-              Ident: &"region",
+              Alias:     (*sqlast.Ident)(nil),
+              Args:      []sqlast.Node{},
+              WithHints: []sqlast.Node{},
             },
           },
-          Having: nil,
+          WhereClause:   nil,
+          GroupByClause: []sqlast.Node{
+            &"region",
+          },
+          HavingClause: nil,
         },
-        OrderBy: []*sqlast.SQLOrderByExpr{},
-        Limit:   nil,
+        OrderBy: []*sqlast.OrderByExpr{},
+        Limit:   (*sqlast.LimitExpr)(nil),
       },
     },
   },
   Body: &sqlast.SQLSelect{
+    sqlSetExpr: sqlast.sqlSetExpr{},
     Distinct:   false,
     Projection: []sqlast.SQLSelectItem{
-      &sqlast.UnnamedExpression{
-        Node: &sqlast.SQLIdentifier{
-          Ident: &"product",
-        },
+      &sqlast.UnnamedSelectItem{
+        sqlSelectItem: sqlast.sqlSelectItem{},
+        Node:          &"product",
       },
-      &sqlast.ExpressionWithAlias{
-        Expr: &sqlast.SQLFunction{
-          Name: &sqlast.SQLObjectName{
-            Idents: []*sqlast.SQLIdent{
+      &sqlast.AliasSelectItem{
+        sqlSelectItem: sqlast.sqlSelectItem{},
+        Expr:          &sqlast.Function{
+          Name: &sqlast.ObjectName{
+            Idents: []*sqlast.Ident{
               &"SUM",
             },
           },
-          Args: []sqlast.ASTNode{
-            &sqlast.SQLIdentifier{
-              Ident: &"quantity",
-            },
+          Args: []sqlast.Node{
+            &"quantity",
           },
-          Over: (*sqlast.SQLWindowSpec)(nil),
+          Over: (*sqlast.WindowSpec)(nil),
         },
         Alias: &"product_units",
       },
     },
-    Relation: &sqlast.Table{
-      Name: &sqlast.SQLObjectName{
-        Idents: []*sqlast.SQLIdent{
-          &"orders",
+    FromClause: []sqlast.TableReference{
+      &sqlast.Table{
+        tableFactor:    sqlast.tableFactor{},
+        tableReference: sqlast.tableReference{},
+        Name:           &sqlast.ObjectName{
+          Idents: []*sqlast.Ident{
+            &"orders",
+          },
         },
+        Alias:     (*sqlast.Ident)(nil),
+        Args:      []sqlast.Node{},
+        WithHints: []sqlast.Node{},
       },
-      Alias:     (*sqlast.SQLIdent)(nil),
-      Args:      []sqlast.ASTNode{},
-      WithHints: []sqlast.ASTNode{},
     },
-    Joins:     []*sqlast.Join{},
-    Selection: &sqlast.SQLInSubQuery{
-      Expr: &sqlast.SQLIdentifier{
-        Ident: &"region",
-      },
-      SubQuery: &sqlast.SQLQuery{
+    WhereClause: &sqlast.InSubQuery{
+      Expr:     &"region",
+      SubQuery: &sqlast.Query{
+        stmt: sqlast.stmt{},
         CTEs: []*sqlast.CTE{},
         Body: &sqlast.SQLSelect{
+          sqlSetExpr: sqlast.sqlSetExpr{},
           Distinct:   false,
           Projection: []sqlast.SQLSelectItem{
-            &sqlast.UnnamedExpression{
-              Node: &sqlast.SQLIdentifier{
-                Ident: &"region",
-              },
+            &sqlast.UnnamedSelectItem{
+              sqlSelectItem: sqlast.sqlSelectItem{},
+              Node:          &"region",
             },
           },
-          Relation: &sqlast.Table{
-            Name: &sqlast.SQLObjectName{
-              Idents: []*sqlast.SQLIdent{
-                &"top_regions",
+          FromClause: []sqlast.TableReference{
+            &sqlast.Table{
+              tableFactor:    sqlast.tableFactor{},
+              tableReference: sqlast.tableReference{},
+              Name:           &sqlast.ObjectName{
+                Idents: []*sqlast.Ident{
+                  &"top_regions",
+                },
               },
+              Alias:     (*sqlast.Ident)(nil),
+              Args:      []sqlast.Node{},
+              WithHints: []sqlast.Node{},
             },
-            Alias:     (*sqlast.SQLIdent)(nil),
-            Args:      []sqlast.ASTNode{},
-            WithHints: []sqlast.ASTNode{},
           },
-          Joins:     []*sqlast.Join{},
-          Selection: nil,
-          GroupBy:   []sqlast.ASTNode{},
-          Having:    nil,
+          WhereClause:   nil,
+          GroupByClause: []sqlast.Node{},
+          HavingClause:  nil,
         },
-        OrderBy: []*sqlast.SQLOrderByExpr{},
-        Limit:   nil,
+        OrderBy: []*sqlast.OrderByExpr{},
+        Limit:   (*sqlast.LimitExpr)(nil),
       },
       Negated: false,
     },
-    GroupBy: []sqlast.ASTNode{
-      &sqlast.SQLIdentifier{
-        Ident: &"region",
-      },
-      &sqlast.SQLIdentifier{
-        Ident: &"product",
-      },
+    GroupByClause: []sqlast.Node{
+      &"region",
+      &"product",
     },
-    Having: nil,
+    HavingClause: nil,
   },
-  OrderBy: []*sqlast.SQLOrderByExpr{},
-  Limit:   nil,
+  OrderBy: []*sqlast.OrderByExpr{},
+  Limit:   (*sqlast.LimitExpr)(nil),
 }
 ```
 

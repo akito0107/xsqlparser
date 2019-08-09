@@ -4,6 +4,43 @@ package xsqlparser
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[SQLKeyword-0]
+	_ = x[Number-1]
+	_ = x[Char-2]
+	_ = x[SingleQuotedString-3]
+	_ = x[NationalStringLiteral-4]
+	_ = x[Comma-5]
+	_ = x[Whitespace-6]
+	_ = x[Eq-7]
+	_ = x[Neq-8]
+	_ = x[Lt-9]
+	_ = x[Gt-10]
+	_ = x[LtEq-11]
+	_ = x[GtEq-12]
+	_ = x[Plus-13]
+	_ = x[Minus-14]
+	_ = x[Mult-15]
+	_ = x[Div-16]
+	_ = x[Mod-17]
+	_ = x[LParen-18]
+	_ = x[RParen-19]
+	_ = x[Period-20]
+	_ = x[Colon-21]
+	_ = x[DoubleColon-22]
+	_ = x[Semicolon-23]
+	_ = x[Backslash-24]
+	_ = x[LBracket-25]
+	_ = x[RBracket-26]
+	_ = x[Ampersand-27]
+	_ = x[LBrace-28]
+	_ = x[RBrace-29]
+	_ = x[ILLEGAL-30]
+}
+
 const _Token_name = "SQLKeywordNumberCharSingleQuotedStringNationalStringLiteralCommaWhitespaceEqNeqLtGtLtEqGtEqPlusMinusMultDivModLParenRParenPeriodColonDoubleColonSemicolonBackslashLBracketRBracketAmpersandLBraceRBraceILLEGAL"
 
 var _Token_index = [...]uint8{0, 10, 16, 20, 38, 59, 64, 74, 76, 79, 81, 83, 87, 91, 95, 100, 104, 107, 110, 116, 122, 128, 133, 144, 153, 162, 170, 178, 187, 193, 199, 206}

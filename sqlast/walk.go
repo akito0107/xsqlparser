@@ -100,7 +100,7 @@ func Walk(v Visitor, node Node) {
 		// nothing to do
 	case *Following:
 		// nothing to do
-	case *SQLQuery:
+	case *Query:
 		for _, c := range n.CTEs {
 			Walk(v, c)
 		}
@@ -183,7 +183,7 @@ func Walk(v Visitor, node Node) {
 		Walk(v, n.Prefix)
 	case *WildcardSelectItem:
 		// nothing to do
-	case *SQLOrderByExpr:
+	case *OrderByExpr:
 		Walk(v, n.Expr)
 	case *LimitExpr:
 		if !n.All {
