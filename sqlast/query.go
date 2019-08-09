@@ -153,7 +153,7 @@ func (s *SQLSelect) ToSQLString() string {
 type Table struct {
 	tableFactor
 	tableReference
-	Name      *SQLObjectName
+	Name      *ObjectName
 	Alias     *Ident
 	Args      []Node
 	WithHints []Node
@@ -197,40 +197,40 @@ func (d *Derived) ToSQLString() string {
 
 //go:generate genmark -t SQLSelectItem -e Node
 
-type UnnamedExpression struct {
+type UnnamedSelectItem struct {
 	sqlSelectItem
 	Node Node
 }
 
-func (u *UnnamedExpression) ToSQLString() string {
+func (u *UnnamedSelectItem) ToSQLString() string {
 	return u.Node.ToSQLString()
 }
 
-type ExpressionWithAlias struct {
+type AliasSelectItem struct {
 	sqlSelectItem
 	Expr  Node
 	Alias *Ident
 }
 
-func (e *ExpressionWithAlias) ToSQLString() string {
+func (e *AliasSelectItem) ToSQLString() string {
 	return fmt.Sprintf("%s AS %s", e.Expr.ToSQLString(), e.Alias.ToSQLString())
 }
 
 // schema.*
-type QualifiedWildcard struct {
+type QualifiedWildcardSelectItem struct {
 	sqlSelectItem
-	Prefix *SQLObjectName
+	Prefix *ObjectName
 }
 
-func (q *QualifiedWildcard) ToSQLString() string {
+func (q *QualifiedWildcardSelectItem) ToSQLString() string {
 	return fmt.Sprintf("%s.*", q.Prefix.ToSQLString())
 }
 
-type Wildcard struct {
+type WildcardSelectItem struct {
 	sqlSelectItem
 }
 
-func (w *Wildcard) ToSQLString() string {
+func (w *WildcardSelectItem) ToSQLString() string {
 	return "*"
 }
 

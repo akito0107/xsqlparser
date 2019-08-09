@@ -11,12 +11,12 @@ import (
 func TestSQLInsert_ToSQLString(t *testing.T) {
 	cases := []struct {
 		name string
-		in   *SQLInsert
+		in   *InsertStmt
 		out  string
 	}{
 		{
 			name: "simple case",
-			in: &SQLInsert{
+			in: &InsertStmt{
 				TableName: NewSQLObjectName("customers"),
 				Columns: []*Ident{
 					NewIdent("customer_name"),
@@ -46,14 +46,14 @@ func TestSQLInsert_ToSQLString(t *testing.T) {
 func TestSQLUpdate_ToSQLString(t *testing.T) {
 	cases := []struct {
 		name string
-		in   *SQLUpdate
+		in   *UpdateStmt
 		out  string
 	}{
 		{
 			name: "simple case",
-			in: &SQLUpdate{
+			in: &UpdateStmt{
 				TableName: NewSQLObjectName("customers"),
-				Assignments: []*SQLAssignment{
+				Assignments: []*Assignment{
 					{
 						ID:    NewIdent("contract_name"),
 						Value: NewSingleQuotedString("Alfred Schmidt"),
@@ -63,7 +63,7 @@ func TestSQLUpdate_ToSQLString(t *testing.T) {
 						Value: NewSingleQuotedString("Frankfurt"),
 					},
 				},
-				Selection: &SQLBinaryExpr{
+				Selection: &BinaryExpr{
 					Op:    Eq,
 					Left:  NewIdent("customer_id"),
 					Right: NewLongValue(1),
@@ -86,14 +86,14 @@ func TestSQLUpdate_ToSQLString(t *testing.T) {
 func TestSQLDelete_ToSQLString(t *testing.T) {
 	cases := []struct {
 		name string
-		in   *SQLDelete
+		in   *DeleteStmt
 		out  string
 	}{
 		{
 			name: "simple case",
-			in: &SQLDelete{
+			in: &DeleteStmt{
 				TableName: NewSQLObjectName("customers"),
-				Selection: &SQLBinaryExpr{
+				Selection: &BinaryExpr{
 					Op:    Eq,
 					Left:  NewIdent("customer_id"),
 					Right: NewLongValue(1),
@@ -116,34 +116,34 @@ func TestSQLDelete_ToSQLString(t *testing.T) {
 func TestSQLCreateView_ToSQLString(t *testing.T) {
 	cases := []struct {
 		name string
-		in   *SQLCreateView
+		in   *CreateViewStmt
 		out  string
 	}{
 		{
 			name: "simple case",
-			in: &SQLCreateView{
+			in: &CreateViewStmt{
 				Name: NewSQLObjectName("customers_view"),
 				Query: &SQLQuery{
 					Body: &SelectExpr{
 						Select: &SQLSelect{
 							Projection: []SQLSelectItem{
-								&UnnamedExpression{
+								&UnnamedSelectItem{
 									Node: NewIdent("customer_name"),
 								},
-								&UnnamedExpression{
+								&UnnamedSelectItem{
 									Node: NewIdent("contract_name"),
 								},
 							},
 							FromClause: []TableReference{
 								&Table{
-									Name: &SQLObjectName{
+									Name: &ObjectName{
 										Idents: []*Ident{
 											NewIdent("customers"),
 										},
 									},
 								},
 							},
-							WhereClause: &SQLBinaryExpr{
+							WhereClause: &BinaryExpr{
 								Op:    Eq,
 								Left:  NewIdent("country"),
 								Right: NewSingleQuotedString("Brazil"),
@@ -172,15 +172,15 @@ func TestSQLCreateView_ToSQLString(t *testing.T) {
 func TestSQLCreateTable_ToSQLString(t *testing.T) {
 	cases := []struct {
 		name string
-		in   *SQLCreateTable
+		in   *CreateTableStmt
 		out  string
 	}{
 		{
 			name: "simple case",
-			in: &SQLCreateTable{
+			in: &CreateTableStmt{
 				Name: NewSQLObjectName("persons"),
 				Elements: []TableElement{
-					&SQLColumnDef{
+					&ColumnDef{
 						Name:     NewIdent("person_id"),
 						DataType: &Int{},
 						Constraints: []*ColumnConstraint{
@@ -194,7 +194,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 							},
 						},
 					},
-					&SQLColumnDef{
+					&ColumnDef{
 						Name: NewIdent("last_name"),
 						DataType: &VarcharType{
 							Size: NewSize(255),
@@ -205,7 +205,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 							},
 						},
 					},
-					&SQLColumnDef{
+					&ColumnDef{
 						Name:     NewIdent("test_id"),
 						DataType: &Int{},
 						Constraints: []*ColumnConstraint{
@@ -220,7 +220,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 							},
 						},
 					},
-					&SQLColumnDef{
+					&ColumnDef{
 						Name: NewIdent("email"),
 						DataType: &VarcharType{
 							Size: NewSize(255),
@@ -234,7 +234,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 							},
 						},
 					},
-					&SQLColumnDef{
+					&ColumnDef{
 						Name:     NewIdent("age"),
 						DataType: &Int{},
 						Constraints: []*ColumnConstraint{
@@ -243,14 +243,14 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 							},
 							{
 								Spec: &CheckColumnSpec{
-									Expr: &SQLBinaryExpr{
+									Expr: &BinaryExpr{
 										Op: And,
-										Left: &SQLBinaryExpr{
+										Left: &BinaryExpr{
 											Op:    Gt,
 											Left:  NewIdent("age"),
 											Right: NewLongValue(0),
 										},
-										Right: &SQLBinaryExpr{
+										Right: &BinaryExpr{
 											Op:    Lt,
 											Left:  NewIdent("age"),
 											Right: NewLongValue(100),
@@ -260,7 +260,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 							},
 						},
 					},
-					&SQLColumnDef{
+					&ColumnDef{
 						Name:     NewIdent("created_at"),
 						DataType: &Timestamp{},
 						Default:  NewIdent("CURRENT_TIMESTAMP"),
@@ -282,10 +282,10 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 		},
 		{
 			name: "with table constraint",
-			in: &SQLCreateTable{
+			in: &CreateTableStmt{
 				Name: NewSQLObjectName("persons"),
 				Elements: []TableElement{
-					&SQLColumnDef{
+					&ColumnDef{
 						Name:     NewIdent("person_id"),
 						DataType: &Int{},
 					},
@@ -303,7 +303,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 					},
 					&TableConstraint{
 						Spec: &CheckTableConstraint{
-							Expr: &SQLBinaryExpr{
+							Expr: &BinaryExpr{
 								Left:  NewIdent("id"),
 								Op:    Gt,
 								Right: NewLongValue(100),
@@ -331,11 +331,11 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 		},
 		{
 			name: "NotExists",
-			in: &SQLCreateTable{
+			in: &CreateTableStmt{
 				Name:      NewSQLObjectName("persons"),
 				NotExists: true,
 				Elements: []TableElement{
-					&SQLColumnDef{
+					&ColumnDef{
 						Name:     NewIdent("person_id"),
 						DataType: &Int{},
 						Constraints: []*ColumnConstraint{
@@ -349,7 +349,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 							},
 						},
 					},
-					&SQLColumnDef{
+					&ColumnDef{
 						Name: NewIdent("last_name"),
 						DataType: &VarcharType{
 							Size: NewSize(255),
@@ -360,7 +360,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 							},
 						},
 					},
-					&SQLColumnDef{
+					&ColumnDef{
 						Name:     NewIdent("created_at"),
 						DataType: &Timestamp{},
 						Default:  NewIdent("CURRENT_TIMESTAMP"),
@@ -392,15 +392,15 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 func TestSQLAlterTable_ToSQLString(t *testing.T) {
 	cases := []struct {
 		name string
-		in   *SQLAlterTable
+		in   *AlterTableStmt
 		out  string
 	}{
 		{
 			name: "add column",
-			in: &SQLAlterTable{
+			in: &AlterTableStmt{
 				TableName: NewSQLObjectName("customers"),
 				Action: &AddColumnTableAction{
-					Column: &SQLColumnDef{
+					Column: &ColumnDef{
 						Name: NewIdent("email"),
 						DataType: &VarcharType{
 							Size: NewSize(255),
@@ -413,10 +413,10 @@ func TestSQLAlterTable_ToSQLString(t *testing.T) {
 		},
 		{
 			name: "add column over uint8",
-			in: &SQLAlterTable{
+			in: &AlterTableStmt{
 				TableName: NewSQLObjectName("customers"),
 				Action: &AddColumnTableAction{
-					Column: &SQLColumnDef{
+					Column: &ColumnDef{
 						Name: NewIdent("email"),
 						DataType: &VarcharType{
 							Size: NewSize(256),
@@ -429,7 +429,7 @@ func TestSQLAlterTable_ToSQLString(t *testing.T) {
 		},
 		{
 			name: "remove column",
-			in: &SQLAlterTable{
+			in: &AlterTableStmt{
 				TableName: NewSQLObjectName("products"),
 				Action: &RemoveColumnTableAction{
 					Name:    NewIdent("description"),
@@ -441,7 +441,7 @@ func TestSQLAlterTable_ToSQLString(t *testing.T) {
 		},
 		{
 			name: "add constraint",
-			in: &SQLAlterTable{
+			in: &AlterTableStmt{
 				TableName: NewSQLObjectName("products"),
 				Action: &AddConstraintTableAction{
 					Constraint: &TableConstraint{
@@ -460,7 +460,7 @@ func TestSQLAlterTable_ToSQLString(t *testing.T) {
 		},
 		{
 			name: "alter column",
-			in: &SQLAlterTable{
+			in: &AlterTableStmt{
 				TableName: NewSQLObjectName("products"),
 				Action: &AlterColumnTableAction{
 					ColumnName: NewIdent("created_at"),
@@ -474,7 +474,7 @@ func TestSQLAlterTable_ToSQLString(t *testing.T) {
 		},
 		{
 			name: "pg change type",
-			in: &SQLAlterTable{
+			in: &AlterTableStmt{
 				TableName: NewSQLObjectName("products"),
 				Action: &AlterColumnTableAction{
 					ColumnName: NewIdent("number"),
@@ -504,12 +504,12 @@ func TestSQLAlterTable_ToSQLString(t *testing.T) {
 func TestSQLCreateIndex_ToSQLString(t *testing.T) {
 	cases := []struct {
 		name string
-		in   *SQLCreateIndex
+		in   *CreateIndexStmt
 		out  string
 	}{
 		{
 			name: "create index",
-			in: &SQLCreateIndex{
+			in: &CreateIndexStmt{
 				TableName:   NewSQLObjectName("customers"),
 				ColumnNames: []*Ident{NewIdent("name")},
 			},
@@ -517,7 +517,7 @@ func TestSQLCreateIndex_ToSQLString(t *testing.T) {
 		},
 		{
 			name: "create unique index",
-			in: &SQLCreateIndex{
+			in: &CreateIndexStmt{
 				TableName:   NewSQLObjectName("customers"),
 				IsUnique:    true,
 				ColumnNames: []*Ident{NewIdent("name")},
@@ -526,7 +526,7 @@ func TestSQLCreateIndex_ToSQLString(t *testing.T) {
 		},
 		{
 			name: "create index with name",
-			in: &SQLCreateIndex{
+			in: &CreateIndexStmt{
 				TableName:   NewSQLObjectName("customers"),
 				IndexName:   NewIdent("customers_idx"),
 				IsUnique:    true,
@@ -536,7 +536,7 @@ func TestSQLCreateIndex_ToSQLString(t *testing.T) {
 		},
 		{
 			name: "create index with name",
-			in: &SQLCreateIndex{
+			in: &CreateIndexStmt{
 				TableName:   NewSQLObjectName("customers"),
 				IndexName:   NewIdent("customers_idx"),
 				IsUnique:    true,
@@ -547,13 +547,13 @@ func TestSQLCreateIndex_ToSQLString(t *testing.T) {
 		},
 		{
 			name: "create partial index with name",
-			in: &SQLCreateIndex{
+			in: &CreateIndexStmt{
 				TableName:   NewSQLObjectName("customers"),
 				IndexName:   NewIdent("customers_idx"),
 				IsUnique:    true,
 				MethodName:  NewIdent("gist"),
 				ColumnNames: []*Ident{NewIdent("name")},
-				Selection: &SQLBinaryExpr{
+				Selection: &BinaryExpr{
 					Left:  NewIdent("name"),
 					Op:    Eq,
 					Right: NewSingleQuotedString("test"),

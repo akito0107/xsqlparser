@@ -92,7 +92,7 @@ func (p *Parser) ParseStatement() (sqlast.SQLStmt, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &sqlast.SQLExplain{Stmt: stmt}, nil
+		return &sqlast.ExplainStmt{Stmt: stmt}, nil
 	default:
 		return nil, errors.Errorf("unexpected (or unsupported) keyword %s", word.Keyword)
 	}
@@ -388,11 +388,11 @@ func (p *Parser) parseSelectList() ([]sqlast.SQLSelectItem, error) {
 		if err != nil {
 			return nil, errors.Errorf("ParseExpr failed: %w", err)
 		}
-		if w, ok := expr.(*sqlast.Wildcard); ok {
+		if w, ok := expr.(*sqlast.WildcardSelectItem); ok {
 			projections = append(projections, w)
-		} else if q, ok := expr.(*sqlast.SQLQualifiedWildcard); ok {
-			projections = append(projections, &sqlast.QualifiedWildcard{
-				Prefix: &sqlast.SQLObjectName{
+		} else if q, ok := expr.(*sqlast.QualifiedWildcard); ok {
+			projections = append(projections, &sqlast.QualifiedWildcardSelectItem{
+				Prefix: &sqlast.ObjectName{
 					Idents: q.Idents,
 				},
 			})
@@ -400,12 +400,12 @@ func (p *Parser) parseSelectList() ([]sqlast.SQLSelectItem, error) {
 			alias := p.parseOptionalAlias(dialect.ReservedForColumnAlias)
 
 			if alias != nil {
-				projections = append(projections, &sqlast.ExpressionWithAlias{
+				projections = append(projections, &sqlast.AliasSelectItem{
 					Expr:  expr,
 					Alias: alias,
 				})
 			} else {
-				projections = append(projections, &sqlast.UnnamedExpression{
+				projections = append(projections, &sqlast.UnnamedSelectItem{
 					Node: expr,
 				})
 			}
@@ -456,7 +456,7 @@ func (p *Parser) parseCreateTable() (sqlast.SQLStmt, error) {
 		return nil, errors.Errorf("parseElements failed: %w", err)
 	}
 
-	return &sqlast.SQLCreateTable{
+	return &sqlast.CreateTableStmt{
 		Name:     name,
 		External: false,
 		Elements: elements,
@@ -476,7 +476,7 @@ func (p *Parser) parseCreateView() (sqlast.SQLStmt, error) {
 		return nil, errors.Errorf("parseQuery failed: %w", err)
 	}
 
-	return &sqlast.SQLCreateView{
+	return &sqlast.CreateViewStmt{
 		Materialized: materialized,
 		Name:         name,
 		Query:        q,
@@ -528,7 +528,7 @@ func (p *Parser) parseCreateIndex(unique bool) (sqlast.SQLStmt, error) {
 		selection = s
 	}
 
-	return &sqlast.SQLCreateIndex{
+	return &sqlast.CreateIndexStmt{
 		IsUnique:    unique,
 		IndexName:   indexName,
 		TableName:   tableName,
@@ -581,7 +581,7 @@ func (p *Parser) parseElements() ([]sqlast.TableElement, error) {
 	return elements, nil
 }
 
-func (p *Parser) parseColumnDef() (*sqlast.SQLColumnDef, error) {
+func (p *Parser) parseColumnDef() (*sqlast.ColumnDef, error) {
 	tok := p.mustNextToken()
 	columnName := tok.Value.(*SQLWord)
 
@@ -595,7 +595,7 @@ func (p *Parser) parseColumnDef() (*sqlast.SQLColumnDef, error) {
 		return nil, errors.Errorf("parseColumnDefinition: %w", err)
 	}
 
-	return &sqlast.SQLColumnDef{
+	return &sqlast.ColumnDef{
 		Constraints: specs,
 		Name:        columnName.AsSQLIdent(),
 		DataType:    dataType,
@@ -837,7 +837,7 @@ func (p *Parser) parseDelete() (sqlast.SQLStmt, error) {
 		}
 	}
 
-	return &sqlast.SQLDelete{
+	return &sqlast.DeleteStmt{
 		TableName: tableName,
 		Selection: selection,
 	}, nil
@@ -863,7 +863,7 @@ func (p *Parser) parseUpdate() (sqlast.SQLStmt, error) {
 		}
 	}
 
-	return &sqlast.SQLUpdate{
+	return &sqlast.UpdateStmt{
 		TableName:   tableName,
 		Assignments: assignments,
 		Selection:   selection,
@@ -871,8 +871,8 @@ func (p *Parser) parseUpdate() (sqlast.SQLStmt, error) {
 
 }
 
-func (p *Parser) parseAssignments() ([]*sqlast.SQLAssignment, error) {
-	var assignments []*sqlast.SQLAssignment
+func (p *Parser) parseAssignments() ([]*sqlast.Assignment, error) {
+	var assignments []*sqlast.Assignment
 
 	for {
 		tok, _ := p.nextToken()
@@ -889,7 +889,7 @@ func (p *Parser) parseAssignments() ([]*sqlast.SQLAssignment, error) {
 			return nil, errors.Errorf("ParseExpr failed: %w", err)
 		}
 
-		assignments = append(assignments, &sqlast.SQLAssignment{
+		assignments = append(assignments, &sqlast.Assignment{
 			ID:    word.AsSQLIdent(),
 			Value: val,
 		})
@@ -935,7 +935,7 @@ func (p *Parser) parseInsert() (sqlast.SQLStmt, error) {
 		}
 	}
 
-	var assigns []*sqlast.SQLAssignment
+	var assigns []*sqlast.Assignment
 	if ok, _ := p.parseKeywords("ON", "DUPLICATE", "KEY", "UPDATE"); ok {
 		assignments, err := p.parseAssignments()
 		if err != nil {
@@ -944,7 +944,7 @@ func (p *Parser) parseInsert() (sqlast.SQLStmt, error) {
 		assigns = assignments
 	}
 
-	return &sqlast.SQLInsert{
+	return &sqlast.InsertStmt{
 		TableName:         tableName,
 		Columns:           columns,
 		Values:            values,
@@ -966,7 +966,7 @@ func (p *Parser) parseAlter() (sqlast.SQLStmt, error) {
 			return nil, errors.Errorf("parseColumnDef failed: %w", err)
 		}
 
-		return &sqlast.SQLAlterTable{
+		return &sqlast.AlterTableStmt{
 			TableName: tableName,
 			Action: &sqlast.AddColumnTableAction{
 				Column: columnDef,
@@ -980,7 +980,7 @@ func (p *Parser) parseAlter() (sqlast.SQLStmt, error) {
 			return nil, errors.Errorf("parseTableConstraints failed: %w", err)
 		}
 
-		return &sqlast.SQLAlterTable{
+		return &sqlast.AlterTableStmt{
 			TableName: tableName,
 			Action: &sqlast.AddConstraintTableAction{
 				Constraint: constraint,
@@ -995,7 +995,7 @@ func (p *Parser) parseAlter() (sqlast.SQLStmt, error) {
 		}
 		cascade, _ := p.parseKeyword("CASCADE")
 
-		return &sqlast.SQLAlterTable{
+		return &sqlast.AlterTableStmt{
 			TableName: tableName,
 			Action: &sqlast.DropConstraintTableAction{
 				Name:    constraintName,
@@ -1011,7 +1011,7 @@ func (p *Parser) parseAlter() (sqlast.SQLStmt, error) {
 		}
 		cascade, _ := p.parseKeyword("CASCADE")
 
-		return &sqlast.SQLAlterTable{
+		return &sqlast.AlterTableStmt{
 			TableName: tableName,
 			Action: &sqlast.RemoveColumnTableAction{
 				Name:    constraintName,
@@ -1026,7 +1026,7 @@ func (p *Parser) parseAlter() (sqlast.SQLStmt, error) {
 			return nil, errors.Errorf("parseAlterColumn failed: %w", err)
 		}
 
-		return &sqlast.SQLAlterTable{
+		return &sqlast.AlterTableStmt{
 			TableName: tableName,
 			Action:    action,
 		}, nil
@@ -1047,7 +1047,7 @@ func (p *Parser) parseDrop() (sqlast.SQLStmt, error) {
 			return nil, errors.Errorf("parseColumnNames of DROP INDEX failed: %w", err)
 		}
 
-		return &sqlast.SQLDropIndex{
+		return &sqlast.DropIndexStmt{
 			IndexNames: idents,
 		}, nil
 	}
@@ -1058,8 +1058,8 @@ func (p *Parser) parseDrop() (sqlast.SQLStmt, error) {
 	}
 	cascade, _ := p.parseKeyword("CASCADE")
 
-	return &sqlast.SQLDropTable{
-		TableNames: []*sqlast.SQLObjectName{tableName},
+	return &sqlast.DropTableStmt{
+		TableNames: []*sqlast.ObjectName{tableName},
 		Cascade:    cascade,
 		IfExists:   exists,
 	}, nil
@@ -1627,7 +1627,7 @@ func (p *Parser) parseInfix(expr sqlast.Node, precedence uint) (sqlast.Node, err
 			return nil, errors.Errorf("parseSubexpr failed: %w", err)
 		}
 
-		return &sqlast.SQLBinaryExpr{
+		return &sqlast.BinaryExpr{
 			Left:  expr,
 			Op:    operator,
 			Right: right,
@@ -1640,12 +1640,12 @@ func (p *Parser) parseInfix(expr sqlast.Node, precedence uint) (sqlast.Node, err
 		switch word.Keyword {
 		case "IS":
 			if ok, _ := p.parseKeyword("NULL"); ok {
-				return &sqlast.SQLIsNull{
+				return &sqlast.IsNull{
 					X: expr,
 				}, nil
 			}
 			if ok, _ := p.parseKeywords("NOT", "NULL"); ok {
-				return &sqlast.SQLIsNotNull{
+				return &sqlast.IsNotNull{
 					X: expr,
 				}, nil
 			}
@@ -1675,7 +1675,7 @@ func (p *Parser) parsePGCast(expr sqlast.Node) (sqlast.Node, error) {
 	if err != nil {
 		return nil, errors.Errorf("ParseDataType failed: %w", err)
 	}
-	return &sqlast.SQLCast{
+	return &sqlast.Cast{
 		Expr:     expr,
 		DateType: tp,
 	}, nil
@@ -1692,7 +1692,7 @@ func (p *Parser) parseIn(expr sqlast.Node, negated bool) (sqlast.Node, error) {
 		if err != nil {
 			return nil, errors.Errorf("parseQuery failed: %w", err)
 		}
-		inop = &sqlast.SQLInSubQuery{
+		inop = &sqlast.InSubQuery{
 			Negated:  negated,
 			Expr:     expr,
 			SubQuery: q,
@@ -1702,7 +1702,7 @@ func (p *Parser) parseIn(expr sqlast.Node, negated bool) (sqlast.Node, error) {
 		if err != nil {
 			return nil, errors.Errorf("parseExprList failed: %w", err)
 		}
-		inop = &sqlast.SQLInList{
+		inop = &sqlast.InList{
 			Expr:    expr,
 			Negated: negated,
 			List:    list,
@@ -1725,7 +1725,7 @@ func (p *Parser) parseBetween(expr sqlast.Node, negated bool) (sqlast.Node, erro
 		return nil, errors.Errorf("parsePrefix: %w", err)
 	}
 
-	return &sqlast.SQLBetween{
+	return &sqlast.Between{
 		Expr:    expr,
 		Negated: negated,
 		High:    high,
@@ -1831,7 +1831,7 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 			if err != nil {
 				return nil, errors.Errorf("parseSubexpr failed: %w", err)
 			}
-			return &sqlast.SQLUnary{
+			return &sqlast.Unary{
 				Operator: sqlast.Not,
 				Expr:     expr,
 			}, nil
@@ -1866,14 +1866,14 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 			}
 
 			if endWithWildcard {
-				return &sqlast.SQLQualifiedWildcard{
+				return &sqlast.QualifiedWildcard{
 					Idents: idParts,
 				}, nil
 			}
 
 			if ok, _ := p.consumeToken(LParen); ok {
 				p.prevToken()
-				name := &sqlast.SQLObjectName{
+				name := &sqlast.ObjectName{
 					Idents: idParts,
 				}
 				f, err := p.parseFunction(name)
@@ -1883,19 +1883,19 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 				return f, nil
 			}
 
-			return &sqlast.SQLCompoundIdentifier{
+			return &sqlast.CompoundIdent{
 				Idents: idParts,
 			}, nil
 		}
 	case Mult:
-		return &sqlast.SQLWildcard{}, nil
+		return &sqlast.Wildcard{}, nil
 	case Plus:
 		precedence := p.getPrecedence(tok)
 		expr, err := p.parseSubexpr(precedence)
 		if err != nil {
 			return nil, errors.Errorf("parseSubexpr failed: %w", err)
 		}
-		return &sqlast.SQLUnary{
+		return &sqlast.Unary{
 			Operator: sqlast.Plus,
 			Expr:     expr,
 		}, nil
@@ -1905,7 +1905,7 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 		if err != nil {
 			return nil, errors.Errorf("parseSubexpr failed: %w", err)
 		}
-		return &sqlast.SQLUnary{
+		return &sqlast.Unary{
 			Operator: sqlast.Minus,
 			Expr:     expr,
 		}, nil
@@ -1928,7 +1928,7 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 			if err != nil {
 				return nil, errors.Errorf("parseQuery failed: %w", err)
 			}
-			ast = &sqlast.SQLSubquery{
+			ast = &sqlast.SubQuery{
 				Query: expr,
 			}
 		} else {
@@ -1936,7 +1936,7 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 			if err != nil {
 				return nil, errors.Errorf("parseQuery failed: %w", err)
 			}
-			ast = &sqlast.SQLNested{
+			ast = &sqlast.Nested{
 				AST: expr,
 			}
 		}
@@ -1947,13 +1947,13 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 	return nil, nil
 }
 
-func (p *Parser) parseFunction(name *sqlast.SQLObjectName) (sqlast.Node, error) {
+func (p *Parser) parseFunction(name *sqlast.ObjectName) (sqlast.Node, error) {
 	p.expectToken(LParen)
 	args, err := p.parseOptionalArgs()
 	if err != nil {
 		return nil, errors.Errorf("parseOptionalArgs failed: %w", err)
 	}
-	var over *sqlast.SQLWindowSpec
+	var over *sqlast.WindowSpec
 	if ok, _ := p.parseKeyword("OVER"); ok {
 		p.expectToken(LParen)
 
@@ -1980,14 +1980,14 @@ func (p *Parser) parseFunction(name *sqlast.SQLObjectName) (sqlast.Node, error) 
 			return nil, errors.Errorf("parseWindowFrame failed: %w", err)
 		}
 
-		over = &sqlast.SQLWindowSpec{
+		over = &sqlast.WindowSpec{
 			PartitionBy:  partitionBy,
 			OrderBy:      orderBy,
 			WindowsFrame: windowFrame,
 		}
 	}
 
-	return &sqlast.SQLFunction{
+	return &sqlast.Function{
 		Name: name,
 		Args: args,
 		Over: over,
@@ -2041,12 +2041,12 @@ func (p *Parser) parseOrderByExprList() ([]*sqlast.SQLOrderByExpr, error) {
 	return exprList, nil
 }
 
-func (p *Parser) parseWindowFrame() (*sqlast.SQLWindowFrame, error) {
-	var windowFrame *sqlast.SQLWindowFrame
+func (p *Parser) parseWindowFrame() (*sqlast.WindowFrame, error) {
+	var windowFrame *sqlast.WindowFrame
 	t, _ := p.peekToken()
 	if t.Tok == SQLKeyword {
 		w := t.Value.(*SQLWord)
-		var units sqlast.SQLWindowFrameUnits
+		var units sqlast.WindowFrameUnits
 		units = units.FromStr(w.Keyword)
 		p.mustNextToken()
 
@@ -2061,7 +2061,7 @@ func (p *Parser) parseWindowFrame() (*sqlast.SQLWindowFrame, error) {
 				return nil, errors.Errorf("parseWindowFrameBound: %w", err)
 			}
 
-			windowFrame = &sqlast.SQLWindowFrame{
+			windowFrame = &sqlast.WindowFrame{
 				StartBound: startBound,
 				EndBound:   endBound,
 				Units:      units,
@@ -2071,7 +2071,7 @@ func (p *Parser) parseWindowFrame() (*sqlast.SQLWindowFrame, error) {
 			if err != nil {
 				return nil, errors.Errorf("parseWindowFrameBound: %w", err)
 			}
-			windowFrame = &sqlast.SQLWindowFrame{
+			windowFrame = &sqlast.WindowFrame{
 				StartBound: startBound,
 				Units:      units,
 			}
@@ -2117,12 +2117,12 @@ func (p *Parser) parseWindowFrameBound() (sqlast.SQLWindowFrameBound, error) {
 	return nil, nil
 }
 
-func (p *Parser) parseObjectName() (*sqlast.SQLObjectName, error) {
+func (p *Parser) parseObjectName() (*sqlast.ObjectName, error) {
 	idents, err := p.parseListOfIds(Period)
 	if err != nil {
 		return nil, errors.Errorf("parseListOfId: %w", err)
 	}
-	return &sqlast.SQLObjectName{
+	return &sqlast.ObjectName{
 		Idents: idents,
 	}, nil
 }
@@ -2296,7 +2296,7 @@ func (p *Parser) parseCaseExpression() (sqlast.Node, error) {
 	}
 	p.expectKeyword("END")
 
-	return &sqlast.SQLCase{
+	return &sqlast.CaseExpr{
 		Operand:    operand,
 		Conditions: conditions,
 		Results:    results,
@@ -2318,7 +2318,7 @@ func (p *Parser) parseCastExpression() (sqlast.Node, error) {
 	}
 	p.expectToken(RParen)
 
-	return &sqlast.SQLCast{
+	return &sqlast.Cast{
 		Expr:     expr,
 		DateType: dataType,
 	}, nil
@@ -2332,7 +2332,7 @@ func (p *Parser) parseExistsExpression(negated bool) (sqlast.Node, error) {
 	}
 	p.expectToken(RParen)
 
-	return &sqlast.SQLExists{
+	return &sqlast.Exists{
 		Negated: negated,
 		Query:   expr,
 	}, nil

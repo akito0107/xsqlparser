@@ -8,15 +8,15 @@ import (
 
 //go:generate genmark -t SQLStmt -e Node
 
-type SQLInsert struct {
+type InsertStmt struct {
 	sqlStmt
-	TableName         *SQLObjectName
+	TableName         *ObjectName
 	Columns           []*Ident
 	Values            [][]Node
-	UpdateAssignments []*SQLAssignment // MySQL only (ON DUPLICATED KEYS)
+	UpdateAssignments []*Assignment // MySQL only (ON DUPLICATED KEYS)
 }
 
-func (s *SQLInsert) ToSQLString() string {
+func (s *InsertStmt) ToSQLString() string {
 	str := fmt.Sprintf("INSERT INTO %s", s.TableName.ToSQLString())
 	if len(s.Columns) != 0 {
 		str += fmt.Sprintf(" (%s)", commaSeparatedString(s.Columns))
@@ -37,14 +37,14 @@ func (s *SQLInsert) ToSQLString() string {
 	return str
 }
 
-type SQLCopy struct {
+type CopyStmt struct {
 	sqlStmt
-	TableName *SQLObjectName
+	TableName *ObjectName
 	Columns   []*Ident
 	Values    []*string
 }
 
-func (s *SQLCopy) ToSQLString() string {
+func (s *CopyStmt) ToSQLString() string {
 	str := fmt.Sprintf("COPY %s", s.TableName.ToSQLString())
 	if len(s.Columns) != 0 {
 		str += fmt.Sprintf(" (%s)", commaSeparatedString(s.Columns))
@@ -67,14 +67,14 @@ func (s *SQLCopy) ToSQLString() string {
 	return str
 }
 
-type SQLUpdate struct {
+type UpdateStmt struct {
 	sqlStmt
-	TableName   *SQLObjectName
-	Assignments []*SQLAssignment
+	TableName   *ObjectName
+	Assignments []*Assignment
 	Selection   Node
 }
 
-func (s *SQLUpdate) ToSQLString() string {
+func (s *UpdateStmt) ToSQLString() string {
 	str := fmt.Sprintf("UPDATE %s SET ", s.TableName.ToSQLString())
 	if s.Assignments != nil {
 		str += commaSeparatedString(s.Assignments)
@@ -86,13 +86,13 @@ func (s *SQLUpdate) ToSQLString() string {
 	return str
 }
 
-type SQLDelete struct {
+type DeleteStmt struct {
 	sqlStmt
-	TableName *SQLObjectName
+	TableName *ObjectName
 	Selection Node
 }
 
-func (s *SQLDelete) ToSQLString() string {
+func (s *DeleteStmt) ToSQLString() string {
 	str := fmt.Sprintf("DELETE FROM %s", s.TableName.ToSQLString())
 
 	if s.Selection != nil {
@@ -102,14 +102,14 @@ func (s *SQLDelete) ToSQLString() string {
 	return str
 }
 
-type SQLCreateView struct {
+type CreateViewStmt struct {
 	sqlStmt
-	Name         *SQLObjectName
+	Name         *ObjectName
 	Query        *SQLQuery
 	Materialized bool
 }
 
-func (s *SQLCreateView) ToSQLString() string {
+func (s *CreateViewStmt) ToSQLString() string {
 	var modifier string
 	if s.Materialized {
 		modifier = " MATERIALIZED"
@@ -117,9 +117,9 @@ func (s *SQLCreateView) ToSQLString() string {
 	return fmt.Sprintf("CREATE%s VIEW %s AS %s", modifier, s.Name.ToSQLString(), s.Query.ToSQLString())
 }
 
-type SQLCreateTable struct {
+type CreateTableStmt struct {
 	sqlStmt
-	Name       *SQLObjectName
+	Name       *ObjectName
 	Elements   []TableElement
 	External   bool
 	FileFormat *FileFormat
@@ -127,7 +127,7 @@ type SQLCreateTable struct {
 	NotExists  bool
 }
 
-func (s *SQLCreateTable) ToSQLString() string {
+func (s *CreateTableStmt) ToSQLString() string {
 	ifNotExists := ""
 	if s.NotExists {
 		ifNotExists = "IF NOT EXISTS "
@@ -139,12 +139,12 @@ func (s *SQLCreateTable) ToSQLString() string {
 	return fmt.Sprintf("CREATE TABLE %s%s (%s)", ifNotExists, s.Name.ToSQLString(), commaSeparatedString(s.Elements))
 }
 
-type SQLAssignment struct {
+type Assignment struct {
 	ID    *Ident
 	Value Node
 }
 
-func (s *SQLAssignment) ToSQLString() string {
+func (s *Assignment) ToSQLString() string {
 	return fmt.Sprintf("%s = %s", s.ID.ToSQLString(), s.Value.ToSQLString())
 }
 
@@ -211,7 +211,7 @@ func (c *CheckTableConstraint) ToSQLString() string {
 	return fmt.Sprintf("CHECK(%s)", c.Expr.ToSQLString())
 }
 
-type SQLColumnDef struct {
+type ColumnDef struct {
 	tableElement
 	Name        *Ident
 	DataType    SQLType
@@ -219,7 +219,7 @@ type SQLColumnDef struct {
 	Constraints []*ColumnConstraint
 }
 
-func (s *SQLColumnDef) ToSQLString() string {
+func (s *ColumnDef) ToSQLString() string {
 	str := fmt.Sprintf("%s %s", s.Name.ToSQLString(), s.DataType.ToSQLString())
 	if s.Default != nil {
 		str += fmt.Sprintf(" DEFAULT %s", s.Default.ToSQLString())
@@ -269,7 +269,7 @@ func (u *UniqueColumnSpec) ToSQLString() string {
 }
 
 type ReferencesColumnSpec struct {
-	TableName *SQLObjectName
+	TableName *ObjectName
 	Columns   []*Ident
 }
 
@@ -338,13 +338,13 @@ func (FileFormat) FromStr(str string) FileFormat {
 	return 0
 }
 
-type SQLAlterTable struct {
+type AlterTableStmt struct {
 	sqlStmt
-	TableName *SQLObjectName
+	TableName *ObjectName
 	Action    AlterTableAction
 }
 
-func (s *SQLAlterTable) ToSQLString() string {
+func (s *AlterTableStmt) ToSQLString() string {
 	return fmt.Sprintf("ALTER TABLE %s %s", s.TableName.ToSQLString(), s.Action.ToSQLString())
 }
 
@@ -352,7 +352,7 @@ func (s *SQLAlterTable) ToSQLString() string {
 
 type AddColumnTableAction struct {
 	alterTableAction
-	Column *SQLColumnDef
+	Column *ColumnDef
 }
 
 func (a *AddColumnTableAction) ToSQLString() string {
@@ -454,14 +454,14 @@ func (d *DropConstraintTableAction) ToSQLString() string {
 	return fmt.Sprintf("DROP CONSTRAINT %s%s", d.Name.ToSQLString(), cascade)
 }
 
-type SQLDropTable struct {
+type DropTableStmt struct {
 	sqlStmt
-	TableNames []*SQLObjectName
+	TableNames []*ObjectName
 	Cascade    bool
 	IfExists   bool
 }
 
-func (s *SQLDropTable) ToSQLString() string {
+func (s *DropTableStmt) ToSQLString() string {
 	var ifexists string
 	if s.IfExists {
 		ifexists = "IF EXISTS "
@@ -475,9 +475,9 @@ func (s *SQLDropTable) ToSQLString() string {
 	return fmt.Sprintf("DROP TABLE %s%s%s", ifexists, commaSeparatedString(s.TableNames), cascade)
 }
 
-type SQLCreateIndex struct {
+type CreateIndexStmt struct {
 	sqlStmt
-	TableName   *SQLObjectName
+	TableName   *ObjectName
 	IsUnique    bool
 	IndexName   *Ident
 	MethodName  *Ident
@@ -485,7 +485,7 @@ type SQLCreateIndex struct {
 	Selection   Node
 }
 
-func (s *SQLCreateIndex) ToSQLString() string {
+func (s *CreateIndexStmt) ToSQLString() string {
 	var uniqueStr string
 	if s.IsUnique {
 		uniqueStr = "UNIQUE "
@@ -511,20 +511,20 @@ func (s *SQLCreateIndex) ToSQLString() string {
 	return str
 }
 
-type SQLDropIndex struct {
+type DropIndexStmt struct {
 	sqlStmt
 	IndexNames []*Ident
 }
 
-func (s *SQLDropIndex) ToSQLString() string {
+func (s *DropIndexStmt) ToSQLString() string {
 	return fmt.Sprintf("DROP INDEX %s", commaSeparatedString(s.IndexNames))
 }
 
-type SQLExplain struct {
+type ExplainStmt struct {
 	sqlStmt
 	Stmt SQLStmt
 }
 
-func (s *SQLExplain) ToSQLString() string {
+func (s *ExplainStmt) ToSQLString() string {
 	return fmt.Sprintf("EXPLAIN %s", s.Stmt.ToSQLString())
 }
