@@ -1,9 +1,10 @@
 package astutil
 
 import (
-	"github.com/akito0107/xsqlparser/sqlast"
 	"log"
 	"reflect"
+
+	"github.com/akito0107/xsqlparser/sqlast"
 )
 
 type ApplyFunc func(*Cursor) bool
@@ -160,67 +161,56 @@ func (a *application) apply(parent sqlast.Node, name string, iter *iterator, n s
 		a.apply(n, "Operator", nil, n.Operator)
 		a.apply(n, "Expr", nil, n.Expr)
 	case *sqlast.Function:
-		Walk(v, n.Name)
-		walkASTNodeLists(v, n.Args)
+		a.apply(n, "Name", nil, n.Name)
+		a.applyList(n, "Args")
 		if n.Over != nil {
-			Walk(v, n.Over)
+			a.apply(n, "Over", nil, n.Over)
 		}
 	case *sqlast.CaseExpr:
-		Walk(v, n.Operand)
+		a.apply(n, "Operand", nil, n.Operand)
 	case *sqlast.Exists:
-		Walk(v, n.Query)
+		a.apply(n, "Query", nil, n.Query)
 	case *sqlast.SubQuery:
-		Walk(v, n.Query)
+		a.apply(n, "Query", nil, n.Query)
 	case *sqlast.ObjectName:
-		walkIdentLists(v, n.Idents)
+		a.applyList(n, "Idents")
 	case *sqlast.WindowSpec:
-		walkASTNodeLists(v, n.PartitionBy)
-		for _, o := range n.OrderBy {
-			Walk(v, o)
-		}
+		a.applyList(n, "PartitionBy")
+		a.applyList(n, "OrderBy")
 		if n.WindowsFrame != nil {
-			Walk(v, n.WindowsFrame)
+			a.applyList(n, "WindowsFrame")
 		}
 	case *sqlast.WindowFrame:
-		Walk(v, n.Units)
-		Walk(v, n.StartBound)
+		a.apply(n, "Units", nil, n.Units)
+		a.apply(n, "StartBound", nil, n.StartBound)
 		if n.EndBound != nil {
-			Walk(v, n.EndBound)
+			a.apply(n, "EndBound", nil, n.EndBound)
 		}
-	case sqlast.WindowFrameUnits:
-		// nothing to do
-	case *sqlast.CurrentRow:
-		// nothing to do
-	case *sqlast.UnboundedPreceding:
-		// nothing to do
-	case *sqlast.UnboundedFollowing:
-		// nothing to do
-	case *sqlast.Preceding:
-		// nothing to do
-	case *sqlast.Following:
+	case sqlast.WindowFrameUnits,
+		*sqlast.CurrentRow,
+		*sqlast.UnboundedPreceding,
+		*sqlast.UnboundedFollowing,
+		*sqlast.Preceding,
+		*sqlast.Following:
 		// nothing to do
 	case *sqlast.Query:
-		for _, c := range n.CTEs {
-			Walk(v, c)
-		}
-		Walk(v, n.Body)
-		for _, o := range n.OrderBy {
-			Walk(v, o)
-		}
+		a.applyList(n, "CTEs")
+		a.apply(n, "Body", nil, n.Body)
+		a.applyList(n, "OrderBy")
 		if n.Limit != nil {
-			Walk(v, n.Limit)
+			a.apply(n, "Limit", nil, n.Limit)
 		}
 	case *sqlast.CTE:
-		Walk(v, n.Query)
-		Walk(v, n.Alias)
+		a.apply(n, "Query", nil, n.Query)
+		a.apply(n, "Alias", nil, n.Alias)
 	case *sqlast.SelectExpr:
-		Walk(v, n.Select)
+		a.apply(n, "Select", nil, n.Select)
 	case *sqlast.QueryExpr:
-		Walk(v, n.Query)
+		a.apply(n, "Query", nil, n.Query)
 	case *sqlast.SetOperationExpr:
-		Walk(v, n.Op)
-		Walk(v, n.Left)
-		Walk(v, n.Right)
+		a.apply(n, "Op", nil, n.Op)
+		a.apply(n, "Left", nil, n.Left)
+		a.apply(n, "Right", nil, n.Right)
 	case *sqlast.UnionOperator:
 		// nothing to do
 	case *sqlast.ExceptOperator:
@@ -228,68 +218,62 @@ func (a *application) apply(parent sqlast.Node, name string, iter *iterator, n s
 	case *sqlast.IntersectOperator:
 		// nothing to do
 	case *sqlast.SQLSelect:
-		for _, p := range n.Projection {
-			Walk(v, p)
-		}
-		if len(n.FromClause) != 0 {
-			for _, f := range n.FromClause {
-				Walk(v, f)
-			}
-		}
+		a.applyList(n, "Projection")
+		a.applyList(n, "FromClause")
 		if n.WhereClause != nil {
-			Walk(v, n.WhereClause)
+			a.apply(n, "WhereClause", nil, n.WhereClause)
 		}
-		walkASTNodeLists(v, n.GroupByClause)
+		a.applyList(n, "GroupByClause")
 		if n.HavingClause != nil {
-			Walk(v, n.HavingClause)
+			a.apply(n, "HavingClause", nil, n.HavingClause)
 		}
 	case *sqlast.QualifiedJoin:
-		Walk(v, n.LeftElement)
-		Walk(v, n.Type)
-		Walk(v, n.RightElement)
-		Walk(v, n.Spec)
+		a.apply(n, "LeftElement", nil, n.LeftElement)
+		a.apply(n, "Type", nil, n.Type)
+		a.apply(n, "RightElement", nil, n.RightElement)
+		a.apply(n, "Spec", nil, n.Spec)
 	case *sqlast.TableJoinElement:
-		Walk(v, n.Ref)
+		a.apply(n, "Ref", nil, n.Ref)
 	case sqlast.JoinType:
 		// nothing to do
 	case *sqlast.JoinCondition:
-		Walk(v, n.SearchCondition)
+		a.apply(n, "SearchCondition", nil, n.SearchCondition)
 	case *sqlast.NaturalJoin:
-		Walk(v, n.LeftElement)
-		Walk(v, n.Type)
-		Walk(v, n.RightElement)
+		a.apply(n, "LeftElement", nil, n.LeftElement)
+		a.apply(n, "Type", nil, n.Type)
+		a.apply(n, "RightElement", nil, n.RightElement)
 	case *sqlast.CrossJoin:
-		Walk(v, n.Factor)
-		Walk(v, n.Reference)
+		a.apply(n, "Factor", nil, n.Factor)
+		a.apply(n, "Reference", nil, n.Reference)
 	case *sqlast.Table:
-		Walk(v, n.Name)
+		a.apply(n, "Name", nil, n.Name)
 		if n.Alias != nil {
-			Walk(v, n.Alias)
+			a.apply(n, "Alias", nil, n.Alias)
 		}
-		walkASTNodeLists(v, n.Args)
-		walkASTNodeLists(v, n.WithHints)
+		a.applyList(n, "Args")
+		a.applyList(n, "WithHints")
 	case *sqlast.Derived:
-		Walk(v, n.SubQuery)
+		a.apply(n, "SubQuery", nil, n.SubQuery)
 		if n.Alias != nil {
-			Walk(v, n.Alias)
+			a.apply(n, "Alias", nil, n.Alias)
 		}
 	case *sqlast.UnnamedSelectItem:
-		Walk(v, n.Node)
+		a.apply(n, "Node", nil, n.Node)
 	case *sqlast.AliasSelectItem:
-		Walk(v, n.Expr)
-		Walk(v, n.Alias)
+		a.apply(n, "Expr", nil, n.Expr)
+		a.apply(n, "Alias", nil, n.Alias)
 	case *sqlast.QualifiedWildcardSelectItem:
-		Walk(v, n.Prefix)
+		a.apply(n, "Prefix", nil, n.Prefix)
 	case *sqlast.WildcardSelectItem:
 		// nothing to do
 	case *sqlast.OrderByExpr:
-		Walk(v, n.Expr)
+		a.apply(n, "Expr", nil, n.Expr)
 	case *sqlast.LimitExpr:
 		if !n.All {
-			Walk(v, n.LimitValue)
+			a.apply(n, "LimitValue", nil, n.LimitValue)
 		}
 		if n.OffsetValue != nil {
-			Walk(v, n.OffsetValue)
+			a.apply(n, "OffsetValue", nil, n.OffsetValue)
 		}
 	case *sqlast.CharType:
 		// nothing to do
@@ -338,128 +322,120 @@ func (a *application) apply(parent sqlast.Node, name string, iter *iterator, n s
 	case *sqlast.Custom:
 		// nothing to do
 	case *sqlast.InsertStmt:
-		Walk(v, n.TableName)
-		walkIdentLists(v, n.Columns)
+		a.apply(n, "TableName", nil, n.TableName)
+		a.applyList(n, "Columns")
 	case *sqlast.CopyStmt:
-		Walk(v, n.TableName)
-		walkIdentLists(v, n.Columns)
+		a.apply(n, "TableName", nil, n.TableName)
+		a.applyList(n, "Columns")
 	case *sqlast.UpdateStmt:
-		Walk(v, n.TableName)
-		for _, a := range n.Assignments {
-			Walk(v, a)
-		}
-		Walk(v, n.Selection)
+		a.apply(n, "TableName", nil, n.TableName)
+		a.applyList(n, "Assignments")
+		a.apply(n, "Selection", nil, n.Selection)
 	case *sqlast.DeleteStmt:
-		Walk(v, n.TableName)
-		Walk(v, n.Selection)
+		a.apply(n, "TableName", nil, n.TableName)
+		a.apply(n, "Selection", nil, n.Selection)
 	case *sqlast.CreateViewStmt:
-		Walk(v, n.Name)
-		Walk(v, n.Query)
+		a.apply(n, "Name", nil, n.Name)
+		a.apply(n, "Query", nil, n.Query)
 	case *sqlast.CreateTableStmt:
-		Walk(v, n.Name)
-		for _, e := range n.Elements {
-			Walk(v, e)
-		}
+		a.apply(n, "Name", nil, n.Name)
+		a.applyList(n, "Elements")
 	case *sqlast.Assignment:
-		Walk(v, n.ID)
-		Walk(v, n.Value)
+		a.apply(n, "ID", nil, n.ID)
+		a.apply(n, "Value", nil, n.Value)
 	case *sqlast.TableConstraint:
 		if n.Name != nil {
-			Walk(v, n.Name)
+			a.apply(n, "Name", nil, n.Name)
 		}
-		Walk(v, n.Spec)
+		a.apply(n, "Spec", nil, n.Spec)
 	case *sqlast.UniqueTableConstraint:
-		walkIdentLists(v, n.Columns)
+		a.applyList(n, "Columns")
 	case *sqlast.ReferentialTableConstraint:
-		walkIdentLists(v, n.Columns)
-		Walk(v, n.KeyExpr)
+		a.applyList(n, "Columns")
+		a.apply(n, "KeyExpr", nil, n.KeyExpr)
 	case *sqlast.ReferenceKeyExpr:
-		Walk(v, n.TableName)
-		walkIdentLists(v, n.Columns)
+		a.apply(n, "TableName", nil, n.TableName)
+		a.applyList(n, "Columns")
 	case *sqlast.CheckTableConstraint:
-		Walk(v, n.Expr)
+		a.apply(n, "Expr", nil, n.Expr)
 	case *sqlast.ColumnDef:
-		Walk(v, n.Name)
-		Walk(v, n.DataType)
+		a.apply(n, "Name", nil, n.Name)
+		a.apply(n, "DataType", nil, n.DataType)
 		if n.Default != nil {
-			Walk(v, n.Default)
+			a.apply(n, "Default", nil, n.Default)
 		}
-		for _, c := range n.Constraints {
-			Walk(v, c)
-		}
+		a.applyList(n, "Constraints")
 	case *sqlast.ColumnConstraint:
 		if n.Name != nil {
-			Walk(v, n.Name)
+			a.apply(n, "Name", nil, n.Name)
 		}
-		Walk(v, n.Spec)
+		a.apply(n, "Spec", nil, n.Spec)
 	case *sqlast.NotNullColumnSpec:
 		// nothing to do
 	case *sqlast.UniqueColumnSpec:
 		// nothing to do
 	case *sqlast.ReferencesColumnSpec:
-		Walk(v, n.TableName)
-		walkIdentLists(v, n.Columns)
+		a.apply(n, "TableName", nil, n.TableName)
+		a.applyList(n, "Columns")
 	case *sqlast.CheckColumnSpec:
-		Walk(v, n.Expr)
+		a.apply(n, "Expr", nil, n.Expr)
 	case *sqlast.AlterTableStmt:
-		Walk(v, n.TableName)
-		Walk(v, n.Action)
+		a.apply(n, "TableName", nil, n.TableName)
+		a.apply(n, "Action", nil, n.Action)
 	case *sqlast.AddColumnTableAction:
-		Walk(v, n.Column)
+		a.apply(n, "Column", nil, n.Column)
 	case *sqlast.AlterColumnTableAction:
-		Walk(v, n.ColumnName)
-		Walk(v, n.Action)
+		a.apply(n, "ColumnName", nil, n.ColumnName)
+		a.apply(n, "Action", nil, n.Action)
 	case *sqlast.SetDefaultColumnAction:
-		Walk(v, n.Default)
+		a.apply(n, "Default", nil, n.Default)
 	case *sqlast.DropDefaultColumnAction:
 		// nothing to do
 	case *sqlast.PGAlterDataTypeColumnAction:
-		Walk(v, n.DataType)
+		a.apply(n, "DataType", nil, n.DataType)
 	case *sqlast.PGSetNotNullColumnAction:
 		// nothing to do
 	case *sqlast.PGDropNotNullColumnAction:
 		// nothing to do
 	case *sqlast.RemoveColumnTableAction:
-		Walk(v, n.Name)
+		a.apply(n, "Name", nil, n.Name)
 	case *sqlast.AddConstraintTableAction:
-		Walk(v, n.Constraint)
+		a.apply(n, "Constraint", nil, n.Constraint)
 	case *sqlast.DropConstraintTableAction:
-		Walk(v, n.Name)
+		a.apply(n, "Name", nil, n.Name)
 	case *sqlast.DropTableStmt:
-		for _, t := range n.TableNames {
-			Walk(v, t)
-		}
+		a.applyList(n, "TableNames")
 	case *sqlast.CreateIndexStmt:
-		Walk(v, n.TableName)
+		a.apply(n, "TableName", nil, n.TableName)
 		if n.IndexName != nil {
-			Walk(v, n.IndexName)
+			a.apply(n, "IndexName", nil, n.IndexName)
 		}
 		if n.MethodName != nil {
-			Walk(v, n.MethodName)
+			a.apply(n, "MethodName", nil, n.MethodName)
 		}
-		walkIdentLists(v, n.ColumnNames)
+		a.applyList(n, "ColumnNames")
 		if n.Selection != nil {
-			Walk(v, n.Selection)
+			a.apply(n, "Selection", nil, n.Selection)
 		}
 	case *sqlast.DropIndexStmt:
-		walkIdentLists(v, n.IndexNames)
+		a.applyList(n, "IndexNames")
 	case *sqlast.ExplainStmt:
-		Walk(v, n.Stmt)
+		a.apply(n, "Stmt", nil, n.Stmt)
 	case sqlast.Operator:
 		// nothing to do
 	case *sqlast.NullValue,
-	*sqlast.LongValue,
-	*sqlast.DoubleValue,
-	*sqlast.SingleQuotedString,
-	*sqlast.NationalStringLiteral,
-	*sqlast.BooleanValue,
-	*sqlast.DateValue,
-	*sqlast.TimeValue,
-	*sqlast.DateTimeValue,
-	*sqlast.TimestampValue:
+		*sqlast.LongValue,
+		*sqlast.DoubleValue,
+		*sqlast.SingleQuotedString,
+		*sqlast.NationalStringLiteral,
+		*sqlast.BooleanValue,
+		*sqlast.DateValue,
+		*sqlast.TimeValue,
+		*sqlast.DateTimeValue,
+		*sqlast.TimestampValue:
 		// nothing to do
 	default:
-		// log.Fatalf("not implemented type %T: %+v", node, node)
+		log.Fatalf("not implemented type %T: %+v", n, n)
 	}
 
 }
