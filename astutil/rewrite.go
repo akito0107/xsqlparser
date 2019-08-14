@@ -333,7 +333,9 @@ func (a *application) apply(parent sqlast.Node, name string, iter *iterator, n s
 		a.apply(n, "Selection", nil, n.Selection)
 	case *sqlast.DeleteStmt:
 		a.apply(n, "TableName", nil, n.TableName)
-		a.apply(n, "Selection", nil, n.Selection)
+		if n.Selection != nil {
+			a.apply(n, "Selection", nil, n.Selection)
+		}
 	case *sqlast.CreateViewStmt:
 		a.apply(n, "Name", nil, n.Name)
 		a.apply(n, "Query", nil, n.Query)

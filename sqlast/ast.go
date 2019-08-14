@@ -200,7 +200,7 @@ type ObjectName struct {
 	Idents []*Ident
 }
 
-func NewSQLObjectName(strs ...string) *ObjectName {
+func NewObjectName(strs ...string) *ObjectName {
 	idents := make([]*Ident, 0, len(strs))
 
 	for _, s := range strs {

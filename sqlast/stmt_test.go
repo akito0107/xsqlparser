@@ -17,7 +17,7 @@ func TestSQLInsert_ToSQLString(t *testing.T) {
 		{
 			name: "simple case",
 			in: &InsertStmt{
-				TableName: NewSQLObjectName("customers"),
+				TableName: NewObjectName("customers"),
 				Columns: []*Ident{
 					NewIdent("customer_name"),
 					NewIdent("contract_name"),
@@ -52,7 +52,7 @@ func TestSQLUpdate_ToSQLString(t *testing.T) {
 		{
 			name: "simple case",
 			in: &UpdateStmt{
-				TableName: NewSQLObjectName("customers"),
+				TableName: NewObjectName("customers"),
 				Assignments: []*Assignment{
 					{
 						ID:    NewIdent("contract_name"),
@@ -92,7 +92,7 @@ func TestSQLDelete_ToSQLString(t *testing.T) {
 		{
 			name: "simple case",
 			in: &DeleteStmt{
-				TableName: NewSQLObjectName("customers"),
+				TableName: NewObjectName("customers"),
 				Selection: &BinaryExpr{
 					Op:    Eq,
 					Left:  NewIdent("customer_id"),
@@ -122,7 +122,7 @@ func TestSQLCreateView_ToSQLString(t *testing.T) {
 		{
 			name: "simple case",
 			in: &CreateViewStmt{
-				Name: NewSQLObjectName("customers_view"),
+				Name: NewObjectName("customers_view"),
 				Query: &Query{
 					Body: &SelectExpr{
 						Select: &SQLSelect{
@@ -178,7 +178,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 		{
 			name: "simple case",
 			in: &CreateTableStmt{
-				Name: NewSQLObjectName("persons"),
+				Name: NewObjectName("persons"),
 				Elements: []TableElement{
 					&ColumnDef{
 						Name:     NewIdent("person_id"),
@@ -214,7 +214,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 							},
 							{
 								Spec: &ReferencesColumnSpec{
-									TableName: NewSQLObjectName("test"),
+									TableName: NewObjectName("test"),
 									Columns:   []*Ident{NewIdent("id1"), NewIdent("id2")},
 								},
 							},
@@ -283,7 +283,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 		{
 			name: "with table constraint",
 			in: &CreateTableStmt{
-				Name: NewSQLObjectName("persons"),
+				Name: NewObjectName("persons"),
 				Elements: []TableElement{
 					&ColumnDef{
 						Name:     NewIdent("person_id"),
@@ -332,7 +332,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 		{
 			name: "NotExists",
 			in: &CreateTableStmt{
-				Name:      NewSQLObjectName("persons"),
+				Name:      NewObjectName("persons"),
 				NotExists: true,
 				Elements: []TableElement{
 					&ColumnDef{
@@ -398,7 +398,7 @@ func TestSQLAlterTable_ToSQLString(t *testing.T) {
 		{
 			name: "add column",
 			in: &AlterTableStmt{
-				TableName: NewSQLObjectName("customers"),
+				TableName: NewObjectName("customers"),
 				Action: &AddColumnTableAction{
 					Column: &ColumnDef{
 						Name: NewIdent("email"),
@@ -414,7 +414,7 @@ func TestSQLAlterTable_ToSQLString(t *testing.T) {
 		{
 			name: "add column over uint8",
 			in: &AlterTableStmt{
-				TableName: NewSQLObjectName("customers"),
+				TableName: NewObjectName("customers"),
 				Action: &AddColumnTableAction{
 					Column: &ColumnDef{
 						Name: NewIdent("email"),
@@ -430,7 +430,7 @@ func TestSQLAlterTable_ToSQLString(t *testing.T) {
 		{
 			name: "remove column",
 			in: &AlterTableStmt{
-				TableName: NewSQLObjectName("products"),
+				TableName: NewObjectName("products"),
 				Action: &RemoveColumnTableAction{
 					Name:    NewIdent("description"),
 					Cascade: true,
@@ -442,7 +442,7 @@ func TestSQLAlterTable_ToSQLString(t *testing.T) {
 		{
 			name: "add constraint",
 			in: &AlterTableStmt{
-				TableName: NewSQLObjectName("products"),
+				TableName: NewObjectName("products"),
 				Action: &AddConstraintTableAction{
 					Constraint: &TableConstraint{
 						Spec: &ReferentialTableConstraint{
@@ -461,7 +461,7 @@ func TestSQLAlterTable_ToSQLString(t *testing.T) {
 		{
 			name: "alter column",
 			in: &AlterTableStmt{
-				TableName: NewSQLObjectName("products"),
+				TableName: NewObjectName("products"),
 				Action: &AlterColumnTableAction{
 					ColumnName: NewIdent("created_at"),
 					Action: &SetDefaultColumnAction{
@@ -475,7 +475,7 @@ func TestSQLAlterTable_ToSQLString(t *testing.T) {
 		{
 			name: "pg change type",
 			in: &AlterTableStmt{
-				TableName: NewSQLObjectName("products"),
+				TableName: NewObjectName("products"),
 				Action: &AlterColumnTableAction{
 					ColumnName: NewIdent("number"),
 					Action: &PGAlterDataTypeColumnAction{
@@ -510,7 +510,7 @@ func TestSQLCreateIndex_ToSQLString(t *testing.T) {
 		{
 			name: "create index",
 			in: &CreateIndexStmt{
-				TableName:   NewSQLObjectName("customers"),
+				TableName:   NewObjectName("customers"),
 				ColumnNames: []*Ident{NewIdent("name")},
 			},
 			out: "CREATE INDEX ON customers (name)",
@@ -518,7 +518,7 @@ func TestSQLCreateIndex_ToSQLString(t *testing.T) {
 		{
 			name: "create unique index",
 			in: &CreateIndexStmt{
-				TableName:   NewSQLObjectName("customers"),
+				TableName:   NewObjectName("customers"),
 				IsUnique:    true,
 				ColumnNames: []*Ident{NewIdent("name")},
 			},
@@ -527,7 +527,7 @@ func TestSQLCreateIndex_ToSQLString(t *testing.T) {
 		{
 			name: "create index with name",
 			in: &CreateIndexStmt{
-				TableName:   NewSQLObjectName("customers"),
+				TableName:   NewObjectName("customers"),
 				IndexName:   NewIdent("customers_idx"),
 				IsUnique:    true,
 				ColumnNames: []*Ident{NewIdent("name"), NewIdent("email")},
@@ -537,7 +537,7 @@ func TestSQLCreateIndex_ToSQLString(t *testing.T) {
 		{
 			name: "create index with name",
 			in: &CreateIndexStmt{
-				TableName:   NewSQLObjectName("customers"),
+				TableName:   NewObjectName("customers"),
 				IndexName:   NewIdent("customers_idx"),
 				IsUnique:    true,
 				MethodName:  NewIdent("gist"),
@@ -548,7 +548,7 @@ func TestSQLCreateIndex_ToSQLString(t *testing.T) {
 		{
 			name: "create partial index with name",
 			in: &CreateIndexStmt{
-				TableName:   NewSQLObjectName("customers"),
+				TableName:   NewObjectName("customers"),
 				IndexName:   NewIdent("customers_idx"),
 				IsUnique:    true,
 				MethodName:  NewIdent("gist"),
