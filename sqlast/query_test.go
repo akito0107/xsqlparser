@@ -22,7 +22,7 @@ func TestSQLSelect_ToSQLString(t *testing.T) {
 				},
 				FromClause: []TableReference{
 					&Table{
-						Name: NewSQLObjectName("test_table"),
+						Name: NewObjectName("test_table"),
 					},
 				},
 			},
@@ -33,20 +33,20 @@ func TestSQLSelect_ToSQLString(t *testing.T) {
 			in: &SQLSelect{
 				Projection: []SQLSelectItem{
 					&UnnamedSelectItem{
-						Node: NewSQLObjectName("test"),
+						Node: NewObjectName("test"),
 					},
 				},
 				FromClause: []TableReference{
 					&NaturalJoin{
 						LeftElement: &TableJoinElement{
 							Ref: &Table{
-								Name: NewSQLObjectName("test_table"),
+								Name: NewObjectName("test_table"),
 							},
 						},
 						Type: IMPLICIT,
 						RightElement: &TableJoinElement{
 							Ref: &Table{
-								Name: NewSQLObjectName("test_table2"),
+								Name: NewObjectName("test_table2"),
 							},
 						},
 					},
@@ -64,7 +64,7 @@ func TestSQLSelect_ToSQLString(t *testing.T) {
 				},
 				FromClause: []TableReference{
 					&Table{
-						Name: NewSQLObjectName("test_table"),
+						Name: NewObjectName("test_table"),
 					},
 				},
 				WhereClause: &BinaryExpr{
@@ -83,7 +83,7 @@ func TestSQLSelect_ToSQLString(t *testing.T) {
 				Projection: []SQLSelectItem{
 					&AliasSelectItem{
 						Expr: &Function{
-							Name: NewSQLObjectName("COUNT"),
+							Name: NewObjectName("COUNT"),
 							Args: []Node{&CompoundIdent{
 								Idents: []*Ident{NewIdent("t1"), NewIdent("id")},
 							}},
@@ -95,14 +95,14 @@ func TestSQLSelect_ToSQLString(t *testing.T) {
 					&QualifiedJoin{
 						LeftElement: &TableJoinElement{
 							Ref: &Table{
-								Name:  NewSQLObjectName("test_table"),
+								Name:  NewObjectName("test_table"),
 								Alias: NewIdent("t1"),
 							},
 						},
 						Type: LEFT,
 						RightElement: &TableJoinElement{
 							Ref: &Table{
-								Name:  NewSQLObjectName("test_table2"),
+								Name:  NewObjectName("test_table2"),
 								Alias: NewIdent("t2"),
 							},
 						},
@@ -128,17 +128,17 @@ func TestSQLSelect_ToSQLString(t *testing.T) {
 				Projection: []SQLSelectItem{
 					&UnnamedSelectItem{
 						Node: &Function{
-							Name: NewSQLObjectName("COUNT"),
+							Name: NewObjectName("COUNT"),
 							Args: []Node{NewIdent("customer_id")},
 						},
 					},
 					&QualifiedWildcardSelectItem{
-						Prefix: NewSQLObjectName("country"),
+						Prefix: NewObjectName("country"),
 					},
 				},
 				FromClause: []TableReference{
 					&Table{
-						Name: NewSQLObjectName("customers"),
+						Name: NewObjectName("customers"),
 					},
 				},
 				GroupByClause: []Node{NewIdent("country")},
@@ -151,7 +151,7 @@ func TestSQLSelect_ToSQLString(t *testing.T) {
 				Projection: []SQLSelectItem{
 					&UnnamedSelectItem{
 						Node: &Function{
-							Name: NewSQLObjectName("COUNT"),
+							Name: NewObjectName("COUNT"),
 							Args: []Node{NewIdent("customer_id")},
 						},
 					},
@@ -161,14 +161,14 @@ func TestSQLSelect_ToSQLString(t *testing.T) {
 				},
 				FromClause: []TableReference{
 					&Table{
-						Name: NewSQLObjectName("customers"),
+						Name: NewObjectName("customers"),
 					},
 				},
 				GroupByClause: []Node{NewIdent("country")},
 				HavingClause: &BinaryExpr{
 					Op: Gt,
 					Left: &Function{
-						Name: NewSQLObjectName("COUNT"),
+						Name: NewObjectName("COUNT"),
 						Args: []Node{NewIdent("customer_id")},
 					},
 					Right: NewLongValue(3),
@@ -210,14 +210,14 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 									&AliasSelectItem{
 										Alias: NewIdent("total_sales"),
 										Expr: &Function{
-											Name: NewSQLObjectName("SUM"),
+											Name: NewObjectName("SUM"),
 											Args: []Node{NewIdent("amount")},
 										},
 									},
 								},
 								FromClause: []TableReference{
 									&Table{
-										Name: NewSQLObjectName("orders"),
+										Name: NewObjectName("orders"),
 									},
 								},
 								GroupByClause: []Node{NewIdent("region")},
@@ -231,14 +231,14 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 						&AliasSelectItem{
 							Alias: NewIdent("product_units"),
 							Expr: &Function{
-								Name: NewSQLObjectName("SUM"),
+								Name: NewObjectName("SUM"),
 								Args: []Node{NewIdent("quantity")},
 							},
 						},
 					},
 					FromClause: []TableReference{
 						&Table{
-							Name: NewSQLObjectName("orders"),
+							Name: NewObjectName("orders"),
 						},
 					},
 					WhereClause: &InSubQuery{
@@ -250,7 +250,7 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 								},
 								FromClause: []TableReference{
 									&Table{
-										Name: NewSQLObjectName("top_regions"),
+										Name: NewObjectName("top_regions"),
 									},
 								},
 							},
@@ -276,14 +276,14 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 						&AliasSelectItem{
 							Alias: NewIdent("product_units"),
 							Expr: &Function{
-								Name: NewSQLObjectName("SUM"),
+								Name: NewObjectName("SUM"),
 								Args: []Node{NewIdent("quantity")},
 							},
 						},
 					},
 					FromClause: []TableReference{
 						&Table{
-							Name: NewSQLObjectName("orders"),
+							Name: NewObjectName("orders"),
 						},
 					},
 					WhereClause: &InSubQuery{
@@ -295,7 +295,7 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 								},
 								FromClause: []TableReference{
 									&Table{
-										Name: NewSQLObjectName("top_regions"),
+										Name: NewObjectName("top_regions"),
 									},
 								},
 							},
@@ -323,7 +323,7 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 					},
 					FromClause: []TableReference{
 						&Table{
-							Name: NewSQLObjectName("user"),
+							Name: NewObjectName("user"),
 						},
 					},
 					WhereClause: &Exists{
@@ -337,7 +337,7 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 								},
 								FromClause: []TableReference{
 									&Table{
-										Name: NewSQLObjectName("user_sub"),
+										Name: NewObjectName("user_sub"),
 									},
 								},
 								WhereClause: &BinaryExpr{
@@ -407,7 +407,7 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 					},
 					FromClause: []TableReference{
 						&Table{
-							Name: NewSQLObjectName("user"),
+							Name: NewObjectName("user"),
 						},
 					},
 					WhereClause: &Between{

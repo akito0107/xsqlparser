@@ -252,7 +252,9 @@ func Walk(v Visitor, node Node) {
 		Walk(v, n.Selection)
 	case *DeleteStmt:
 		Walk(v, n.TableName)
-		Walk(v, n.Selection)
+		if n.Selection != nil {
+			Walk(v, n.Selection)
+		}
 	case *CreateViewStmt:
 		Walk(v, n.Name)
 		Walk(v, n.Query)

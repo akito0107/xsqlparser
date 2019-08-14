@@ -112,7 +112,7 @@ func (t *TimeValue) ToSQLString() string {
 
 type DateTimeValue time.Time
 
-func NewDateTiemValue(t time.Time) *DateTimeValue {
+func NewDateTimeValue(t time.Time) *DateTimeValue {
 	v := DateTimeValue(t)
 	return &v
 }
@@ -125,7 +125,6 @@ func (d *DateTimeValue) ToSQLString() string {
 	return time.Time(*d).Format("2006-01-02 15:04:05")
 }
 
-// TODO
 type TimestampValue time.Time
 
 func NewTimestampValue(t time.Time) *TimestampValue {
