@@ -1,0 +1,1 @@
+INSERT INTO tbl_name (a,b,c) SELECT * from tbl_name2;

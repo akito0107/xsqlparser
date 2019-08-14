@@ -919,20 +919,33 @@ func (p *Parser) parseInsert() (sqlast.Stmt, error) {
 		p.expectToken(RParen)
 	}
 
-	p.expectKeyword("VALUES")
-	var values [][]sqlast.Node
-
-	for {
-		p.expectToken(LParen)
-		v, err := p.parseExprList()
+	var insertSrc sqlast.InsertSource
+	if ok, _ := p.parseKeyword("VALUES"); !ok {
+		q, err := p.parseQuery()
 		if err != nil {
-			return nil, errors.Errorf("invalid insert value assign: %w", err)
+			return nil, errors.Errorf("invalid select source: expected query: %w", err)
 		}
-		values = append(values, v)
-		p.expectToken(RParen)
-		if ok, _ := p.consumeToken(Comma); !ok {
-			break
+		insertSrc = &sqlast.SubQuerySource{
+			SubQuery: q,
 		}
+	} else {
+		var constSrc sqlast.ConstructorSource
+		for {
+			p.expectToken(LParen)
+			v, err := p.parseExprList()
+			if err != nil {
+				return nil, errors.Errorf("invalid insert value assign: %w", err)
+			}
+			constSrc.Rows = append(constSrc.Rows, &sqlast.RowValueExpr{
+				Values: v,
+			})
+			p.expectToken(RParen)
+			if ok, _ := p.consumeToken(Comma); !ok {
+				break
+			}
+		}
+
+		insertSrc = &constSrc
 	}
 
 	var assigns []*sqlast.Assignment
@@ -947,7 +960,7 @@ func (p *Parser) parseInsert() (sqlast.Stmt, error) {
 	return &sqlast.InsertStmt{
 		TableName:         tableName,
 		Columns:           columns,
-		Values:            values,
+		Source:            insertSrc,
 		UpdateAssignments: assigns,
 	}, nil
 }

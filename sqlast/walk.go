@@ -241,6 +241,22 @@ func Walk(v Visitor, node Node) {
 	case *InsertStmt:
 		Walk(v, n.TableName)
 		walkIdentLists(v, n.Columns)
+		Walk(v, n.Source)
+
+		for _, a := range n.UpdateAssignments {
+			Walk(v, a)
+		}
+
+	case *ConstructorSource:
+		for _, r := range n.Rows {
+			Walk(v, r)
+		}
+	case *RowValueExpr:
+		for _, r := range n.Values {
+			Walk(v, r)
+		}
+	case *SubQuerySource:
+		Walk(v, n.SubQuery)
 	case *CopyStmt:
 		Walk(v, n.TableName)
 		walkIdentLists(v, n.Columns)
