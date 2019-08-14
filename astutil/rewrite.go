@@ -105,7 +105,7 @@ type iterator struct {
 
 type application struct {
 	pre, post ApplyFunc
-	curosor   Cursor
+	cursor    Cursor
 	iter      iterator
 }
 
@@ -114,14 +114,14 @@ func (a *application) apply(parent sqlast.Node, name string, iter *iterator, n s
 		n = nil
 	}
 
-	saved := a.curosor
-	a.curosor.parent = parent
-	a.curosor.name = name
-	a.curosor.iter = iter
-	a.curosor.node = n
+	saved := a.cursor
+	a.cursor.parent = parent
+	a.cursor.name = name
+	a.cursor.iter = iter
+	a.cursor.node = n
 
-	if a.pre != nil && !a.pre(&a.curosor) {
-		a.curosor = saved
+	if a.pre != nil && !a.pre(&a.cursor) {
+		a.cursor = saved
 		return
 	}
 
@@ -178,7 +178,7 @@ func (a *application) apply(parent sqlast.Node, name string, iter *iterator, n s
 		a.applyList(n, "PartitionBy")
 		a.applyList(n, "OrderBy")
 		if n.WindowsFrame != nil {
-			a.applyList(n, "WindowsFrame")
+			a.apply(n, "WindowsFrame", nil, n.WindowsFrame)
 		}
 	case *sqlast.WindowFrame:
 		a.apply(n, "Units", nil, n.Units)
@@ -438,13 +438,17 @@ func (a *application) apply(parent sqlast.Node, name string, iter *iterator, n s
 		log.Fatalf("not implemented type %T: %+v", n, n)
 	}
 
+	if a.post != nil && !a.post(&a.cursor) {
+		panic(abort)
+	}
+	a.cursor = saved
 }
 
 func (a *application) applyList(parent sqlast.Node, name string) {
 	saved := a.iter
 	a.iter.index = 0
 	for {
-		v := reflect.Indirect(reflect.ValueOf(parent))
+		v := reflect.Indirect(reflect.ValueOf(parent)).FieldByName(name)
 		if a.iter.index >= v.Len() {
 			break
 		}
