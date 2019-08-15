@@ -751,10 +751,14 @@ func TestParser_ParseStatement(t *testing.T) {
 						sqlast.NewIdent("customer_name"),
 						sqlast.NewIdent("contract_name"),
 					},
-					Values: [][]sqlast.Node{
-						{
-							sqlast.NewSingleQuotedString("Cardinal"),
-							sqlast.NewSingleQuotedString("Tom B. Erichsen"),
+					Source: &sqlast.ConstructorSource{
+						Rows: []*sqlast.RowValueExpr{
+							{
+								Values: []sqlast.Node{
+									sqlast.NewSingleQuotedString("Cardinal"),
+									sqlast.NewSingleQuotedString("Tom B. Erichsen"),
+								},
+							},
 						},
 					},
 				},
@@ -770,14 +774,20 @@ func TestParser_ParseStatement(t *testing.T) {
 						sqlast.NewIdent("customer_name"),
 						sqlast.NewIdent("contract_name"),
 					},
-					Values: [][]sqlast.Node{
-						{
-							sqlast.NewSingleQuotedString("Cardinal"),
-							sqlast.NewSingleQuotedString("Tom B. Erichsen"),
-						},
-						{
-							sqlast.NewSingleQuotedString("Cardinal"),
-							sqlast.NewSingleQuotedString("Tom B. Erichsen"),
+					Source: &sqlast.ConstructorSource{
+						Rows: []*sqlast.RowValueExpr{
+							{
+								Values: []sqlast.Node{
+									sqlast.NewSingleQuotedString("Cardinal"),
+									sqlast.NewSingleQuotedString("Tom B. Erichsen"),
+								},
+							},
+							{
+								Values: []sqlast.Node{
+									sqlast.NewSingleQuotedString("Cardinal"),
+									sqlast.NewSingleQuotedString("Tom B. Erichsen"),
+								},
+							},
 						},
 					},
 				},

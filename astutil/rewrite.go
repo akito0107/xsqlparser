@@ -324,6 +324,14 @@ func (a *application) apply(parent sqlast.Node, name string, iter *iterator, n s
 	case *sqlast.InsertStmt:
 		a.apply(n, "TableName", nil, n.TableName)
 		a.applyList(n, "Columns")
+		a.apply(n, "Source", nil, n.Source)
+		a.applyList(n, "UpdateAssignments")
+	case *sqlast.ConstructorSource:
+		a.applyList(n, "Rows")
+	case *sqlast.RowValueExpr:
+		a.applyList(n, "Values")
+	case *sqlast.SubQuerySource:
+		a.apply(n, "SubQuery", nil, n.SubQuery)
 	case *sqlast.CopyStmt:
 		a.apply(n, "TableName", nil, n.TableName)
 		a.applyList(n, "Columns")

@@ -22,14 +22,78 @@ func TestSQLInsert_ToSQLString(t *testing.T) {
 					NewIdent("customer_name"),
 					NewIdent("contract_name"),
 				},
-				Values: [][]Node{
-					{
-						NewSingleQuotedString("Cardinal"),
-						NewSingleQuotedString("Tom B. Erichsen"),
+				Source: &ConstructorSource{
+					Rows: []*RowValueExpr{
+						{
+							Values: []Node{
+								NewSingleQuotedString("Cardinal"),
+								NewSingleQuotedString("Tom B. Erichsen"),
+							},
+						},
 					},
 				},
 			},
 			out: "INSERT INTO customers (customer_name, contract_name) VALUES ('Cardinal', 'Tom B. Erichsen')",
+		},
+		{
+			name: "multi row case",
+			in: &InsertStmt{
+				TableName: NewObjectName("customers"),
+				Columns: []*Ident{
+					NewIdent("customer_name"),
+					NewIdent("contract_name"),
+				},
+				Source: &ConstructorSource{
+					Rows: []*RowValueExpr{
+						{
+							Values: []Node{
+								NewSingleQuotedString("Cardinal"),
+								NewSingleQuotedString("Tom B. Erichsen"),
+							},
+						},
+						{
+							Values: []Node{
+								NewSingleQuotedString("Cardinal2"),
+								NewSingleQuotedString("Tom B. Erichsen2"),
+							},
+						},
+						{
+							Values: []Node{
+								NewSingleQuotedString("Cardinal3"),
+								NewSingleQuotedString("Tom B. Erichsen3"),
+							},
+						},
+					},
+				},
+			},
+			out: "INSERT INTO customers (customer_name, contract_name) VALUES ('Cardinal', 'Tom B. Erichsen'), ('Cardinal2', 'Tom B. Erichsen2'), ('Cardinal3', 'Tom B. Erichsen3')",
+		},
+		{
+			name: "insert sub query",
+			in: &InsertStmt{
+				TableName: NewObjectName("customers"),
+				Columns: []*Ident{
+					NewIdent("customer_name"),
+					NewIdent("contract_name"),
+				},
+				Source: &SubQuerySource{
+					SubQuery: &Query{
+						Body: &SelectExpr{
+							Select: &SQLSelect{
+								Projection: []SQLSelectItem{
+									&WildcardSelectItem{},
+								},
+								FromClause: []TableReference{
+									&Table{
+										Name: NewObjectName("customers2"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			out: "INSERT INTO customers (customer_name, contract_name) SELECT * FROM customers2",
 		},
 	}
 	for _, c := range cases {

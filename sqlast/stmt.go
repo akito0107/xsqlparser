@@ -12,29 +12,60 @@ type InsertStmt struct {
 	stmt
 	TableName         *ObjectName
 	Columns           []*Ident
-	Values            [][]Node
+	Source            InsertSource
 	UpdateAssignments []*Assignment // MySQL only (ON DUPLICATED KEYS)
 }
 
 func (s *InsertStmt) ToSQLString() string {
-	str := fmt.Sprintf("INSERT INTO %s", s.TableName.ToSQLString())
+	str := fmt.Sprintf("INSERT INTO %s ", s.TableName.ToSQLString())
 	if len(s.Columns) != 0 {
-		str += fmt.Sprintf(" (%s)", commaSeparatedString(s.Columns))
+		str += fmt.Sprintf("(%s) ", commaSeparatedString(s.Columns))
 	}
-	if len(s.Values) != 0 {
-		var valuestrs []string
-		for _, v := range s.Values {
-			str := commaSeparatedString(v)
-			valuestrs = append(valuestrs, fmt.Sprintf("(%s)", str))
-		}
-		str += fmt.Sprintf(" VALUES %s", strings.Join(valuestrs, ", "))
-	}
+
+	str += s.Source.ToSQLString()
 
 	if len(s.UpdateAssignments) != 0 {
 		str += " ON DUPLICATE KEY UPDATE " + commaSeparatedString(s.UpdateAssignments)
 	}
 
 	return str
+}
+
+//go:generate genmark -t InsertSource -e Node
+
+type SubQuerySource struct {
+	insertSource
+	SubQuery *Query
+}
+
+func (s *SubQuerySource) ToSQLString() string {
+	return s.SubQuery.ToSQLString()
+}
+
+type ConstructorSource struct {
+	insertSource
+	Rows []*RowValueExpr
+}
+
+func (c *ConstructorSource) ToSQLString() string {
+	str := "VALUES "
+
+	for idx, r := range c.Rows {
+		str += fmt.Sprintf("(%s)", r.ToSQLString())
+		if idx != len(c.Rows)-1 {
+			str += ", "
+		}
+	}
+
+	return str
+}
+
+type RowValueExpr struct {
+	Values []Node
+}
+
+func (r *RowValueExpr) ToSQLString() string {
+	return commaSeparatedString(r.Values)
 }
 
 type CopyStmt struct {
