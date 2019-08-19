@@ -727,7 +727,7 @@ COLUMN_DEF_LOOP:
 		case "CONSTRAINT", "NOT", "UNIQUE", "PRIMARY", "REFERENCES", "CHECK":
 			s, err := p.parseColumnConstraints()
 			if err != nil {
-				return nil, nil, errors.Errorf("parseColumnConstrains failed: %w", err)
+				return nil, nil, errors.Errorf("parseColumnConstraints failed: %w", err)
 			}
 			specs = s
 		default:
