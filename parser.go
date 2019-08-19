@@ -14,7 +14,7 @@ import (
 )
 
 type Parser struct {
-	tokens []*TokenSet
+	tokens []*Token
 	index  uint
 }
 
@@ -303,7 +303,7 @@ BODY_LOOP:
 	return expr, nil
 }
 
-func (p *Parser) parseSetOperator(token *TokenSet) sqlast.SQLSetOperator {
+func (p *Parser) parseSetOperator(token *Token) sqlast.SQLSetOperator {
 	if token == nil {
 		return nil
 	}
@@ -1755,7 +1755,7 @@ func (p *Parser) getNextPrecedence() (uint, error) {
 	return p.getPrecedence(tok), nil
 }
 
-func (p *Parser) getPrecedence(ts *TokenSet) uint {
+func (p *Parser) getPrecedence(ts *Token) uint {
 	switch ts.Tok {
 	case SQLKeyword:
 		word := ts.Value.(*SQLWord)
@@ -1835,7 +1835,7 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 				return ast, nil
 			}
 
-			ts := &TokenSet{
+			ts := &Token{
 				Tok:   SQLKeyword,
 				Value: MakeKeyword("NOT", 0),
 			}
@@ -2238,7 +2238,7 @@ func (p *Parser) parseLiteralInt() (int, error) {
 	return i, nil
 }
 
-func (p *Parser) parseListOfIds(separator Token) ([]*sqlast.Ident, error) {
+func (p *Parser) parseListOfIds(separator TokenKind) ([]*sqlast.Ident, error) {
 	var idents []*sqlast.Ident
 	expectIdentifier := true
 
@@ -2362,7 +2362,7 @@ func (p *Parser) expectKeyword(expected string) {
 	}
 }
 
-func (p *Parser) expectToken(expected Token) {
+func (p *Parser) expectToken(expected TokenKind) {
 	ok, err := p.consumeToken(expected)
 	if err != nil || !ok {
 		tok, _ := p.peekToken()
@@ -2375,7 +2375,7 @@ func (p *Parser) expectToken(expected Token) {
 	}
 }
 
-func (p *Parser) consumeToken(expected Token) (bool, error) {
+func (p *Parser) consumeToken(expected TokenKind) (bool, error) {
 	tok, err := p.peekToken()
 	if err != nil {
 		return false, err
@@ -2391,7 +2391,7 @@ func (p *Parser) consumeToken(expected Token) (bool, error) {
 	return false, nil
 }
 
-func (p *Parser) mustNextToken() *TokenSet {
+func (p *Parser) mustNextToken() *Token {
 	tok, err := p.nextToken()
 	if err != nil {
 		log.Fatalf("%+v", err)
@@ -2400,7 +2400,7 @@ func (p *Parser) mustNextToken() *TokenSet {
 	return tok
 }
 
-func (p *Parser) nextToken() (*TokenSet, error) {
+func (p *Parser) nextToken() (*Token, error) {
 	for {
 		tok, err := p.nextTokenNoSkip()
 		if err != nil {
@@ -2415,7 +2415,7 @@ func (p *Parser) nextToken() (*TokenSet, error) {
 
 var TokenAlreadyConsumed = errors.New("tokens are already consumed")
 
-func (p *Parser) nextTokenNoSkip() (*TokenSet, error) {
+func (p *Parser) nextTokenNoSkip() (*Token, error) {
 	if p.index < uint(len(p.tokens)) {
 		p.index += 1
 		return p.tokens[p.index-1], nil
@@ -2423,7 +2423,7 @@ func (p *Parser) nextTokenNoSkip() (*TokenSet, error) {
 	return nil, TokenAlreadyConsumed
 }
 
-func (p *Parser) prevToken() *TokenSet {
+func (p *Parser) prevToken() *Token {
 	for {
 		tok := p.prevTokenNoSkip()
 		if tok.Tok == Whitespace {
@@ -2433,7 +2433,7 @@ func (p *Parser) prevToken() *TokenSet {
 	}
 }
 
-func (p *Parser) prevTokenNoSkip() *TokenSet {
+func (p *Parser) prevTokenNoSkip() *Token {
 	if p.index > 0 {
 		p.index -= 1
 		return p.tokens[p.index]
@@ -2441,7 +2441,7 @@ func (p *Parser) prevTokenNoSkip() *TokenSet {
 	return nil
 }
 
-func (p *Parser) peekToken() (*TokenSet, error) {
+func (p *Parser) peekToken() (*Token, error) {
 	u, err := p.tilNonWhitespace()
 	if err != nil {
 		return nil, err
@@ -2449,7 +2449,7 @@ func (p *Parser) peekToken() (*TokenSet, error) {
 	return p.tokens[u], nil
 }
 
-func (p *Parser) tokenAt(n uint) *TokenSet {
+func (p *Parser) tokenAt(n uint) *Token {
 	return p.tokens[n]
 }
 

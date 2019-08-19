@@ -62,8 +62,8 @@ func MakeKeyword(word string, quoteStyle rune) *SQLWord {
 	}
 }
 
-type TokenSet struct {
-	Tok   Token
+type Token struct {
+	Tok   TokenKind
 	Value interface{}
 	Pos   *TokenPos
 }
@@ -94,8 +94,8 @@ func NewTokenizer(src io.Reader, dialect dialect.Dialect) *Tokenizer {
 	}
 }
 
-func (t *Tokenizer) Tokenize() ([]*TokenSet, error) {
-	var tokenset []*TokenSet
+func (t *Tokenizer) Tokenize() ([]*Token, error) {
+	var tokenset []*Token
 
 	for {
 		t, err := t.NextToken()
@@ -108,16 +108,16 @@ func (t *Tokenizer) Tokenize() ([]*TokenSet, error) {
 	return tokenset, nil
 }
 
-func (t *Tokenizer) NextToken() (*TokenSet, error) {
+func (t *Tokenizer) NextToken() (*Token, error) {
 	tok, str, err := t.next()
 	if err == io.EOF {
 		return nil, io.EOF
 	}
 	if err != nil {
-		return &TokenSet{Tok: ILLEGAL, Value: "", Pos: t.Pos()}, errors.Errorf("tokenize failed %w", err)
+		return &Token{Tok: ILLEGAL, Value: "", Pos: t.Pos()}, errors.Errorf("tokenize failed %w", err)
 	}
 
-	return &TokenSet{Tok: tok, Value: str, Pos: t.Pos()}, nil
+	return &Token{Tok: tok, Value: str, Pos: t.Pos()}, nil
 }
 
 func (t *Tokenizer) Pos() *TokenPos {
@@ -127,7 +127,7 @@ func (t *Tokenizer) Pos() *TokenPos {
 	}
 }
 
-func (t *Tokenizer) next() (Token, interface{}, error) {
+func (t *Tokenizer) next() (TokenKind, interface{}, error) {
 	r := t.Scanner.Peek()
 	switch {
 	case ' ' == r:

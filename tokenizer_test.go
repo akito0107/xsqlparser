@@ -12,12 +12,12 @@ func TestTokenizer_Tokenize(t *testing.T) {
 	cases := []struct {
 		name string
 		in   string
-		out  []*TokenSet
+		out  []*Token
 	}{
 		{
 			name: "whitespace",
 			in:   " ",
-			out: []*TokenSet{
+			out: []*Token{
 				{
 					Tok:   Whitespace,
 					Value: " ",
@@ -28,7 +28,7 @@ func TestTokenizer_Tokenize(t *testing.T) {
 			name: "whitespace and new line",
 			in: `
  `,
-			out: []*TokenSet{
+			out: []*Token{
 				{
 					Tok:   Whitespace,
 					Value: "\n",
@@ -42,7 +42,7 @@ func TestTokenizer_Tokenize(t *testing.T) {
 		{
 			name: "whitespace and tab",
 			in: "\r\n	",
-			out: []*TokenSet{
+			out: []*Token{
 				{
 					Tok:   Whitespace,
 					Value: "\n",
@@ -56,7 +56,7 @@ func TestTokenizer_Tokenize(t *testing.T) {
 		{
 			name: "N string",
 			in:   "N'string'",
-			out: []*TokenSet{
+			out: []*Token{
 				{
 					Tok:   NationalStringLiteral,
 					Value: "string",
@@ -66,7 +66,7 @@ func TestTokenizer_Tokenize(t *testing.T) {
 		{
 			name: "N string with keyword",
 			in:   "N'string' NOT",
-			out: []*TokenSet{
+			out: []*Token{
 				{
 					Tok:   NationalStringLiteral,
 					Value: "string",
@@ -87,7 +87,7 @@ func TestTokenizer_Tokenize(t *testing.T) {
 		{
 			name: "Ident",
 			in:   "select",
-			out: []*TokenSet{
+			out: []*Token{
 				{
 					Tok: SQLKeyword,
 					Value: &SQLWord{
@@ -100,7 +100,7 @@ func TestTokenizer_Tokenize(t *testing.T) {
 		{
 			name: "single quote string",
 			in:   "'test'",
-			out: []*TokenSet{
+			out: []*Token{
 				{
 					Tok:   SingleQuotedString,
 					Value: "test",
@@ -110,7 +110,7 @@ func TestTokenizer_Tokenize(t *testing.T) {
 		{
 			name: "quoted string",
 			in:   "\"SELECT\"",
-			out: []*TokenSet{
+			out: []*Token{
 				{
 					Tok: SQLKeyword,
 					Value: &SQLWord{
@@ -124,7 +124,7 @@ func TestTokenizer_Tokenize(t *testing.T) {
 		{
 			name: "parents with number",
 			in:   "(123),",
-			out: []*TokenSet{
+			out: []*Token{
 				{
 					Tok:   LParen,
 					Value: "(",
@@ -146,7 +146,7 @@ func TestTokenizer_Tokenize(t *testing.T) {
 		{
 			name: "minus comment",
 			in:   "-- test",
-			out: []*TokenSet{
+			out: []*Token{
 				{
 					Tok:   Whitespace,
 					Value: " test\n",
@@ -156,7 +156,7 @@ func TestTokenizer_Tokenize(t *testing.T) {
 		{
 			name: "minus operator",
 			in:   "1-3",
-			out: []*TokenSet{
+			out: []*Token{
 				{
 					Tok:   Number,
 					Value: "1",
@@ -176,7 +176,7 @@ func TestTokenizer_Tokenize(t *testing.T) {
 			in: `/* test
 multiline
 comment */`,
-			out: []*TokenSet{
+			out: []*Token{
 				{
 					Tok:   Whitespace,
 					Value: " test\nmultiline\ncomment ",
@@ -186,7 +186,7 @@ comment */`,
 		{
 			name: "operators",
 			in:   "1/1*1+1%1=1.1-.",
-			out: []*TokenSet{
+			out: []*Token{
 				{
 					Tok:   Number,
 					Value: "1",
@@ -244,7 +244,7 @@ comment */`,
 		{
 			name: "Neq",
 			in:   "1!=2",
-			out: []*TokenSet{
+			out: []*Token{
 				{
 					Tok:   Number,
 					Value: "1",
@@ -262,7 +262,7 @@ comment */`,
 		{
 			name: "Lts",
 			in:   "<<=<>",
-			out: []*TokenSet{
+			out: []*Token{
 				{
 					Tok:   Lt,
 					Value: "<",
@@ -280,7 +280,7 @@ comment */`,
 		{
 			name: "Gts",
 			in:   ">>=",
-			out: []*TokenSet{
+			out: []*Token{
 				{
 					Tok:   Gt,
 					Value: ">",
@@ -294,7 +294,7 @@ comment */`,
 		{
 			name: "colons",
 			in:   ":1::1;",
-			out: []*TokenSet{
+			out: []*Token{
 				{
 					Tok:   Colon,
 					Value: ":",
@@ -320,7 +320,7 @@ comment */`,
 		{
 			name: "others",
 			in:   "\\[{&}]",
-			out: []*TokenSet{
+			out: []*Token{
 				{
 					Tok:   Backslash,
 					Value: "\\",

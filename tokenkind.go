@@ -1,11 +1,11 @@
 package xsqlparser
 
-type Token int
+type TokenKind int
 
-//go:generate stringer -type Token token.go
+//go:generate stringer -type TokenKind tokenkind.go
 const (
 	// A keyword (like SELECT)
-	SQLKeyword Token = iota
+	SQLKeyword TokenKind = iota
 	// Numeric literal
 	Number
 	// A character that cloud not be tokenized
