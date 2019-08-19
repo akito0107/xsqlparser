@@ -1,9 +1,13 @@
 package xsqlparser
 
 import (
+	"bytes"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 
 	"github.com/akito0107/xsqlparser/dialect"
 )
@@ -373,4 +377,99 @@ comment */`,
 			}
 		})
 	}
+}
+
+func TestTokenizer_Pos(t *testing.T) {
+	t.Run("operators", func(t *testing.T) {
+		cases := []struct {
+			operator string
+			add      int
+		}{
+			{
+				operator: "+",
+			},
+			{
+				operator: "-",
+			},
+			{
+				operator: "%",
+			},
+			{
+				operator: "*",
+			},
+			{
+				operator: "/",
+			},
+			{
+				operator: ">",
+			},
+			{
+				operator: "=",
+			},
+			{
+				operator: "<",
+			},
+			{
+				operator: "<=",
+				add:      1,
+			},
+			{
+				operator: "<>",
+				add:      1,
+			},
+			{
+				operator: ">=",
+				add:      1,
+			},
+		}
+
+		for _, c := range cases {
+			t.Run(c.operator, func(t *testing.T) {
+				src := fmt.Sprintf("1 %s 1", c.operator)
+				tokenizer := NewTokenizer(bytes.NewBufferString(src), &dialect.GenericSQLDialect{})
+
+				if _, err := tokenizer.Tokenize(); err != nil {
+					t.Fatal(err)
+				}
+
+				if d := cmp.Diff(tokenizer.Pos(), TokenPos{Line: 1, Col: 5 + c.add}); d != "" {
+					t.Errorf("must be same but diff: %s", d)
+				}
+			})
+		}
+	})
+	t.Run("multilines", func(t *testing.T) {
+		cases := []struct {
+			name   string
+			src    string
+			expect TokenPos
+		}{
+			{
+				name: "multiline ",
+				src: `1+1
+asdf`,
+				expect: TokenPos{Line: 2, Col: 4},
+			},
+			{
+				name:   "single line comment",
+				src:    `-- comments`,
+				expect: TokenPos{Line: 2, Col: 0},
+			},
+		}
+
+		for _, c := range cases {
+			t.Run(c.name, func(t *testing.T) {
+				tokenizer := NewTokenizer(bytes.NewBufferString(c.src), &dialect.GenericSQLDialect{})
+
+				if _, err := tokenizer.Tokenize(); err != nil {
+					t.Fatal(err)
+				}
+
+				if d := cmp.Diff(tokenizer.Pos(), c.expect); d != "" {
+					t.Errorf("must be same but diff: %s", d)
+				}
+			})
+		}
+	})
+
 }

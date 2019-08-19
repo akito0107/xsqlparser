@@ -65,7 +65,7 @@ func MakeKeyword(word string, quoteStyle rune) *SQLWord {
 type Token struct {
 	Kind  TokenKind
 	Value interface{}
-	Pos   *TokenPos
+	Pos   TokenPos
 }
 
 type TokenPos struct {
@@ -90,7 +90,7 @@ func NewTokenizer(src io.Reader, dialect dialect.Dialect) *Tokenizer {
 		Dialect: dialect,
 		Scanner: scan.Init(src),
 		Line:    1,
-		Col:     1,
+		Col:     0,
 	}
 }
 
@@ -101,6 +101,9 @@ func (t *Tokenizer) Tokenize() ([]*Token, error) {
 		t, err := t.NextToken()
 		if err == io.EOF {
 			break
+		}
+		if err != nil {
+			return nil, err
 		}
 		tokenset = append(tokenset, t)
 	}
@@ -120,8 +123,8 @@ func (t *Tokenizer) NextToken() (*Token, error) {
 	return &Token{Kind: tok, Value: str, Pos: t.Pos()}, nil
 }
 
-func (t *Tokenizer) Pos() *TokenPos {
-	return &TokenPos{
+func (t *Tokenizer) Pos() TokenPos {
+	return TokenPos{
 		Line: t.Line,
 		Col:  t.Col,
 	}
@@ -143,7 +146,7 @@ func (t *Tokenizer) next() (TokenKind, interface{}, error) {
 	case '\n' == r:
 		t.Scanner.Next()
 		t.Line += 1
-		t.Col = 1
+		t.Col = 0
 		return Whitespace, "\n", nil
 
 	case '\r' == r:
@@ -153,30 +156,30 @@ func (t *Tokenizer) next() (TokenKind, interface{}, error) {
 			t.Scanner.Next()
 		}
 		t.Line += 1
-		t.Col = 1
+		t.Col = 0
 		return Whitespace, "\n", nil
 
 	case 'N' == r:
 		t.Scanner.Next()
 		n := t.Scanner.Peek()
 		if n == '\'' {
-			str := tokenizeSingleQuotedString(t.Scanner)
+			str := t.tokenizeSingleQuotedString()
 			t.Col += 3 + len(str)
 			return NationalStringLiteral, str, nil
 		}
-		s := tokenizeWord('N', t.Dialect, t.Scanner)
+		s := t.tokenizeWord('N')
 		t.Col += len(s)
 		v := MakeKeyword(s, 0)
 		return SQLKeyword, v, nil
 
 	case t.Dialect.IsIdentifierStart(r):
 		t.Scanner.Next()
-		s := tokenizeWord(r, t.Dialect, t.Scanner)
+		s := t.tokenizeWord(r)
 		t.Col += len(s)
 		return SQLKeyword, MakeKeyword(s, 0), nil
 
 	case '\'' == r:
-		s := tokenizeSingleQuotedString(t.Scanner)
+		s := t.tokenizeSingleQuotedString()
 		t.Col += 2 + len(s)
 		return SingleQuotedString, s, nil
 
@@ -207,7 +210,7 @@ func (t *Tokenizer) next() (TokenKind, interface{}, error) {
 				break
 			}
 		}
-		t.Col = len(s)
+		t.Col += len(s)
 		return Number, string(s), nil
 
 	case '(' == r:
@@ -238,10 +241,13 @@ func (t *Tokenizer) next() (TokenKind, interface{}, error) {
 					s = append(s, ch)
 				} else {
 					s = append(s, '\n')
+					t.Col = 0
+					t.Line += 1
 					return Whitespace, string(s), nil // Comment Node
 				}
 			}
 		}
+		t.Col += 1
 		return Minus, "-", nil
 
 	case '/' == r:
@@ -249,9 +255,9 @@ func (t *Tokenizer) next() (TokenKind, interface{}, error) {
 
 		if '*' == t.Scanner.Peek() {
 			t.Scanner.Next()
-			return Whitespace, tokenizeMultilineComment(t.Scanner), nil
+			return Whitespace, t.tokenizeMultilineComment(), nil
 		}
-
+		t.Col += 1
 		return Div, "/", nil
 
 	case '+' == r:
@@ -358,14 +364,14 @@ func (t *Tokenizer) next() (TokenKind, interface{}, error) {
 	}
 }
 
-func tokenizeWord(f rune, dialect dialect.Dialect, s *scanner.Scanner) string {
+func (t *Tokenizer) tokenizeWord(f rune) string {
 	var str []rune
 	str = append(str, f)
 
 	for {
-		r := s.Peek()
-		if dialect.IsIdentifierPart(r) {
-			s.Next()
+		r := t.Scanner.Peek()
+		if t.Dialect.IsIdentifierPart(r) {
+			t.Scanner.Next()
 			str = append(str, r)
 		} else {
 			break
@@ -375,35 +381,35 @@ func tokenizeWord(f rune, dialect dialect.Dialect, s *scanner.Scanner) string {
 	return string(str)
 }
 
-func tokenizeSingleQuotedString(s *scanner.Scanner) string {
+func (t *Tokenizer) tokenizeSingleQuotedString() string {
 	var str []rune
-	s.Next()
+	t.Scanner.Next()
 
 	for {
-		n := s.Peek()
+		n := t.Scanner.Peek()
 		if n == '\'' {
-			s.Next()
-			if s.Peek() == '\'' {
+			t.Scanner.Next()
+			if t.Scanner.Peek() == '\'' {
 				str = append(str, '\'')
-				s.Next()
+				t.Scanner.Next()
 			} else {
 				break
 			}
 			continue
 		}
 
-		s.Next()
+		t.Scanner.Next()
 		str = append(str, n)
 	}
 
 	return string(str)
 }
 
-func tokenizeMultilineComment(s *scanner.Scanner) string {
+func (t *Tokenizer) tokenizeMultilineComment() string {
 	var str []rune
 	var mayBeClosingComment bool
 	for {
-		n := s.Next()
+		n := t.Scanner.Next()
 
 		if mayBeClosingComment {
 			if n == '/' {
