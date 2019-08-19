@@ -163,24 +163,21 @@ func (t *Tokenizer) next() (TokenKind, interface{}, error) {
 		t.Scanner.Next()
 		n := t.Scanner.Peek()
 		if n == '\'' {
+			t.Col += 1
 			str := t.tokenizeSingleQuotedString()
-			t.Col += 3 + len(str)
 			return NationalStringLiteral, str, nil
 		}
 		s := t.tokenizeWord('N')
-		t.Col += len(s)
 		v := MakeKeyword(s, 0)
 		return SQLKeyword, v, nil
 
 	case t.Dialect.IsIdentifierStart(r):
 		t.Scanner.Next()
 		s := t.tokenizeWord(r)
-		t.Col += len(s)
 		return SQLKeyword, MakeKeyword(s, 0), nil
 
 	case '\'' == r:
 		s := t.tokenizeSingleQuotedString()
-		t.Col += 2 + len(s)
 		return SingleQuotedString, s, nil
 
 	case t.Dialect.IsDelimitedIdentifierStart(r):
@@ -377,7 +374,7 @@ func (t *Tokenizer) tokenizeWord(f rune) string {
 			break
 		}
 	}
-
+	t.Col += len(str)
 	return string(str)
 }
 
@@ -401,6 +398,7 @@ func (t *Tokenizer) tokenizeSingleQuotedString() string {
 		t.Scanner.Next()
 		str = append(str, n)
 	}
+	t.Col += 2 + len(str)
 
 	return string(str)
 }
@@ -408,8 +406,22 @@ func (t *Tokenizer) tokenizeSingleQuotedString() string {
 func (t *Tokenizer) tokenizeMultilineComment() string {
 	var str []rune
 	var mayBeClosingComment bool
+	t.Col += 2
 	for {
 		n := t.Scanner.Next()
+
+		if n == '\r' {
+			if t.Scanner.Peek() == '\n' {
+				t.Scanner.Next()
+			}
+			t.Col = 0
+			t.Line += 1
+		} else if n == '\n' {
+			t.Col = 0
+			t.Line += 1
+		} else {
+			t.Col += 1
+		}
 
 		if mayBeClosingComment {
 			if n == '/' {

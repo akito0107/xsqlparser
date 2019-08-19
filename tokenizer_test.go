@@ -438,7 +438,7 @@ func TestTokenizer_Pos(t *testing.T) {
 			})
 		}
 	})
-	t.Run("multilines", func(t *testing.T) {
+	t.Run("other expressions", func(t *testing.T) {
 		cases := []struct {
 			name   string
 			src    string
@@ -454,6 +454,31 @@ asdf`,
 				name:   "single line comment",
 				src:    `-- comments`,
 				expect: TokenPos{Line: 2, Col: 0},
+			},
+			{
+				name:   "statements",
+				src:    `select count(id) from account`,
+				expect: TokenPos{Line: 1, Col: 29},
+			},
+			{
+				name: "multiline statements",
+				src: `select count(id)
+from account 
+where name like '%test%'`,
+				expect: TokenPos{Line: 3, Col: 24},
+			},
+			{
+				name: "multiline comment",
+				src: `/*
+test comment
+test comment
+*/`,
+				expect: TokenPos{Line: 4, Col: 2},
+			},
+			{
+				name:   "single line comment",
+				src:    "/* asdf */",
+				expect: TokenPos{Line: 1, Col: 10},
 			},
 		}
 
