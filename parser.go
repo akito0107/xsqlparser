@@ -307,7 +307,7 @@ func (p *Parser) parseSetOperator(token *Token) sqlast.SQLSetOperator {
 	if token == nil {
 		return nil
 	}
-	if token.Tok != SQLKeyword {
+	if token.Kind != SQLKeyword {
 		return nil
 	}
 	word := token.Value.(*SQLWord)
@@ -411,7 +411,7 @@ func (p *Parser) parseSelectList() ([]sqlast.SQLSelectItem, error) {
 			}
 		}
 
-		if t, _ := p.peekToken(); t.Tok == Comma {
+		if t, _ := p.peekToken(); t.Kind == Comma {
 			p.mustNextToken()
 		} else {
 			break
@@ -546,7 +546,7 @@ func (p *Parser) parseElements() ([]sqlast.TableElement, error) {
 
 	for {
 		tok, _ := p.nextToken()
-		if tok == nil || tok.Tok != SQLKeyword {
+		if tok == nil || tok.Kind != SQLKeyword {
 			return nil, errors.Errorf("parse error after column def")
 		}
 
@@ -571,9 +571,9 @@ func (p *Parser) parseElements() ([]sqlast.TableElement, error) {
 		}
 
 		t, _ := p.nextToken()
-		if t == nil || (t.Tok != Comma && t.Tok != RParen) {
+		if t == nil || (t.Kind != Comma && t.Kind != RParen) {
 			log.Fatalf("Expected ',' or ')' after column definition but %v", t)
-		} else if t.Tok == RParen {
+		} else if t.Kind == RParen {
 			break
 		}
 	}
@@ -605,7 +605,7 @@ func (p *Parser) parseColumnDef() (*sqlast.ColumnDef, error) {
 
 func (p *Parser) parseTableConstraints() (*sqlast.TableConstraint, error) {
 	tok, _ := p.peekToken()
-	if tok == nil || tok.Tok != SQLKeyword {
+	if tok == nil || tok.Kind != SQLKeyword {
 		return nil, errors.Errorf("parse error after column def")
 	}
 
@@ -708,7 +708,7 @@ func (p *Parser) parseColumnDefinition() (sqlast.Node, []*sqlast.ColumnConstrain
 COLUMN_DEF_LOOP:
 	for {
 		t, _ := p.peekToken()
-		if t == nil || t.Tok != SQLKeyword {
+		if t == nil || t.Kind != SQLKeyword {
 			break
 		}
 
@@ -762,7 +762,7 @@ CONSTRAINT_LOOP:
 		}
 
 		tok, _ = p.peekToken()
-		if tok.Tok != SQLKeyword {
+		if tok.Kind != SQLKeyword {
 			break
 		}
 
@@ -876,7 +876,7 @@ func (p *Parser) parseAssignments() ([]*sqlast.Assignment, error) {
 
 	for {
 		tok, _ := p.nextToken()
-		if tok.Tok != SQLKeyword {
+		if tok.Kind != SQLKeyword {
 			return nil, errors.Errorf("should be sqlkeyword but %v", tok)
 		}
 
@@ -1085,7 +1085,7 @@ func (p *Parser) parseAlterColumn() (*sqlast.AlterColumnTableAction, error) {
 	}
 
 	tok := p.mustNextToken()
-	if tok.Tok != SQLKeyword {
+	if tok.Kind != SQLKeyword {
 		return nil, errors.Errorf("must be SQLKeyword but: %v", tok)
 	}
 
@@ -1151,7 +1151,7 @@ func (p *Parser) parseDefaultExpr(precedence uint) (sqlast.Node, error) {
 	}
 	for {
 		tok, _ := p.peekToken()
-		if tok != nil && tok.Tok == SQLKeyword {
+		if tok != nil && tok.Kind == SQLKeyword {
 			w := tok.Value.(*SQLWord)
 			if w.Keyword == "NOT" || w.Keyword == "NULL" {
 				break
@@ -1181,7 +1181,7 @@ func (p *Parser) parseOptionalAlias(reservedKeywords map[string]struct{}) *sqlas
 		return nil
 	}
 
-	if maybeAlias.Tok == SQLKeyword {
+	if maybeAlias.Kind == SQLKeyword {
 
 		word := maybeAlias.Value.(*SQLWord)
 		if afterAs || !containsStr(reservedKeywords, word.Keyword) {
@@ -1549,7 +1549,7 @@ func (p *Parser) parseExprList() ([]sqlast.Node, error) {
 			return nil, errors.Errorf("ParseExpr failed: %w", err)
 		}
 		exprList = append(exprList, expr)
-		if tok, _ := p.peekToken(); tok != nil && tok.Tok == Comma {
+		if tok, _ := p.peekToken(); tok != nil && tok.Kind == Comma {
 			p.mustNextToken()
 		} else {
 			break
@@ -1594,7 +1594,7 @@ func (p *Parser) parseInfix(expr sqlast.Node, precedence uint) (sqlast.Node, err
 		return nil, errors.Errorf("nextToken failed: %w", err)
 	}
 
-	switch tok.Tok {
+	switch tok.Kind {
 	case Eq:
 		operator = sqlast.Eq
 	case Neq:
@@ -1647,7 +1647,7 @@ func (p *Parser) parseInfix(expr sqlast.Node, precedence uint) (sqlast.Node, err
 		}, nil
 	}
 
-	if tok.Tok == SQLKeyword {
+	if tok.Kind == SQLKeyword {
 		word := tok.Value.(*SQLWord)
 
 		switch word.Keyword {
@@ -1675,7 +1675,7 @@ func (p *Parser) parseInfix(expr sqlast.Node, precedence uint) (sqlast.Node, err
 		}
 	}
 
-	if tok.Tok == DoubleColon {
+	if tok.Kind == DoubleColon {
 		return p.parsePGCast(expr)
 	}
 
@@ -1756,7 +1756,7 @@ func (p *Parser) getNextPrecedence() (uint, error) {
 }
 
 func (p *Parser) getPrecedence(ts *Token) uint {
-	switch ts.Tok {
+	switch ts.Kind {
 	case SQLKeyword:
 		word := ts.Value.(*SQLWord)
 		switch word.Keyword {
@@ -1796,7 +1796,7 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 		return nil, errors.Errorf("nextToken error: %w", err)
 	}
 
-	switch tok.Tok {
+	switch tok.Kind {
 	case SQLKeyword:
 		word := tok.Value.(*SQLWord)
 		switch word.Keyword {
@@ -1836,7 +1836,7 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 			}
 
 			ts := &Token{
-				Tok:   SQLKeyword,
+				Kind:  SQLKeyword,
 				Value: MakeKeyword("NOT", 0),
 			}
 			precedence := p.getPrecedence(ts)
@@ -1850,7 +1850,7 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 			}, nil
 		default:
 			t, _ := p.peekToken()
-			if t == nil || (t.Tok != LParen && t.Tok != Period) {
+			if t == nil || (t.Kind != LParen && t.Kind != Period) {
 				return word.AsSQLIdent(), nil
 			}
 			idParts := []*sqlast.Ident{word.AsSQLIdent()}
@@ -1865,12 +1865,12 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 					return nil, errors.Errorf("nextToken failed: %w", err)
 				}
 
-				if n.Tok == SQLKeyword {
+				if n.Kind == SQLKeyword {
 					w := n.Value.(*SQLWord)
 					idParts = append(idParts, w.AsSQLIdent())
 					continue
 				}
-				if n.Tok == Mult {
+				if n.Kind == Mult {
 					endWithWildcard = true
 					break
 				}
@@ -2044,7 +2044,7 @@ func (p *Parser) parseOrderByExprList() ([]*sqlast.OrderByExpr, error) {
 			ASC:  asc,
 		})
 
-		if t, _ := p.peekToken(); t != nil && t.Tok == Comma {
+		if t, _ := p.peekToken(); t != nil && t.Kind == Comma {
 			p.mustNextToken()
 		} else {
 			break
@@ -2057,7 +2057,7 @@ func (p *Parser) parseOrderByExprList() ([]*sqlast.OrderByExpr, error) {
 func (p *Parser) parseWindowFrame() (*sqlast.WindowFrame, error) {
 	var windowFrame *sqlast.WindowFrame
 	t, _ := p.peekToken()
-	if t.Tok == SQLKeyword {
+	if t.Kind == SQLKeyword {
 		w := t.Value.(*SQLWord)
 		var units sqlast.WindowFrameUnits
 		units = units.FromStr(w.Keyword)
@@ -2150,7 +2150,7 @@ func (p *Parser) parseValue() (sqlast.Node, error) {
 		return nil, errors.Errorf("nextToken failed: %w", err)
 	}
 
-	switch tok.Tok {
+	switch tok.Kind {
 	case SQLKeyword:
 		word := tok.Value.(*SQLWord)
 
@@ -2226,8 +2226,8 @@ func (p *Parser) parseOptionalPrecisionScale() (*uint, *uint, error) {
 
 func (p *Parser) parseLiteralInt() (int, error) {
 	tok, _ := p.nextToken()
-	if tok.Tok != Number {
-		return 0, errors.Errorf("expect literal int but %v", tok.Tok)
+	if tok.Kind != Number {
+		return 0, errors.Errorf("expect literal int but %v", tok.Kind)
 	}
 	istr := tok.Value.(string)
 	i, err := strconv.Atoi(istr)
@@ -2247,12 +2247,12 @@ func (p *Parser) parseListOfIds(separator TokenKind) ([]*sqlast.Ident, error) {
 		if tok == nil {
 			break
 		}
-		if tok.Tok == SQLKeyword && expectIdentifier {
+		if tok.Kind == SQLKeyword && expectIdentifier {
 			expectIdentifier = false
 			word := tok.Value.(*SQLWord)
 			idents = append(idents, word.AsSQLIdent())
 			continue
-		} else if tok.Tok == separator && !expectIdentifier {
+		} else if tok.Kind == separator && !expectIdentifier {
 			expectIdentifier = true
 			continue
 		}
@@ -2381,7 +2381,7 @@ func (p *Parser) consumeToken(expected TokenKind) (bool, error) {
 		return false, err
 	}
 
-	if tok.Tok == expected {
+	if tok.Kind == expected {
 		if _, err := p.nextToken(); err != nil {
 			return false, err
 		}
@@ -2406,7 +2406,7 @@ func (p *Parser) nextToken() (*Token, error) {
 		if err != nil {
 			return nil, err
 		}
-		if tok.Tok == Whitespace {
+		if tok.Kind == Whitespace {
 			continue
 		}
 		return tok, nil
@@ -2426,7 +2426,7 @@ func (p *Parser) nextTokenNoSkip() (*Token, error) {
 func (p *Parser) prevToken() *Token {
 	for {
 		tok := p.prevTokenNoSkip()
-		if tok.Tok == Whitespace {
+		if tok.Kind == Whitespace {
 			continue
 		}
 		return tok
@@ -2460,7 +2460,7 @@ func (p *Parser) tilNonWhitespace() (uint, error) {
 			return 0, TokenAlreadyConsumed
 		}
 		tok := p.tokens[idx]
-		if tok.Tok == Whitespace {
+		if tok.Kind == Whitespace {
 			idx += 1
 			continue
 		}

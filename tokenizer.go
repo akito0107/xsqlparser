@@ -63,7 +63,7 @@ func MakeKeyword(word string, quoteStyle rune) *SQLWord {
 }
 
 type Token struct {
-	Tok   TokenKind
+	Kind  TokenKind
 	Value interface{}
 	Pos   *TokenPos
 }
@@ -114,10 +114,10 @@ func (t *Tokenizer) NextToken() (*Token, error) {
 		return nil, io.EOF
 	}
 	if err != nil {
-		return &Token{Tok: ILLEGAL, Value: "", Pos: t.Pos()}, errors.Errorf("tokenize failed %w", err)
+		return &Token{Kind: ILLEGAL, Value: "", Pos: t.Pos()}, errors.Errorf("tokenize failed %w", err)
 	}
 
-	return &Token{Tok: tok, Value: str, Pos: t.Pos()}, nil
+	return &Token{Kind: tok, Value: str, Pos: t.Pos()}, nil
 }
 
 func (t *Tokenizer) Pos() *TokenPos {

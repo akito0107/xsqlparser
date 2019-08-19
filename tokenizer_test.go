@@ -19,7 +19,7 @@ func TestTokenizer_Tokenize(t *testing.T) {
 			in:   " ",
 			out: []*Token{
 				{
-					Tok:   Whitespace,
+					Kind:  Whitespace,
 					Value: " ",
 				},
 			},
@@ -30,11 +30,11 @@ func TestTokenizer_Tokenize(t *testing.T) {
  `,
 			out: []*Token{
 				{
-					Tok:   Whitespace,
+					Kind:  Whitespace,
 					Value: "\n",
 				},
 				{
-					Tok:   Whitespace,
+					Kind:  Whitespace,
 					Value: " ",
 				},
 			},
@@ -44,11 +44,11 @@ func TestTokenizer_Tokenize(t *testing.T) {
 			in: "\r\n	",
 			out: []*Token{
 				{
-					Tok:   Whitespace,
+					Kind:  Whitespace,
 					Value: "\n",
 				},
 				{
-					Tok:   Whitespace,
+					Kind:  Whitespace,
 					Value: "\t",
 				},
 			},
@@ -58,7 +58,7 @@ func TestTokenizer_Tokenize(t *testing.T) {
 			in:   "N'string'",
 			out: []*Token{
 				{
-					Tok:   NationalStringLiteral,
+					Kind:  NationalStringLiteral,
 					Value: "string",
 				},
 			},
@@ -68,15 +68,15 @@ func TestTokenizer_Tokenize(t *testing.T) {
 			in:   "N'string' NOT",
 			out: []*Token{
 				{
-					Tok:   NationalStringLiteral,
+					Kind:  NationalStringLiteral,
 					Value: "string",
 				},
 				{
-					Tok:   Whitespace,
+					Kind:  Whitespace,
 					Value: " ",
 				},
 				{
-					Tok: SQLKeyword,
+					Kind: SQLKeyword,
 					Value: &SQLWord{
 						Value:   "NOT",
 						Keyword: "NOT",
@@ -89,7 +89,7 @@ func TestTokenizer_Tokenize(t *testing.T) {
 			in:   "select",
 			out: []*Token{
 				{
-					Tok: SQLKeyword,
+					Kind: SQLKeyword,
 					Value: &SQLWord{
 						Value:   "select",
 						Keyword: "SELECT",
@@ -102,7 +102,7 @@ func TestTokenizer_Tokenize(t *testing.T) {
 			in:   "'test'",
 			out: []*Token{
 				{
-					Tok:   SingleQuotedString,
+					Kind:  SingleQuotedString,
 					Value: "test",
 				},
 			},
@@ -112,7 +112,7 @@ func TestTokenizer_Tokenize(t *testing.T) {
 			in:   "\"SELECT\"",
 			out: []*Token{
 				{
-					Tok: SQLKeyword,
+					Kind: SQLKeyword,
 					Value: &SQLWord{
 						Value:      "SELECT",
 						Keyword:    "SELECT",
@@ -126,19 +126,19 @@ func TestTokenizer_Tokenize(t *testing.T) {
 			in:   "(123),",
 			out: []*Token{
 				{
-					Tok:   LParen,
+					Kind:  LParen,
 					Value: "(",
 				},
 				{
-					Tok:   Number,
+					Kind:  Number,
 					Value: "123",
 				},
 				{
-					Tok:   RParen,
+					Kind:  RParen,
 					Value: ")",
 				},
 				{
-					Tok:   Comma,
+					Kind:  Comma,
 					Value: ",",
 				},
 			},
@@ -148,7 +148,7 @@ func TestTokenizer_Tokenize(t *testing.T) {
 			in:   "-- test",
 			out: []*Token{
 				{
-					Tok:   Whitespace,
+					Kind:  Whitespace,
 					Value: " test\n",
 				},
 			},
@@ -158,15 +158,15 @@ func TestTokenizer_Tokenize(t *testing.T) {
 			in:   "1-3",
 			out: []*Token{
 				{
-					Tok:   Number,
+					Kind:  Number,
 					Value: "1",
 				},
 				{
-					Tok:   Minus,
+					Kind:  Minus,
 					Value: "-",
 				},
 				{
-					Tok:   Number,
+					Kind:  Number,
 					Value: "3",
 				},
 			},
@@ -178,7 +178,7 @@ multiline
 comment */`,
 			out: []*Token{
 				{
-					Tok:   Whitespace,
+					Kind:  Whitespace,
 					Value: " test\nmultiline\ncomment ",
 				},
 			},
@@ -188,55 +188,55 @@ comment */`,
 			in:   "1/1*1+1%1=1.1-.",
 			out: []*Token{
 				{
-					Tok:   Number,
+					Kind:  Number,
 					Value: "1",
 				},
 				{
-					Tok:   Div,
+					Kind:  Div,
 					Value: "/",
 				},
 				{
-					Tok:   Number,
+					Kind:  Number,
 					Value: "1",
 				},
 				{
-					Tok:   Mult,
+					Kind:  Mult,
 					Value: "*",
 				},
 				{
-					Tok:   Number,
+					Kind:  Number,
 					Value: "1",
 				},
 				{
-					Tok:   Plus,
+					Kind:  Plus,
 					Value: "+",
 				},
 				{
-					Tok:   Number,
+					Kind:  Number,
 					Value: "1",
 				},
 				{
-					Tok:   Mod,
+					Kind:  Mod,
 					Value: "%",
 				},
 				{
-					Tok:   Number,
+					Kind:  Number,
 					Value: "1",
 				},
 				{
-					Tok:   Eq,
+					Kind:  Eq,
 					Value: "=",
 				},
 				{
-					Tok:   Number,
+					Kind:  Number,
 					Value: "1.1",
 				},
 				{
-					Tok:   Minus,
+					Kind:  Minus,
 					Value: "-",
 				},
 				{
-					Tok:   Period,
+					Kind:  Period,
 					Value: ".",
 				},
 			},
@@ -246,15 +246,15 @@ comment */`,
 			in:   "1!=2",
 			out: []*Token{
 				{
-					Tok:   Number,
+					Kind:  Number,
 					Value: "1",
 				},
 				{
-					Tok:   Neq,
+					Kind:  Neq,
 					Value: "!=",
 				},
 				{
-					Tok:   Number,
+					Kind:  Number,
 					Value: "2",
 				},
 			},
@@ -264,15 +264,15 @@ comment */`,
 			in:   "<<=<>",
 			out: []*Token{
 				{
-					Tok:   Lt,
+					Kind:  Lt,
 					Value: "<",
 				},
 				{
-					Tok:   LtEq,
+					Kind:  LtEq,
 					Value: "<=",
 				},
 				{
-					Tok:   Neq,
+					Kind:  Neq,
 					Value: "<>",
 				},
 			},
@@ -282,11 +282,11 @@ comment */`,
 			in:   ">>=",
 			out: []*Token{
 				{
-					Tok:   Gt,
+					Kind:  Gt,
 					Value: ">",
 				},
 				{
-					Tok:   GtEq,
+					Kind:  GtEq,
 					Value: ">=",
 				},
 			},
@@ -296,23 +296,23 @@ comment */`,
 			in:   ":1::1;",
 			out: []*Token{
 				{
-					Tok:   Colon,
+					Kind:  Colon,
 					Value: ":",
 				},
 				{
-					Tok:   Number,
+					Kind:  Number,
 					Value: "1",
 				},
 				{
-					Tok:   DoubleColon,
+					Kind:  DoubleColon,
 					Value: "::",
 				},
 				{
-					Tok:   Number,
+					Kind:  Number,
 					Value: "1",
 				},
 				{
-					Tok:   Semicolon,
+					Kind:  Semicolon,
 					Value: ";",
 				},
 			},
@@ -322,27 +322,27 @@ comment */`,
 			in:   "\\[{&}]",
 			out: []*Token{
 				{
-					Tok:   Backslash,
+					Kind:  Backslash,
 					Value: "\\",
 				},
 				{
-					Tok:   LBracket,
+					Kind:  LBracket,
 					Value: "[",
 				},
 				{
-					Tok:   LBrace,
+					Kind:  LBrace,
 					Value: "{",
 				},
 				{
-					Tok:   Ampersand,
+					Kind:  Ampersand,
 					Value: "&",
 				},
 				{
-					Tok:   RBrace,
+					Kind:  RBrace,
 					Value: "}",
 				},
 				{
-					Tok:   RBracket,
+					Kind:  RBracket,
 					Value: "]",
 				},
 			},
@@ -364,8 +364,8 @@ comment */`,
 			}
 
 			for i := 0; i < len(tok); i++ {
-				if tok[i].Tok != c.out[i].Tok {
-					t.Errorf("%d, expected token: %d, but got %d", i, c.out[i].Tok, tok[i].Tok)
+				if tok[i].Kind != c.out[i].Kind {
+					t.Errorf("%d, expected token: %d, but got %d", i, c.out[i].Kind, tok[i].Kind)
 				}
 				if !reflect.DeepEqual(tok[i].Value, c.out[i].Value) {
 					t.Errorf("%d, expected value: %+v, but got %+v", i, c.out[i].Value, tok[i].Value)
