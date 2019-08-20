@@ -65,7 +65,8 @@ func MakeKeyword(word string, quoteStyle rune) *SQLWord {
 type Token struct {
 	Kind  TokenKind
 	Value interface{}
-	Pos   TokenPos
+	From  TokenPos
+	To    TokenPos
 }
 
 type TokenPos struct {
@@ -112,15 +113,16 @@ func (t *Tokenizer) Tokenize() ([]*Token, error) {
 }
 
 func (t *Tokenizer) NextToken() (*Token, error) {
+	pos := t.Pos()
 	tok, str, err := t.next()
 	if err == io.EOF {
 		return nil, io.EOF
 	}
 	if err != nil {
-		return &Token{Kind: ILLEGAL, Value: "", Pos: t.Pos()}, errors.Errorf("tokenize failed %w", err)
+		return &Token{Kind: ILLEGAL, Value: "", From: pos, To: t.Pos()}, errors.Errorf("tokenize failed %w", err)
 	}
 
-	return &Token{Kind: tok, Value: str, Pos: t.Pos()}, nil
+	return &Token{Kind: tok, Value: str, From: pos, To: t.Pos()}, nil
 }
 
 func (t *Tokenizer) Pos() TokenPos {
@@ -233,13 +235,12 @@ func (t *Tokenizer) next() (TokenKind, interface{}, error) {
 
 			var s []rune
 			for {
-				ch := t.Scanner.Next()
+				ch := t.Scanner.Peek()
 				if ch != scanner.EOF && ch != '\n' {
+					t.Scanner.Next()
 					s = append(s, ch)
 				} else {
-					s = append(s, '\n')
-					t.Col = 0
-					t.Line += 1
+					t.Col += len(s) + 2
 					return Comment, string(s), nil // Comment Node
 				}
 			}
