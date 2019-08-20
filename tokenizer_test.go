@@ -152,7 +152,7 @@ func TestTokenizer_Tokenize(t *testing.T) {
 			in:   "-- test",
 			out: []*Token{
 				{
-					Kind:  Whitespace,
+					Kind:  Comment,
 					Value: " test\n",
 				},
 			},
@@ -182,7 +182,7 @@ multiline
 comment */`,
 			out: []*Token{
 				{
-					Kind:  Whitespace,
+					Kind:  Comment,
 					Value: " test\nmultiline\ncomment ",
 				},
 			},
@@ -479,6 +479,11 @@ test comment
 				name:   "single line comment",
 				src:    "/* asdf */",
 				expect: TokenPos{Line: 1, Col: 10},
+			},
+			{
+				name:   "comment inside sql",
+				src:    "select * from /* test table */ test_table where id != 123",
+				expect: TokenPos{Line: 1, Col: 57},
 			},
 		}
 

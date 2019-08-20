@@ -2406,7 +2406,7 @@ func (p *Parser) nextToken() (*Token, error) {
 		if err != nil {
 			return nil, err
 		}
-		if tok.Kind == Whitespace {
+		if tok.Kind == Whitespace || tok.Kind == Comment {
 			continue
 		}
 		return tok, nil
@@ -2426,7 +2426,7 @@ func (p *Parser) nextTokenNoSkip() (*Token, error) {
 func (p *Parser) prevToken() *Token {
 	for {
 		tok := p.prevTokenNoSkip()
-		if tok.Kind == Whitespace {
+		if tok.Kind == Whitespace || tok.Kind == Comment {
 			continue
 		}
 		return tok
@@ -2460,7 +2460,7 @@ func (p *Parser) tilNonWhitespace() (uint, error) {
 			return 0, TokenAlreadyConsumed
 		}
 		tok := p.tokens[idx]
-		if tok.Kind == Whitespace {
+		if tok.Kind == Whitespace || tok.Kind == Comment {
 			idx += 1
 			continue
 		}

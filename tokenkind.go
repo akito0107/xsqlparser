@@ -18,6 +18,8 @@ const (
 	Comma
 	// Whitespace
 	Whitespace
+	// comment node
+	Comment
 	// = operator
 	Eq
 	// != or <> operator

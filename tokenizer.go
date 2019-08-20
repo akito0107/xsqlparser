@@ -240,7 +240,7 @@ func (t *Tokenizer) next() (TokenKind, interface{}, error) {
 					s = append(s, '\n')
 					t.Col = 0
 					t.Line += 1
-					return Whitespace, string(s), nil // Comment Node
+					return Comment, string(s), nil // Comment Node
 				}
 			}
 		}
@@ -252,7 +252,7 @@ func (t *Tokenizer) next() (TokenKind, interface{}, error) {
 
 		if '*' == t.Scanner.Peek() {
 			t.Scanner.Next()
-			return Whitespace, t.tokenizeMultilineComment(), nil
+			return Comment, t.tokenizeMultilineComment(), nil
 		}
 		t.Col += 1
 		return Div, "/", nil
