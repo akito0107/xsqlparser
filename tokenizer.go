@@ -20,9 +20,9 @@ type SQLWord struct {
 
 func (s *SQLWord) String() string {
 	if s.QuoteStyle == '"' || s.QuoteStyle == '[' || s.QuoteStyle == '`' {
-		return fmt.Sprintf("%s%s%s", string(s.QuoteStyle), s.Value, string(matchingEndQuote(s.QuoteStyle)))
+		return string(s.QuoteStyle) + s.Value + string(matchingEndQuote(s.QuoteStyle))
 	} else if s.QuoteStyle == 0 {
-		return fmt.Sprintf("%s", s.Value)
+		return s.Value
 	}
 	return ""
 }
