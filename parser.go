@@ -2450,10 +2450,6 @@ func (p *Parser) peekToken() (*sqltoken.Token, error) {
 	return p.tokens[u], nil
 }
 
-func (p *Parser) tokenAt(n uint) *sqltoken.Token {
-	return p.tokens[n]
-}
-
 func (p *Parser) tilNonWhitespace() (uint, error) {
 	idx := p.index
 	for {
