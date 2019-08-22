@@ -397,14 +397,6 @@ type ObjectName struct {
 	Idents []*Ident
 }
 
-func (s *ObjectName) Pos() sqltoken.Pos {
-	return s.Idents[0].Pos()
-}
-
-func (s *ObjectName) End() sqltoken.Pos {
-	return s.Idents[len(s.Idents)-1].End()
-}
-
 func NewObjectName(strs ...string) *ObjectName {
 	idents := make([]*Ident, 0, len(strs))
 
@@ -417,12 +409,221 @@ func NewObjectName(strs ...string) *ObjectName {
 	}
 }
 
+func (s *ObjectName) Pos() sqltoken.Pos {
+	return s.Idents[0].Pos()
+}
+
+func (s *ObjectName) End() sqltoken.Pos {
+	return s.Idents[len(s.Idents)-1].End()
+}
+
 func (s *ObjectName) ToSQLString() string {
 	var strs []string
 	for _, l := range s.Idents {
 		strs = append(strs, l.ToSQLString())
 	}
 	return strings.Join(strs, ".")
+}
+
+type WindowSpec struct {
+	PartitionBy  []Node
+	OrderBy      []*OrderByExpr
+	WindowsFrame *WindowFrame
+}
+
+func (s *WindowSpec) Pos() sqltoken.Pos {
+	panic("implement me")
+}
+
+func (s *WindowSpec) End() sqltoken.Pos {
+	panic("implement me")
+}
+
+func (s *WindowSpec) ToSQLString() string {
+	var clauses []string
+	if len(s.PartitionBy) != 0 {
+		clauses = append(clauses, fmt.Sprintf("PARTITION BY %s", commaSeparatedString(s.PartitionBy)))
+	}
+	if len(s.OrderBy) != 0 {
+		clauses = append(clauses, fmt.Sprintf("ORDER BY %s", commaSeparatedString(s.OrderBy)))
+	}
+
+	if s.WindowsFrame != nil {
+		clauses = append(clauses, s.WindowsFrame.ToSQLString())
+	}
+
+	return strings.Join(clauses, " ")
+}
+
+type WindowFrame struct {
+	Units      *WindowFrameUnit
+	StartBound SQLWindowFrameBound
+	EndBound   SQLWindowFrameBound
+}
+
+func (s *WindowFrame) Pos() sqltoken.Pos {
+	panic("implement me")
+}
+
+func (s *WindowFrame) End() sqltoken.Pos {
+	panic("implement me")
+}
+
+func (s *WindowFrame) ToSQLString() string {
+	if s.EndBound != nil {
+		return fmt.Sprintf("%s BETWEEN %s AND %s", s.Units.ToSQLString(), s.StartBound.ToSQLString(), s.EndBound.ToSQLString())
+	} else {
+		return fmt.Sprintf("%s %s", s.Units.ToSQLString(), s.StartBound.ToSQLString())
+	}
+}
+
+type WindowFrameUnit struct {
+	From, To sqltoken.Pos
+	Type     WindowFrameUnitType
+}
+
+func (s *WindowFrameUnit) Pos() sqltoken.Pos {
+	return s.From
+}
+
+func (s *WindowFrameUnit) End() sqltoken.Pos {
+	return s.To
+}
+
+type WindowFrameUnitType int
+
+const (
+	RowsUnit WindowFrameUnitType = iota
+	RangeUnit
+	GroupsUnit
+)
+
+func (s *WindowFrameUnit) ToSQLString() string {
+	switch s.Type {
+	case RowsUnit:
+		return "ROWS"
+	case RangeUnit:
+		return "RANGE"
+	case GroupsUnit:
+		return "GROUPS"
+	}
+	return ""
+}
+
+// unused
+// TODO remove
+func (WindowFrameUnitType) FromStr(str string) *WindowFrameUnit {
+	if str == "ROWS" {
+		return &WindowFrameUnit{
+			Type: RowsUnit,
+		}
+	} else if str == "RANGE" {
+		return &WindowFrameUnit{
+			Type: RangeUnit,
+		}
+	} else if str == "GROUPS" {
+		return &WindowFrameUnit{
+			Type: GroupsUnit,
+		}
+	}
+	log.Fatalf("expected ROWS, RANGE, GROUPS but: %s", str)
+	return nil
+}
+
+//go:generate genmark -t SQLWindowFrameBound -e Node
+
+type CurrentRow struct {
+	sqlWindowFrameBound
+	Current sqltoken.Pos
+	Row     sqltoken.Pos
+}
+
+func (c *CurrentRow) Pos() sqltoken.Pos {
+	return c.Current
+}
+
+func (c *CurrentRow) End() sqltoken.Pos {
+	return c.Row
+}
+
+func (*CurrentRow) ToSQLString() string {
+	return "CURRENT ROW"
+}
+
+type UnboundedPreceding struct {
+	sqlWindowFrameBound
+	Unbounded sqltoken.Pos // first char position of UNBOUND
+	Preceding sqltoken.Pos // last char position of PRECEDING
+}
+
+func (u *UnboundedPreceding) Pos() sqltoken.Pos {
+	return u.Unbounded
+}
+
+func (u *UnboundedPreceding) End() sqltoken.Pos {
+	return u.Preceding
+}
+
+func (*UnboundedPreceding) ToSQLString() string {
+	return "UNBOUNDED PRECEDING"
+}
+
+type UnboundedFollowing struct {
+	sqlWindowFrameBound
+	Unbounded sqltoken.Pos // first char position of UNBOUND
+	Following sqltoken.Pos // last char position of FOLLOWING
+}
+
+func (u *UnboundedFollowing) Pos() sqltoken.Pos {
+	return u.Unbounded
+}
+
+func (u *UnboundedFollowing) End() sqltoken.Pos {
+	return u.Following
+}
+
+func (*UnboundedFollowing) ToSQLString() string {
+	return "UNBOUNDED FOLLOWING"
+}
+
+// `Bound PRECEDING`
+type Preceding struct {
+	sqlWindowFrameBound
+	Bound     *uint64
+	From      sqltoken.Pos // first char position of Bound
+	Preceding sqltoken.Pos // last char position of PRECEDING
+}
+
+func (p *Preceding) Pos() sqltoken.Pos {
+	return p.From
+}
+
+func (p *Preceding) End() sqltoken.Pos {
+	return p.Preceding
+}
+
+func (p *Preceding) ToSQLString() string {
+	return fmt.Sprintf("%d PRECEDING", *p.Bound)
+}
+
+// `Bound FOLLOWING`
+type Following struct {
+	sqlWindowFrameBound
+	From      sqltoken.Pos // first char position of Bound
+	Following sqltoken.Pos // last char position of FOLLOWING
+	Bound     *uint64
+}
+
+func (f *Following) Pos() sqltoken.Pos {
+	return f.From
+}
+
+func (f *Following) End() sqltoken.Pos {
+	return f.Following
+}
+
+func (f *Following) ToSQLString() string {
+	return fmt.Sprintf("%d FOLLOWING", *f.Bound)
 }
 
 func commaSeparatedString(list interface{}) string {
@@ -482,116 +683,4 @@ func negatedString(negated bool) string {
 	}
 
 	return n
-}
-
-type WindowSpec struct {
-	PartitionBy  []Node
-	OrderBy      []*OrderByExpr
-	WindowsFrame *WindowFrame
-}
-
-func (s *WindowSpec) ToSQLString() string {
-	var clauses []string
-	if len(s.PartitionBy) != 0 {
-		clauses = append(clauses, fmt.Sprintf("PARTITION BY %s", commaSeparatedString(s.PartitionBy)))
-	}
-	if len(s.OrderBy) != 0 {
-		clauses = append(clauses, fmt.Sprintf("ORDER BY %s", commaSeparatedString(s.OrderBy)))
-	}
-
-	if s.WindowsFrame != nil {
-		clauses = append(clauses, s.WindowsFrame.ToSQLString())
-	}
-
-	return strings.Join(clauses, " ")
-}
-
-type WindowFrame struct {
-	Units      WindowFrameUnits
-	StartBound SQLWindowFrameBound
-	EndBound   SQLWindowFrameBound
-}
-
-func (s *WindowFrame) ToSQLString() string {
-	if s.EndBound != nil {
-		return fmt.Sprintf("%s BETWEEN %s AND %s", s.Units.ToSQLString(), s.StartBound.ToSQLString(), s.EndBound.ToSQLString())
-	} else {
-		return fmt.Sprintf("%s %s", s.Units.ToSQLString(), s.StartBound.ToSQLString())
-	}
-}
-
-type WindowFrameUnits int
-
-const (
-	RowsUnit WindowFrameUnits = iota
-	RangeUnit
-	GroupsUnit
-)
-
-func (s WindowFrameUnits) ToSQLString() string {
-	switch s {
-	case RowsUnit:
-		return "ROWS"
-	case RangeUnit:
-		return "RANGE"
-	case GroupsUnit:
-		return "GROUPS"
-	}
-	return ""
-}
-
-func (WindowFrameUnits) FromStr(str string) WindowFrameUnits {
-	if str == "ROWS" {
-		return RowsUnit
-	} else if str == "RANGE" {
-		return RangeUnit
-	} else if str == "GROUPS" {
-		return GroupsUnit
-	}
-	log.Fatalf("expected ROWS, RANGE, GROUPS but: %s", str)
-	return 0
-}
-
-//go:generate genmark -t SQLWindowFrameBound -e Node
-
-type CurrentRow struct {
-	sqlWindowFrameBound
-}
-
-func (*CurrentRow) ToSQLString() string {
-	return "CURRENT ROW"
-}
-
-type UnboundedPreceding struct {
-	sqlWindowFrameBound
-}
-
-func (*UnboundedPreceding) ToSQLString() string {
-	return "UNBOUNDED PRECEDING"
-}
-
-type UnboundedFollowing struct {
-	sqlWindowFrameBound
-}
-
-func (*UnboundedFollowing) ToSQLString() string {
-	return "UNBOUNDED FOLLOWING"
-}
-
-type Preceding struct {
-	sqlWindowFrameBound
-	Bound *uint64
-}
-
-func (p *Preceding) ToSQLString() string {
-	return fmt.Sprintf("%d PRECEDING", *p.Bound)
-}
-
-type Following struct {
-	sqlWindowFrameBound
-	Bound *uint64
-}
-
-func (f *Following) ToSQLString() string {
-	return fmt.Sprintf("%d FOLLOWING", *f.Bound)
 }
