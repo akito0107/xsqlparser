@@ -1,4 +1,4 @@
-package xsqlparser
+package sqltoken
 
 import (
 	"fmt"
@@ -63,18 +63,18 @@ func MakeKeyword(word string, quoteStyle rune) *SQLWord {
 }
 
 type Token struct {
-	Kind  TokenKind
+	Kind  Kind
 	Value interface{}
-	From  TokenPos
-	To    TokenPos
+	From  Pos
+	To    Pos
 }
 
-type TokenPos struct {
+type Pos struct {
 	Line int
 	Col  int
 }
 
-func (t *TokenPos) String() string {
+func (t *Pos) String() string {
 	return fmt.Sprintf("{Line: %d Col: %d}", t.Line, t.Col)
 }
 
@@ -125,14 +125,14 @@ func (t *Tokenizer) NextToken() (*Token, error) {
 	return &Token{Kind: tok, Value: str, From: pos, To: t.Pos()}, nil
 }
 
-func (t *Tokenizer) Pos() TokenPos {
-	return TokenPos{
+func (t *Tokenizer) Pos() Pos {
+	return Pos{
 		Line: t.Line,
 		Col:  t.Col,
 	}
 }
 
-func (t *Tokenizer) next() (TokenKind, interface{}, error) {
+func (t *Tokenizer) next() (Kind, interface{}, error) {
 	r := t.Scanner.Peek()
 	switch {
 	case ' ' == r:
