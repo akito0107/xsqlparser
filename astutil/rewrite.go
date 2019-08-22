@@ -157,8 +157,8 @@ func (a *application) apply(parent sqlast.Node, name string, iter *iterator, n s
 		a.apply(n, "DateType", nil, n.DateType)
 	case *sqlast.Nested:
 		a.apply(n, "AST", nil, n.AST)
-	case *sqlast.Unary:
-		a.apply(n, "Operator", nil, n.Operator)
+	case *sqlast.UnaryExpr:
+		a.apply(n, "Op", nil, n.Op)
 		a.apply(n, "Expr", nil, n.Expr)
 	case *sqlast.Function:
 		a.apply(n, "Name", nil, n.Name)

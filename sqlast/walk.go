@@ -57,8 +57,8 @@ func Walk(v Visitor, node Node) {
 		Walk(v, n.DateType)
 	case *Nested:
 		Walk(v, n.AST)
-	case *Unary:
-		Walk(v, n.Operator)
+	case *UnaryExpr:
+		Walk(v, n.Op)
 		Walk(v, n.Expr)
 	case *Function:
 		Walk(v, n.Name)

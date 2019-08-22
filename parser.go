@@ -598,7 +598,7 @@ func (p *Parser) parseColumnDef() (*sqlast.ColumnDef, error) {
 
 	return &sqlast.ColumnDef{
 		Constraints: specs,
-		Name:        columnName.AsSQLIdent(),
+		Name:        sqlast.NewIdentFromWord(columnName),
 		DataType:    dataType,
 		Default:     def,
 	}, nil
@@ -672,7 +672,7 @@ func (p *Parser) parseTableConstraints() (*sqlast.TableConstraint, error) {
 		p.expectToken(sqltoken.RParen)
 
 		keys := &sqlast.ReferenceKeyExpr{
-			TableName: w.AsSQLIdent(),
+			TableName: sqlast.NewIdentFromWord(w),
 			Columns:   refcolumns,
 		}
 
@@ -891,7 +891,7 @@ func (p *Parser) parseAssignments() ([]*sqlast.Assignment, error) {
 		}
 
 		assignments = append(assignments, &sqlast.Assignment{
-			ID:    word.AsSQLIdent(),
+			ID:    sqlast.NewIdentFromWord(word),
 			Value: val,
 		})
 
@@ -1186,7 +1186,7 @@ func (p *Parser) parseOptionalAlias(reservedKeywords map[string]struct{}) *sqlas
 
 		word := maybeAlias.Value.(*sqltoken.SQLWord)
 		if afterAs || !containsStr(reservedKeywords, word.Keyword) {
-			return word.AsSQLIdent()
+			return sqlast.NewIdentFromWord(word)
 		}
 	}
 	if afterAs {
@@ -1845,16 +1845,16 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 			if err != nil {
 				return nil, errors.Errorf("parseSubexpr failed: %w", err)
 			}
-			return &sqlast.Unary{
-				Operator: sqlast.Not,
-				Expr:     expr,
+			return &sqlast.UnaryExpr{
+				Op:   sqlast.Not,
+				Expr: expr,
 			}, nil
 		default:
 			t, _ := p.peekToken()
 			if t == nil || (t.Kind != sqltoken.LParen && t.Kind != sqltoken.Period) {
-				return word.AsSQLIdent(), nil
+				return sqlast.NewIdentFromWord(word), nil
 			}
-			idParts := []*sqlast.Ident{word.AsSQLIdent()}
+			idParts := []*sqlast.Ident{sqlast.NewIdentFromWord(word)}
 			endWithWildcard := false
 
 			for {
@@ -1868,7 +1868,7 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 
 				if n.Kind == sqltoken.SQLKeyword {
 					w := n.Value.(*sqltoken.SQLWord)
-					idParts = append(idParts, w.AsSQLIdent())
+					idParts = append(idParts, sqlast.NewIdentFromWord(w))
 					continue
 				}
 				if n.Kind == sqltoken.Mult {
@@ -1909,9 +1909,9 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 		if err != nil {
 			return nil, errors.Errorf("parseSubexpr failed: %w", err)
 		}
-		return &sqlast.Unary{
-			Operator: sqlast.Plus,
-			Expr:     expr,
+		return &sqlast.UnaryExpr{
+			Op:   sqlast.Plus,
+			Expr: expr,
 		}, nil
 	case sqltoken.Minus:
 		precedence := p.getPrecedence(tok)
@@ -1919,9 +1919,9 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 		if err != nil {
 			return nil, errors.Errorf("parseSubexpr failed: %w", err)
 		}
-		return &sqlast.Unary{
-			Operator: sqlast.Minus,
-			Expr:     expr,
+		return &sqlast.UnaryExpr{
+			Op:   sqlast.Minus,
+			Expr: expr,
 		}, nil
 	case sqltoken.Number, sqltoken.SingleQuotedString, sqltoken.NationalStringLiteral:
 		p.prevToken()
@@ -2251,7 +2251,7 @@ func (p *Parser) parseListOfIds(separator sqltoken.Kind) ([]*sqlast.Ident, error
 		if tok.Kind == sqltoken.SQLKeyword && expectIdentifier {
 			expectIdentifier = false
 			word := tok.Value.(*sqltoken.SQLWord)
-			idents = append(idents, word.AsSQLIdent())
+			idents = append(idents, sqlast.NewIdentFromWord(word))
 			continue
 		} else if tok.Kind == separator && !expectIdentifier {
 			expectIdentifier = true

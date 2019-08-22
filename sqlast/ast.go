@@ -1,42 +1,88 @@
+/*
+Package sqlast declares types that used to represent abstract syntax tree of sql.
+Basically, these definitions are from https://github.com/andygrove/sqlparser-rs and https://jakewheat.github.io/sql-overview/sql-2008-foundation-grammar.html#_5_lexical_elements.
+However, in some cases, the syntax is extended to support RDBMS specific syntax such as PGAlterTableAction.
+*/
 package sqlast
 
 import (
 	"fmt"
 	"log"
 	"strings"
+
+	"github.com/akito0107/xsqlparser/sqltoken"
 )
 
-type Ident string
+// AST Node interface. All node types implements this interface.
+type Node interface {
+	ToSQLString() string // convert Node as as sql valid string
+	Pos() sqltoken.Pos   // position of first character belonging to the node
+	End() sqltoken.Pos   // position of last character belonging to the node
+}
+
+// Identifier
+type Ident struct {
+	Value    string
+	From, To sqltoken.Pos
+}
+
+func NewIdentFromWord(s *sqltoken.SQLWord) *Ident {
+	return NewIdent(s.String())
+}
 
 func NewIdent(str string) *Ident {
-	s := Ident(str)
-	return &s
+	return &Ident{Value: str}
 }
 
 func (s *Ident) ToSQLString() string {
-	return string(*s)
+	return s.Value
 }
 
-type Node interface {
-	ToSQLString() string
+func (s *Ident) Pos() sqltoken.Pos {
+	return s.From
 }
 
-// *
-type Wildcard struct{}
+func (s *Ident) End() sqltoken.Pos {
+	return s.To
+}
+
+// `*` Node.
+type Wildcard struct {
+	Wildcard sqltoken.Pos
+}
+
+func (s *Wildcard) Pos() sqltoken.Pos {
+	return s.Wildcard
+}
+
+func (s *Wildcard) End() sqltoken.Pos {
+	return sqltoken.Pos{
+		Line: s.Wildcard.Line,
+		Col:  s.Wildcard.Col + 1,
+	}
+}
 
 func (s Wildcard) ToSQLString() string {
 	return "*"
 }
 
-// table.*, schema.table.*
+// `table.*`, schema.table.*
 type QualifiedWildcard struct {
 	Idents []*Ident
+}
+
+func (s *QualifiedWildcard) Pos() sqltoken.Pos {
+	return s.Idents[0].Pos()
+}
+
+func (s *QualifiedWildcard) End() sqltoken.Pos {
+	return s.Idents[len(s.Idents)-1].End()
 }
 
 func (s *QualifiedWildcard) ToSQLString() string {
 	strs := make([]string, 0, len(s.Idents))
 	for _, ident := range s.Idents {
-		strs = append(strs, string(*ident))
+		strs = append(strs, ident.ToSQLString())
 	}
 	return fmt.Sprintf("%s.*", strings.Join(strs, "."))
 }
@@ -46,51 +92,103 @@ type CompoundIdent struct {
 	Idents []*Ident
 }
 
+func (s *CompoundIdent) Pos() sqltoken.Pos {
+	return s.Idents[0].Pos()
+}
+
+func (s *CompoundIdent) End() sqltoken.Pos {
+	return s.Idents[len(s.Idents)-1].End()
+}
+
 func (s *CompoundIdent) ToSQLString() string {
 	strs := make([]string, 0, len(s.Idents))
 	for _, ident := range s.Idents {
-		strs = append(strs, string(*ident))
+		strs = append(strs, ident.ToSQLString())
 	}
 	return strings.Join(strs, ".")
 }
 
+// ` X IS NULL`
 type IsNull struct {
 	X Node
+}
+
+func (s *IsNull) Pos() sqltoken.Pos {
+	return s.X.Pos()
+}
+
+func (s *IsNull) End() sqltoken.Pos {
+	return sqltoken.Pos{
+		Line: s.X.End().Line,
+		Col:  s.X.End().Col + 8,
+	}
 }
 
 func (s *IsNull) ToSQLString() string {
 	return fmt.Sprintf("%s IS NULl", s.X.ToSQLString())
 }
 
+// `X IS NOT NULL`
 type IsNotNull struct {
 	X Node
+}
+
+func (s *IsNotNull) Pos() sqltoken.Pos {
+	return s.X.Pos()
+}
+
+func (s *IsNotNull) End() sqltoken.Pos {
+	return sqltoken.Pos{
+		Line: s.X.End().Line,
+		Col:  s.X.End().Col + 12,
+	}
 }
 
 func (s *IsNotNull) ToSQLString() string {
 	return fmt.Sprintf("%s IS NOT NULL", s.X.ToSQLString())
 }
 
+// `Expr IN (List...)`
 type InList struct {
 	Expr    Node
 	List    []Node
 	Negated bool
+	RParen  sqltoken.Pos
+}
+
+func (s *InList) Pos() sqltoken.Pos {
+	return s.Expr.Pos()
+}
+
+func (s *InList) End() sqltoken.Pos {
+	return s.RParen
 }
 
 func (s *InList) ToSQLString() string {
 	return fmt.Sprintf("%s %sIN (%s)", s.Expr.ToSQLString(), negatedString(s.Negated), commaSeparatedString(s.List))
 }
 
-//[ NOT ] IN (SELECT ...)
+// `Expr [ NOT ] IN SubQuery`
 type InSubQuery struct {
 	Expr     Node
 	SubQuery *Query
 	Negated  bool
+	RParen   sqltoken.Pos
+}
+
+func (s *InSubQuery) Pos() sqltoken.Pos {
+	return s.Expr.Pos()
+}
+
+func (s *InSubQuery) End() sqltoken.Pos {
+	return s.RParen
 }
 
 func (s *InSubQuery) ToSQLString() string {
 	return fmt.Sprintf("%s %sIN (%s)", s.Expr.ToSQLString(), negatedString(s.Negated), s.SubQuery.ToSQLString())
 }
 
+// `Expr [ NOT ] BETWEEN [ LOW expr ] AND [ HIGH expr]`
 type Between struct {
 	Expr    Node
 	Negated bool
@@ -98,50 +196,112 @@ type Between struct {
 	High    Node
 }
 
+func (s *Between) Pos() sqltoken.Pos {
+	return s.Expr.Pos()
+}
+
+func (s *Between) End() sqltoken.Pos {
+	return s.High.End()
+}
+
 func (s *Between) ToSQLString() string {
 	return fmt.Sprintf("%s %sBETWEEN %s AND %s", s.Expr.ToSQLString(), negatedString(s.Negated), s.Low.ToSQLString(), s.High.ToSQLString())
 }
 
+// `Left Op Right`
 type BinaryExpr struct {
 	Left  Node
 	Op    Operator
 	Right Node
 }
 
+func (s *BinaryExpr) Pos() sqltoken.Pos {
+	return s.Left.Pos()
+}
+
+func (s *BinaryExpr) End() sqltoken.Pos {
+	return s.Right.End()
+}
+
 func (s *BinaryExpr) ToSQLString() string {
 	return fmt.Sprintf("%s %s %s", s.Left.ToSQLString(), s.Op.ToSQLString(), s.Right.ToSQLString())
 }
 
+// `CAST(Expr AS DataType)`
 type Cast struct {
 	Expr     Node
 	DateType Type
+	Cast     sqltoken.Pos // first position of CAST token
+	RParen   sqltoken.Pos
+}
+
+func (s *Cast) Pos() sqltoken.Pos {
+	return s.Cast
+}
+
+func (s *Cast) End() sqltoken.Pos {
+	return s.RParen
 }
 
 func (s *Cast) ToSQLString() string {
 	return fmt.Sprintf("CAST(%s AS %s)", s.Expr.ToSQLString(), s.DateType.ToSQLString())
 }
 
+// (AST)
 type Nested struct {
-	AST Node
+	AST            Node
+	LParen, RParen sqltoken.Pos
+}
+
+func (s *Nested) Pos() sqltoken.Pos {
+	return s.LParen
+}
+
+func (s *Nested) End() sqltoken.Pos {
+	return s.RParen
 }
 
 func (s *Nested) ToSQLString() string {
 	return fmt.Sprintf("(%s)", s.AST.ToSQLString())
 }
 
-type Unary struct {
-	Operator Operator
-	Expr     Node
+// Op Expr
+type UnaryExpr struct {
+	From sqltoken.Pos // first position of Op
+	Op   Operator
+	Expr Node
 }
 
-func (s *Unary) ToSQLString() string {
-	return fmt.Sprintf("%s %s", s.Operator.ToSQLString(), s.Expr.ToSQLString())
+func (s *UnaryExpr) Pos() sqltoken.Pos {
+	return s.From
 }
 
+func (s *UnaryExpr) End() sqltoken.Pos {
+	return s.Expr.End()
+}
+
+func (s *UnaryExpr) ToSQLString() string {
+	return fmt.Sprintf("%s %s", s.Op.ToSQLString(), s.Expr.ToSQLString())
+}
+
+// Name(Args...) [OVER (Over)]
 type Function struct {
-	Name *ObjectName
-	Args []Node
-	Over *WindowSpec
+	Name       *ObjectName // Function Name
+	Args       []Node
+	ArgsRParen sqltoken.Pos // function args RParen position
+	Over       *WindowSpec
+	OverRparen sqltoken.Pos // Over RParen position (if Over is not nil)
+}
+
+func (s *Function) Pos() sqltoken.Pos {
+	return s.Name.Pos()
+}
+
+func (s *Function) End() sqltoken.Pos {
+	if s.Over == nil {
+		return s.ArgsRParen
+	}
+	return s.OverRparen
 }
 
 func (s *Function) ToSQLString() string {
@@ -154,11 +314,22 @@ func (s *Function) ToSQLString() string {
 	return str
 }
 
+// CASE [Operand] WHEN Conditions... THEN Results... [ELSE ElseResult] END
 type CaseExpr struct {
+	Case       sqltoken.Pos // first position of CASE keyword
+	CaseEnd    sqltoken.Pos // Last position of END keyword
 	Operand    Node
 	Conditions []Node
 	Results    []Node
 	ElseResult Node
+}
+
+func (s *CaseExpr) Pos() sqltoken.Pos {
+	return s.Case
+}
+
+func (s *CaseExpr) End() sqltoken.Pos {
+	return s.CaseEnd
 }
 
 func (s *CaseExpr) ToSQLString() string {
@@ -179,25 +350,59 @@ func (s *CaseExpr) ToSQLString() string {
 	return str
 }
 
+// [ NOT ] EXISTS (Query)
 type Exists struct {
 	Negated bool
 	Query   *Query
+	Not     sqltoken.Pos // first position of NOT keyword when Negated is true
+	Exists  sqltoken.Pos // first position of EXISTS keyword
+	RParen  sqltoken.Pos
+}
+
+func (s *Exists) Pos() sqltoken.Pos {
+	if s.Negated {
+		return s.Not
+	}
+	return s.Exists
+}
+
+func (s *Exists) End() sqltoken.Pos {
+	return s.RParen
 }
 
 func (s *Exists) ToSQLString() string {
 	return fmt.Sprintf("%sEXISTS (%s)", negatedString(s.Negated), s.Query.ToSQLString())
 }
 
+// (Query)
 type SubQuery struct {
-	Query *Query
+	RParen, LParen sqltoken.Pos
+	Query          *Query
+}
+
+func (s *SubQuery) Pos() sqltoken.Pos {
+	return s.RParen
+}
+
+func (s *SubQuery) End() sqltoken.Pos {
+	return s.LParen
 }
 
 func (s *SubQuery) ToSQLString() string {
 	return fmt.Sprintf("(%s)", s.Query.ToSQLString())
 }
 
+// Table Names (ex public.table_name)
 type ObjectName struct {
 	Idents []*Ident
+}
+
+func (s *ObjectName) Pos() sqltoken.Pos {
+	return s.Idents[0].Pos()
+}
+
+func (s *ObjectName) End() sqltoken.Pos {
+	return s.Idents[len(s.Idents)-1].End()
 }
 
 func NewObjectName(strs ...string) *ObjectName {
@@ -215,7 +420,7 @@ func NewObjectName(strs ...string) *ObjectName {
 func (s *ObjectName) ToSQLString() string {
 	var strs []string
 	for _, l := range s.Idents {
-		strs = append(strs, string(*l))
+		strs = append(strs, l.ToSQLString())
 	}
 	return strings.Join(strs, ".")
 }

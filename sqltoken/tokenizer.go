@@ -9,7 +9,6 @@ import (
 	errors "golang.org/x/xerrors"
 
 	"github.com/akito0107/xsqlparser/dialect"
-	"github.com/akito0107/xsqlparser/sqlast"
 )
 
 type SQLWord struct {
@@ -25,10 +24,6 @@ func (s *SQLWord) String() string {
 		return s.Value
 	}
 	return ""
-}
-
-func (s *SQLWord) AsSQLIdent() *sqlast.Ident {
-	return sqlast.NewIdent(s.String())
 }
 
 func matchingEndQuote(quoteStyle rune) rune {
