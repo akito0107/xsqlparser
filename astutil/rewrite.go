@@ -186,7 +186,7 @@ func (a *application) apply(parent sqlast.Node, name string, iter *iterator, n s
 		if n.EndBound != nil {
 			a.apply(n, "EndBound", nil, n.EndBound)
 		}
-	case sqlast.WindowFrameUnits,
+	case *sqlast.WindowFrameUnit,
 		*sqlast.CurrentRow,
 		*sqlast.UnboundedPreceding,
 		*sqlast.UnboundedFollowing,
@@ -234,7 +234,7 @@ func (a *application) apply(parent sqlast.Node, name string, iter *iterator, n s
 		a.apply(n, "Spec", nil, n.Spec)
 	case *sqlast.TableJoinElement:
 		a.apply(n, "Ref", nil, n.Ref)
-	case sqlast.JoinType:
+	case *sqlast.JoinType:
 		// nothing to do
 	case *sqlast.JoinCondition:
 		a.apply(n, "SearchCondition", nil, n.SearchCondition)
@@ -431,7 +431,7 @@ func (a *application) apply(parent sqlast.Node, name string, iter *iterator, n s
 		a.applyList(n, "IndexNames")
 	case *sqlast.ExplainStmt:
 		a.apply(n, "Stmt", nil, n.Stmt)
-	case sqlast.Operator:
+	case *sqlast.Operator:
 		// nothing to do
 	case *sqlast.NullValue,
 		*sqlast.LongValue,

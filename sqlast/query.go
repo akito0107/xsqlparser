@@ -53,7 +53,7 @@ func (q *Query) ToSQLString() string {
 	query += q.Body.ToSQLString()
 
 	if len(q.OrderBy) != 0 {
-		query += fmt.Sprintf(" ORDER BY %q", commaSeparatedString(q.OrderBy))
+		query += fmt.Sprintf(" ORDER BY %s", commaSeparatedString(q.OrderBy))
 	}
 
 	if q.Limit != nil {
@@ -484,7 +484,7 @@ func (p *PartitionedJoinTable) ToSQLString() string {
 type QualifiedJoin struct {
 	tableReference
 	LeftElement  *TableJoinElement
-	Type         JoinType
+	Type         *JoinType
 	RightElement *TableJoinElement
 	Spec         JoinSpec
 }
@@ -504,7 +504,7 @@ func (q *QualifiedJoin) ToSQLString() string {
 type NaturalJoin struct {
 	tableReference
 	LeftElement  *TableJoinElement
-	Type         JoinType
+	Type         *JoinType
 	RightElement *TableJoinElement
 }
 

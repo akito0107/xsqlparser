@@ -1,9 +1,26 @@
 package sqlast
 
-type Operator int
+import (
+	"github.com/akito0107/xsqlparser/sqltoken"
+)
+
+type Operator struct {
+	Type     OperatorType
+	From, To sqltoken.Pos
+}
+
+func (o *Operator) Pos() sqltoken.Pos {
+	return o.From
+}
+
+func (o *Operator) End() sqltoken.Pos {
+	return o.To
+}
+
+type OperatorType int
 
 const (
-	Plus Operator = iota
+	Plus OperatorType = iota
 	Minus
 	Multiply
 	Divide
@@ -22,8 +39,8 @@ const (
 	None
 )
 
-func (s Operator) ToSQLString() string {
-	switch s {
+func (o *Operator) ToSQLString() string {
+	switch o.Type {
 	case Plus:
 		return "+"
 	case Minus:

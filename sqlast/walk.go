@@ -88,7 +88,7 @@ func Walk(v Visitor, node Node) {
 		if n.EndBound != nil {
 			Walk(v, n.EndBound)
 		}
-	case WindowFrameUnits:
+	case *WindowFrameUnit:
 		// nothing to do
 	case *CurrentRow:
 		// nothing to do
@@ -151,7 +151,7 @@ func Walk(v Visitor, node Node) {
 		Walk(v, n.Spec)
 	case *TableJoinElement:
 		Walk(v, n.Ref)
-	case JoinType:
+	case *JoinType:
 	// nothing to do
 	case *JoinCondition:
 		Walk(v, n.SearchCondition)
@@ -364,7 +364,7 @@ func Walk(v Visitor, node Node) {
 		walkIdentLists(v, n.IndexNames)
 	case *ExplainStmt:
 		Walk(v, n.Stmt)
-	case Operator:
+	case *Operator:
 		// nothing to do
 	case *NullValue,
 		*LongValue,

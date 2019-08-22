@@ -128,7 +128,7 @@ func TestSQLUpdate_ToSQLString(t *testing.T) {
 					},
 				},
 				Selection: &BinaryExpr{
-					Op:    Eq,
+					Op:    &Operator{Type: Eq},
 					Left:  NewIdent("customer_id"),
 					Right: NewLongValue(1),
 				},
@@ -158,7 +158,7 @@ func TestSQLDelete_ToSQLString(t *testing.T) {
 			in: &DeleteStmt{
 				TableName: NewObjectName("customers"),
 				Selection: &BinaryExpr{
-					Op:    Eq,
+					Op:    &Operator{Type: Eq},
 					Left:  NewIdent("customer_id"),
 					Right: NewLongValue(1),
 				},
@@ -208,7 +208,7 @@ func TestSQLCreateView_ToSQLString(t *testing.T) {
 								},
 							},
 							WhereClause: &BinaryExpr{
-								Op:    Eq,
+								Op:    &Operator{Type: Eq},
 								Left:  NewIdent("country"),
 								Right: NewSingleQuotedString("Brazil"),
 							},
@@ -308,14 +308,14 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 							{
 								Spec: &CheckColumnSpec{
 									Expr: &BinaryExpr{
-										Op: And,
+										Op: &Operator{Type: And},
 										Left: &BinaryExpr{
-											Op:    Gt,
+											Op:    &Operator{Type: Gt},
 											Left:  NewIdent("age"),
 											Right: NewLongValue(0),
 										},
 										Right: &BinaryExpr{
-											Op:    Lt,
+											Op:    &Operator{Type: Lt},
 											Left:  NewIdent("age"),
 											Right: NewLongValue(100),
 										},
@@ -369,7 +369,7 @@ func TestSQLCreateTable_ToSQLString(t *testing.T) {
 						Spec: &CheckTableConstraint{
 							Expr: &BinaryExpr{
 								Left:  NewIdent("id"),
-								Op:    Gt,
+								Op:    &Operator{Type: Gt},
 								Right: NewLongValue(100),
 							},
 						},
@@ -619,7 +619,7 @@ func TestSQLCreateIndex_ToSQLString(t *testing.T) {
 				ColumnNames: []*Ident{NewIdent("name")},
 				Selection: &BinaryExpr{
 					Left:  NewIdent("name"),
-					Op:    Eq,
+					Op:    &Operator{Type: Eq},
 					Right: NewSingleQuotedString("test"),
 				},
 			},

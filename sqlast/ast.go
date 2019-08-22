@@ -211,7 +211,7 @@ func (s *Between) ToSQLString() string {
 // `Left Op Right`
 type BinaryExpr struct {
 	Left  Node
-	Op    Operator
+	Op    *Operator
 	Right Node
 }
 
@@ -268,7 +268,7 @@ func (s *Nested) ToSQLString() string {
 // Op Expr
 type UnaryExpr struct {
 	From sqltoken.Pos // first position of Op
-	Op   Operator
+	Op   *Operator
 	Expr Node
 }
 
