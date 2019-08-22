@@ -65,7 +65,7 @@ func TestParser_ParseStatement(t *testing.T) {
 							Left: &sqlast.CompoundIdent{
 								Idents: []*sqlast.Ident{sqlast.NewIdent("test_table"), sqlast.NewIdent("column1")},
 							},
-							Op:    sqlast.Eq,
+							Op:    &sqlast.Operator{Type: sqlast.Eq},
 							Right: sqlast.NewSingleQuotedString("test"),
 						},
 					},
@@ -95,7 +95,7 @@ func TestParser_ParseStatement(t *testing.T) {
 										Alias: sqlast.NewIdent("t1"),
 									},
 								},
-								Type: sqlast.LEFT,
+								Type: &sqlast.JoinType{Condition: sqlast.LEFT},
 								RightElement: &sqlast.TableJoinElement{
 									Ref: &sqlast.Table{
 										Name:  sqlast.NewObjectName("test_table2"),
@@ -107,7 +107,7 @@ func TestParser_ParseStatement(t *testing.T) {
 										Left: &sqlast.CompoundIdent{
 											Idents: []*sqlast.Ident{sqlast.NewIdent("t1"), sqlast.NewIdent("id")},
 										},
-										Op: sqlast.Eq,
+										Op: &sqlast.Operator{Type: sqlast.Eq},
 										Right: &sqlast.CompoundIdent{
 											Idents: []*sqlast.Ident{sqlast.NewIdent("t2"), sqlast.NewIdent("test_table_id")},
 										},
@@ -166,7 +166,7 @@ func TestParser_ParseStatement(t *testing.T) {
 						},
 						GroupByClause: []sqlast.Node{sqlast.NewIdent("country")},
 						HavingClause: &sqlast.BinaryExpr{
-							Op: sqlast.Gt,
+							Op: &sqlast.Operator{Type: sqlast.Gt},
 							Left: &sqlast.Function{
 								Name: sqlast.NewObjectName("COUNT"),
 								Args: []sqlast.Node{sqlast.NewIdent("customer_id")},
@@ -326,9 +326,9 @@ func TestParser_ParseStatement(t *testing.T) {
 										},
 									},
 									WhereClause: &sqlast.BinaryExpr{
-										Op: sqlast.And,
+										Op: &sqlast.Operator{Type: sqlast.And},
 										Left: &sqlast.BinaryExpr{
-											Op: sqlast.Eq,
+											Op: &sqlast.Operator{Type: sqlast.Eq},
 											Left: &sqlast.CompoundIdent{
 												Idents: []*sqlast.Ident{
 													sqlast.NewIdent("user"),
@@ -343,7 +343,7 @@ func TestParser_ParseStatement(t *testing.T) {
 											},
 										},
 										Right: &sqlast.BinaryExpr{
-											Op: sqlast.Eq,
+											Op: &sqlast.Operator{Type: sqlast.Eq},
 											Left: &sqlast.CompoundIdent{
 												Idents: []*sqlast.Ident{
 													sqlast.NewIdent("user_sub"),
@@ -370,12 +370,12 @@ func TestParser_ParseStatement(t *testing.T) {
 								Expr: &sqlast.CaseExpr{
 									Conditions: []sqlast.Node{
 										&sqlast.BinaryExpr{
-											Op:    sqlast.Eq,
+											Op:    &sqlast.Operator{Type: sqlast.Eq},
 											Left:  sqlast.NewIdent("expr1"),
 											Right: sqlast.NewSingleQuotedString("1"),
 										},
 										&sqlast.BinaryExpr{
-											Op:    sqlast.Eq,
+											Op:    &sqlast.Operator{Type: sqlast.Eq},
 											Left:  sqlast.NewIdent("expr2"),
 											Right: sqlast.NewSingleQuotedString("2"),
 										},
@@ -568,14 +568,14 @@ func TestParser_ParseStatement(t *testing.T) {
 								{
 									Spec: &sqlast.CheckColumnSpec{
 										Expr: &sqlast.BinaryExpr{
-											Op: sqlast.And,
+											Op: &sqlast.Operator{Type: sqlast.And},
 											Left: &sqlast.BinaryExpr{
-												Op:    sqlast.Gt,
+												Op:    &sqlast.Operator{Type: sqlast.Gt},
 												Left:  sqlast.NewIdent("age"),
 												Right: sqlast.NewLongValue(0),
 											},
 											Right: &sqlast.BinaryExpr{
-												Op:    sqlast.Lt,
+												Op:    &sqlast.Operator{Type: sqlast.Lt},
 												Left:  sqlast.NewIdent("age"),
 												Right: sqlast.NewLongValue(100),
 											},
@@ -629,7 +629,7 @@ func TestParser_ParseStatement(t *testing.T) {
 							Spec: &sqlast.CheckTableConstraint{
 								Expr: &sqlast.BinaryExpr{
 									Left:  sqlast.NewIdent("id"),
-									Op:    sqlast.Gt,
+									Op:    &sqlast.Operator{Type: sqlast.Gt},
 									Right: sqlast.NewLongValue(100),
 								},
 							},
@@ -660,7 +660,7 @@ func TestParser_ParseStatement(t *testing.T) {
 								},
 							},
 							WhereClause: &sqlast.BinaryExpr{
-								Op:    sqlast.Eq,
+								Op:    &sqlast.Operator{Type: sqlast.Eq},
 								Left:  sqlast.NewIdent("kind"),
 								Right: sqlast.NewSingleQuotedString("Comedy"),
 							},
@@ -705,7 +705,7 @@ func TestParser_ParseStatement(t *testing.T) {
 				out: &sqlast.DeleteStmt{
 					TableName: sqlast.NewObjectName("customers"),
 					Selection: &sqlast.BinaryExpr{
-						Op:    sqlast.Eq,
+						Op:    &sqlast.Operator{Type: sqlast.Eq},
 						Left:  sqlast.NewIdent("customer_id"),
 						Right: sqlast.NewLongValue(1),
 					},
@@ -960,7 +960,7 @@ func TestParser_ParseStatement(t *testing.T) {
 						},
 					},
 					Selection: &sqlast.BinaryExpr{
-						Op:    sqlast.Eq,
+						Op:    &sqlast.Operator{Type: sqlast.Eq},
 						Left:  sqlast.NewIdent("customer_id"),
 						Right: sqlast.NewLongValue(1),
 					},

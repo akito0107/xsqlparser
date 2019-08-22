@@ -1423,14 +1423,14 @@ func (p *Parser) parseJoinType() (*sqlast.JoinType, error) {
 		return &sqlast.JoinType{Condition: sqlast.FULL}, nil
 	case "JOIN":
 		p.prevToken()
-		return sqlast.IMPLICIT, nil
+		return &sqlast.JoinType{Condition: sqlast.IMPLICIT}, nil
 	default:
-		return 0, errors.Errorf("unknown join type: %v", word)
+		return nil, errors.Errorf("unknown join type: %v", word)
 	}
 }
 
 func (p *Parser) parseJoinSpec() (sqlast.JoinSpec, error) {
-	if ok, _ := p.parseKeyword("ON"); ok {
+	if ok, _, _ := p.parseKeyword("ON"); ok {
 		expr, err := p.ParseExpr()
 		if err != nil {
 			return nil, errors.Errorf("parse join condition failed: %w", err)
@@ -1440,7 +1440,7 @@ func (p *Parser) parseJoinSpec() (sqlast.JoinSpec, error) {
 		}, nil
 	}
 
-	ok, _ := p.parseKeyword("USING")
+	ok, _, _ := p.parseKeyword("USING")
 	if !ok {
 		tok, _ := p.nextToken()
 		return nil, errors.Errorf("unknown join spec need USING or ON but: %v", tok)
@@ -1459,7 +1459,7 @@ func (p *Parser) parseJoinSpec() (sqlast.JoinSpec, error) {
 }
 
 func (p *Parser) parseTableFactor() (sqlast.TableFactor, error) {
-	isLateral, _ := p.parseKeyword("LATERAL")
+	isLateral, _, _ := p.parseKeyword("LATERAL")
 	if ok, _ := p.consumeToken(sqltoken.LParen); ok {
 		subquery, err := p.parseQuery()
 		if err != nil {
@@ -1492,7 +1492,7 @@ func (p *Parser) parseTableFactor() (sqlast.TableFactor, error) {
 	alias := p.parseOptionalAlias(dialect.ReservedForTableAlias)
 
 	var withHints []sqlast.Node
-	if ok, _ := p.parseKeyword("WITH"); ok {
+	if ok, _, _ := p.parseKeyword("WITH"); ok {
 		if ok, _ := p.consumeToken(sqltoken.LParen); ok {
 			h, err := p.parseExprList()
 			if err != nil {
@@ -1515,7 +1515,7 @@ func (p *Parser) parseTableFactor() (sqlast.TableFactor, error) {
 }
 
 func (p *Parser) parseLimit() (*sqlast.LimitExpr, error) {
-	if ok, _ := p.parseKeyword("ALL"); ok {
+	if ok, _, _ := p.parseKeyword("ALL"); ok {
 		return &sqlast.LimitExpr{All: true}, nil
 	}
 
@@ -1525,7 +1525,7 @@ func (p *Parser) parseLimit() (*sqlast.LimitExpr, error) {
 	}
 
 	var offset *sqlast.LongValue
-	if ok, _ := p.parseKeyword("OFFSET"); ok {
+	if ok, _, _ := p.parseKeyword("OFFSET"); ok {
 		o, err := p.parseLiteralInt()
 		if err != nil {
 			return nil, errors.Errorf("invalid offset value: %w", err)
@@ -1639,7 +1639,7 @@ func (p *Parser) parseInfix(expr sqlast.Node, precedence uint) (sqlast.Node, err
 		case "LIKE":
 			operator = sqlast.Like
 		case "NOT":
-			ok, _ := p.parseKeyword("LIKE")
+			ok, _, _ := p.parseKeyword("LIKE")
 			if ok {
 				operator = sqlast.NotLike
 			}
@@ -1654,7 +1654,7 @@ func (p *Parser) parseInfix(expr sqlast.Node, precedence uint) (sqlast.Node, err
 
 		return &sqlast.BinaryExpr{
 			Left:  expr,
-			Op:    operator,
+			Op:    &sqlast.Operator{Type: operator},
 			Right: right,
 		}, nil
 	}
@@ -1664,7 +1664,7 @@ func (p *Parser) parseInfix(expr sqlast.Node, precedence uint) (sqlast.Node, err
 
 		switch word.Keyword {
 		case "IS":
-			if ok, _ := p.parseKeyword("NULL"); ok {
+			if ok, _, _ := p.parseKeyword("NULL"); ok {
 				return &sqlast.IsNull{
 					X: expr,
 				}, nil
@@ -1677,11 +1677,11 @@ func (p *Parser) parseInfix(expr sqlast.Node, precedence uint) (sqlast.Node, err
 			return nil, errors.Errorf("NULL or NOT NULL after IS")
 		case "NOT", "IN", "BETWEEN":
 			p.prevToken()
-			negated, _ := p.parseKeyword("NOT")
-			if ok, _ := p.parseKeyword("IN"); ok {
+			negated, _, _ := p.parseKeyword("NOT")
+			if ok, _, _ := p.parseKeyword("IN"); ok {
 				return p.parseIn(expr, negated)
 			}
-			if ok, _ := p.parseKeyword("BETWEEN"); ok {
+			if ok, _, _ := p.parseKeyword("BETWEEN"); ok {
 				return p.parseBetween(expr, negated)
 			}
 		}
@@ -1708,8 +1708,8 @@ func (p *Parser) parsePGCast(expr sqlast.Node) (sqlast.Node, error) {
 
 func (p *Parser) parseIn(expr sqlast.Node, negated bool) (sqlast.Node, error) {
 	p.expectToken(sqltoken.LParen)
-	sok, _ := p.parseKeyword("SELECT")
-	wok, _ := p.parseKeyword("WITH")
+	sok, _, _ := p.parseKeyword("SELECT")
+	wok, _, _ := p.parseKeyword("WITH")
 	var inop sqlast.Node
 	if sok || wok {
 		p.prevToken()
@@ -1838,7 +1838,7 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 			}
 			return ast, nil
 		case "NOT":
-			if ok, _ := p.parseKeyword("EXISTS"); ok {
+			if ok, _, _ := p.parseKeyword("EXISTS"); ok {
 				ast, err := p.parseExistsExpression(true)
 				if err != nil {
 					return nil, errors.Errorf("parseExistsExpression: %w", err)
@@ -1857,7 +1857,7 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 				return nil, errors.Errorf("parseSubexpr failed: %w", err)
 			}
 			return &sqlast.UnaryExpr{
-				Op:   sqlast.Not,
+				Op:   &sqlast.Operator{Type: sqlast.Not},
 				Expr: expr,
 			}, nil
 		default:
@@ -1921,7 +1921,7 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 			return nil, errors.Errorf("parseSubexpr failed: %w", err)
 		}
 		return &sqlast.UnaryExpr{
-			Op:   sqlast.Plus,
+			Op:   &sqlast.Operator{Type: sqlast.Plus},
 			Expr: expr,
 		}, nil
 	case sqltoken.Minus:
@@ -1931,7 +1931,7 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 			return nil, errors.Errorf("parseSubexpr failed: %w", err)
 		}
 		return &sqlast.UnaryExpr{
-			Op:   sqlast.Minus,
+			Op:   &sqlast.Operator{Type: sqlast.Minus},
 			Expr: expr,
 		}, nil
 	case sqltoken.Number, sqltoken.SingleQuotedString, sqltoken.NationalStringLiteral:
@@ -1942,8 +1942,8 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 		}
 		return v, nil
 	case sqltoken.LParen:
-		sok, _ := p.parseKeyword("SELECT")
-		wok, _ := p.parseKeyword("WITH")
+		sok, _, _ := p.parseKeyword("SELECT")
+		wok, _, _ := p.parseKeyword("WITH")
 
 		var ast sqlast.Node
 
@@ -1979,7 +1979,7 @@ func (p *Parser) parseFunction(name *sqlast.ObjectName) (sqlast.Node, error) {
 		return nil, errors.Errorf("parseOptionalArgs failed: %w", err)
 	}
 	var over *sqlast.WindowSpec
-	if ok, _ := p.parseKeyword("OVER"); ok {
+	if ok, _, _ := p.parseKeyword("OVER"); ok {
 		p.expectToken(sqltoken.LParen)
 
 		var partitionBy []sqlast.Node
@@ -2043,10 +2043,10 @@ func (p *Parser) parseOrderByExprList() ([]*sqlast.OrderByExpr, error) {
 		}
 		var asc *bool
 
-		if ok, _ := p.parseKeyword("ASC"); ok {
+		if ok, _, _ := p.parseKeyword("ASC"); ok {
 			b := true
 			asc = &b
-		} else if ok, _ := p.parseKeyword("DESC"); ok {
+		} else if ok, _, _ := p.parseKeyword("DESC"); ok {
 			b := false
 			asc = &b
 		}
@@ -2071,11 +2071,12 @@ func (p *Parser) parseWindowFrame() (*sqlast.WindowFrame, error) {
 	t, _ := p.peekToken()
 	if t.Kind == sqltoken.SQLKeyword {
 		w := t.Value.(*sqltoken.SQLWord)
-		var units sqlast.WindowFrameUnits
-		units = units.FromStr(w.Keyword)
+		var u sqlast.WindowFrameUnit
+		// FIXME
+		units := u.FromStr(w.Keyword)
 		p.mustNextToken()
 
-		if ok, _ := p.parseKeyword("BETWEEN"); ok {
+		if ok, _, _ := p.parseKeyword("BETWEEN"); ok {
 			startBound, err := p.parseWindowFrameBound()
 			if err != nil {
 				return nil, errors.Errorf("parseWindowFrameBound: %w", err)
@@ -2113,11 +2114,11 @@ func (p *Parser) parseWindowFrameBound() (sqlast.SQLWindowFrameBound, error) {
 	}
 
 	var rows *uint64
-	if ok, _ := p.parseKeyword("UNBOUNDED"); ok {
-		if ok, _ := p.parseKeyword("PRECEDING"); ok {
+	if ok, _, _ := p.parseKeyword("UNBOUNDED"); ok {
+		if ok, _, _ := p.parseKeyword("PRECEDING"); ok {
 			return &sqlast.UnboundedPreceding{}, nil
 		}
-		if ok, _ := p.parseKeyword("FOLLOWING"); ok {
+		if ok, _, _ := p.parseKeyword("FOLLOWING"); ok {
 			return &sqlast.UnboundedFollowing{}, nil
 		}
 	} else {
@@ -2132,10 +2133,10 @@ func (p *Parser) parseWindowFrameBound() (sqlast.SQLWindowFrameBound, error) {
 		rows = &ui
 	}
 
-	if ok, _ := p.parseKeyword("PRECEDING"); ok {
+	if ok, _, _ := p.parseKeyword("PRECEDING"); ok {
 		return &sqlast.Preceding{Bound: rows}, nil
 	}
-	if ok, _ := p.parseKeyword("FOLLOWING"); ok {
+	if ok, _, _ := p.parseKeyword("FOLLOWING"); ok {
 		return &sqlast.Following{Bound: rows}, nil
 	}
 	log.Fatal("expected PRECEDING or FOLLOWING")
@@ -2282,7 +2283,7 @@ func (p *Parser) parseListOfIds(separator sqltoken.Kind) ([]*sqlast.Ident, error
 func (p *Parser) parseCaseExpression() (sqlast.Node, error) {
 	var operand sqlast.Node
 
-	if ok, _ := p.parseKeyword("WHEN"); !ok {
+	if ok, _, _ := p.parseKeyword("WHEN"); !ok {
 		expr, err := p.ParseExpr()
 		if err != nil {
 			return nil, errors.Errorf("ParseExpr failed: %w", err)
@@ -2306,13 +2307,13 @@ func (p *Parser) parseCaseExpression() (sqlast.Node, error) {
 			return nil, errors.Errorf("ParseExpr failed: %w", err)
 		}
 		results = append(results, result)
-		if ok, _ := p.parseKeyword("WHEN"); !ok {
+		if ok, _, _ := p.parseKeyword("WHEN"); !ok {
 			break
 		}
 	}
 	var elseResult sqlast.Node
 
-	if ok, _ := p.parseKeyword("ELSE"); ok {
+	if ok, _, _ := p.parseKeyword("ELSE"); ok {
 		result, err := p.ParseExpr()
 		if err != nil {
 			return nil, errors.Errorf("ParseExpr failed: %w", err)
@@ -2364,7 +2365,7 @@ func (p *Parser) parseExistsExpression(negated bool) (sqlast.Node, error) {
 }
 
 func (p *Parser) expectKeyword(expected string) {
-	ok, err := p.parseKeyword(expected)
+	ok, _, err := p.parseKeyword(expected)
 	if err != nil || !ok {
 		for i := 0; i < int(p.index); i++ {
 			fmt.Printf("%v", p.tokens[i].Value)

@@ -510,9 +510,7 @@ func (s *WindowFrameUnit) ToSQLString() string {
 	return ""
 }
 
-// unused
-// TODO remove
-func (WindowFrameUnitType) FromStr(str string) *WindowFrameUnit {
+func (WindowFrameUnit) FromStr(str string) *WindowFrameUnit {
 	if str == "ROWS" {
 		return &WindowFrameUnit{
 			Type: RowsUnit,
