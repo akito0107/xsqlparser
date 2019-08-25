@@ -111,45 +111,50 @@ func (p *Parser) ParseDataType() (sqlast.Type, error) {
 
 	switch word.Keyword {
 	case "BOOLEAN":
-		return &sqlast.Boolean{}, nil
+		return &sqlast.Boolean{
+			From: tok.From,
+			To:   tok.To,
+		}, nil
 	case "FLOAT":
-		size, err := p.parseOptionalPrecision()
+		size, r, err := p.parseOptionalPrecision()
 		if err != nil {
 			return nil, errors.Errorf("parsePrecision failed: %w", err)
 		}
-		return &sqlast.Float{Size: size}, nil
+		return &sqlast.Float{Size: size, From: tok.From, To: tok.To, RParen: r}, nil
 	case "REAL":
-		return &sqlast.Real{}, nil
+		return &sqlast.Real{From: tok.From, To: tok.To}, nil
 	case "DOUBLE":
-		p.expectKeyword("PRECISION")
-		return &sqlast.Double{}, nil
+		p := p.expectKeyword("PRECISION")
+		return &sqlast.Double{From: tok.From, To: p.To}, nil
 	case "SMALLINT":
-		return &sqlast.SmallInt{}, nil
+		return &sqlast.SmallInt{From: tok.From, To: tok.To}, nil
 	case "INTEGER", "INT":
-		return &sqlast.Int{}, nil
+		return &sqlast.Int{From: tok.From, To: tok.To}, nil
 	case "BIGINT":
-		return &sqlast.BigInt{}, nil
+		return &sqlast.BigInt{From: tok.From, To: tok.To}, nil
 	case "VARCHAR":
-		p, err := p.parseOptionalPrecision()
+		p, r, err := p.parseOptionalPrecision()
 		if err != nil {
 			return nil, errors.Errorf("parsePrecision failed: %w", err)
+
 		}
-		return &sqlast.VarcharType{Size: p}, nil
+		// FIXME Character
+		return &sqlast.VarcharType{Size: p, RParen: r, Character: tok.From}, nil
 	case "CHAR", "CHARACTER":
-		if ok, _, _ := p.parseKeyword("VARYING"); ok {
-			p, err := p.parseOptionalPrecision()
+		if ok, v, _ := p.parseKeyword("VARYING"); ok {
+			p, r, err := p.parseOptionalPrecision()
 			if err != nil {
 				return nil, errors.Errorf("parsePrecision failed: %w", err)
 			}
-			return &sqlast.VarcharType{Size: p}, nil
+			return &sqlast.VarcharType{Size: p, Character: tok.From, Varying: v.To, RParen: r}, nil
 		}
-		p, err := p.parseOptionalPrecision()
+		p, r, err := p.parseOptionalPrecision()
 		if err != nil {
 			return nil, errors.Errorf("parsePrecision failed: %w", err)
 		}
-		return &sqlast.CharType{Size: p}, nil
+		return &sqlast.CharType{Size: p, From: tok.From, To: tok.To, RParen: r}, nil
 	case "UUID":
-		return &sqlast.UUID{}, nil
+		return &sqlast.UUID{From: tok.From, To: tok.To}, nil
 	case "DATE":
 		return &sqlast.Date{}, nil
 	case "TIMESTAMP":
@@ -252,11 +257,12 @@ func (p *Parser) parseQuery() (*sqlast.Query, error) {
 
 func (p *Parser) parseQueryBody(precedence uint8) (sqlast.SQLSetExpr, error) {
 	var expr sqlast.SQLSetExpr
-	if ok, _, _ := p.parseKeyword("SELECT"); ok {
+	if ok, tok, _ := p.parseKeyword("SELECT"); ok {
 		s, err := p.parseSelect()
 		if err != nil {
 			return nil, errors.Errorf("parseSelect failed: %w", err)
 		}
+		s.Select = tok.From
 		expr = s
 	} else if ok, _ := p.consumeToken(sqltoken.LParen); ok {
 		subquery, err := p.parseQuery()
@@ -1549,7 +1555,11 @@ func (p *Parser) parseIdentifier() (*sqlast.Ident, error) {
 		return nil, errors.Errorf("expected identifier but %+v", tok)
 	}
 
-	return sqlast.NewIdent(word.Value), nil
+	return &sqlast.Ident{
+		From:  tok.From,
+		To:    tok.To,
+		Value: word.String(),
+	}, nil
 }
 
 func (p *Parser) parseExprList() ([]sqlast.Node, error) {
@@ -1820,6 +1830,7 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 			}
 			return t, nil
 		case "CASE":
+			p.prevToken()
 			ast, err := p.parseCaseExpression()
 			if err != nil {
 				return nil, errors.Errorf("parseCaseExpression failed: %w", err)
@@ -2169,11 +2180,22 @@ func (p *Parser) parseValue() (sqlast.Node, error) {
 
 		switch word.Keyword {
 		case "TRUE":
-			return sqlast.NewBooleanValue(true), nil
+			return &sqlast.BooleanValue{
+				From:    tok.From,
+				To:      tok.To,
+				Boolean: true,
+			}, nil
 		case "FALSE":
-			return sqlast.NewBooleanValue(false), nil
+			return &sqlast.BooleanValue{
+				From:    tok.From,
+				To:      tok.To,
+				Boolean: false,
+			}, nil
 		case "NULL":
-			return sqlast.NewNullValue(), nil
+			return &sqlast.NullValue{
+				From: tok.From,
+				To:   tok.To,
+			}, nil
 		default:
 			return nil, errors.Errorf("unexpected sqltoken %v", word)
 		}
@@ -2184,34 +2206,54 @@ func (p *Parser) parseValue() (sqlast.Node, error) {
 			if err != nil {
 				return nil, errors.Errorf("parseFloat failed %s", num)
 			}
-			return sqlast.NewDoubleValue(f), nil
+			return &sqlast.DoubleValue{
+				From:   tok.From,
+				To:     tok.To,
+				Double: f,
+			}, nil
 		} else {
 			i, _ := strconv.Atoi(num)
-			return sqlast.NewLongValue(int64(i)), nil
+			return &sqlast.LongValue{
+				Long: int64(i),
+				From: tok.From,
+				To:   tok.To,
+			}, nil
 		}
 	case sqltoken.SingleQuotedString:
 		str := tok.Value.(string)
-		return sqlast.NewSingleQuotedString(str), nil
+		return &sqlast.SingleQuotedString{
+			From:   tok.From,
+			To:     tok.To,
+			String: str,
+		}, nil
 	case sqltoken.NationalStringLiteral:
 		str := tok.Value.(string)
-		return sqlast.NewNationalStringLiteral(str), nil
+		return &sqlast.NationalStringLiteral{
+			String: str,
+			From:   tok.From,
+			To:     tok.To,
+		}, nil
 	default:
 		return nil, errors.Errorf("unexpected sqltoken %v", tok)
 	}
 
 }
 
-func (p *Parser) parseOptionalPrecision() (*uint, error) {
+func (p *Parser) parseOptionalPrecision() (*uint, sqltoken.Pos, error) {
 	if ok, _ := p.consumeToken(sqltoken.LParen); ok {
 		n, err := p.parseLiteralInt()
 		if err != nil {
-			return nil, errors.Errorf("parseLiteralInt failed: %w", err)
+			return nil, sqltoken.Pos{}, errors.Errorf("parseLiteralInt failed: %w", err)
 		}
-		p.expectToken(sqltoken.RParen)
+		tok, _ := p.nextToken()
+
+		if tok.Kind != sqltoken.RParen {
+			return nil, sqltoken.Pos{}, errors.Errorf("expected RParen but %s", tok)
+		}
 		i := uint(n)
-		return &i, nil
+		return &i, tok.To, nil
 	} else {
-		return nil, nil
+		return nil, sqltoken.Pos{}, nil
 	}
 }
 
@@ -2263,7 +2305,11 @@ func (p *Parser) parseListOfIds(separator sqltoken.Kind) ([]*sqlast.Ident, error
 		if tok.Kind == sqltoken.SQLKeyword && expectIdentifier {
 			expectIdentifier = false
 			word := tok.Value.(*sqltoken.SQLWord)
-			idents = append(idents, sqlast.NewIdentFromWord(word))
+			idents = append(idents, &sqlast.Ident{
+				Value: word.String(),
+				From:  tok.From,
+				To:    tok.To,
+			})
 			continue
 		} else if tok.Kind == separator && !expectIdentifier {
 			expectIdentifier = true
@@ -2281,8 +2327,12 @@ func (p *Parser) parseListOfIds(separator sqltoken.Kind) ([]*sqlast.Ident, error
 }
 
 func (p *Parser) parseCaseExpression() (sqlast.Node, error) {
-	var operand sqlast.Node
+	ok, tok, _ := p.parseKeyword("CASE")
+	if !ok {
+		return nil, errors.Errorf("expected CASE keyword but %s", tok)
+	}
 
+	var operand sqlast.Node
 	if ok, _, _ := p.parseKeyword("WHEN"); !ok {
 		expr, err := p.ParseExpr()
 		if err != nil {
@@ -2320,9 +2370,14 @@ func (p *Parser) parseCaseExpression() (sqlast.Node, error) {
 		}
 		elseResult = result
 	}
-	p.expectKeyword("END")
+	ok, etok, _ := p.parseKeyword("END")
+	if !ok {
+		return nil, errors.Errorf("expect END keyword but %s", etok)
+	}
 
 	return &sqlast.CaseExpr{
+		Case:       tok.From,
+		CaseEnd:    etok.To,
 		Operand:    operand,
 		Conditions: conditions,
 		Results:    results,
@@ -2364,8 +2419,8 @@ func (p *Parser) parseExistsExpression(negated bool) (sqlast.Node, error) {
 	}, nil
 }
 
-func (p *Parser) expectKeyword(expected string) {
-	ok, _, err := p.parseKeyword(expected)
+func (p *Parser) expectKeyword(expected string) *sqltoken.Token {
+	ok, tok, err := p.parseKeyword(expected)
 	if err != nil || !ok {
 		for i := 0; i < int(p.index); i++ {
 			fmt.Printf("%v", p.tokens[i].Value)
@@ -2373,6 +2428,8 @@ func (p *Parser) expectKeyword(expected string) {
 		fmt.Println()
 		log.Fatalf("should be expected keyword: %s err: %v", expected, err)
 	}
+
+	return tok
 }
 
 func (p *Parser) expectToken(expected sqltoken.Kind) {

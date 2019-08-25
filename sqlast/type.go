@@ -11,16 +11,19 @@ type Type interface {
 }
 
 type CharType struct {
-	Size         *uint
-	Char, RParen sqltoken.Pos
+	Size             *uint
+	From, To, RParen sqltoken.Pos
 }
 
 func (c *CharType) Pos() sqltoken.Pos {
-	return c.Char
+	return c.From
 }
 
 func (c *CharType) End() sqltoken.Pos {
-	return c.RParen
+	if c.Size != nil {
+		return c.RParen
+	}
+	return c.To
 }
 
 func (c *CharType) ToSQLString() string {
@@ -28,8 +31,8 @@ func (c *CharType) ToSQLString() string {
 }
 
 type VarcharType struct {
-	Size               *uint
-	Character, Varying sqltoken.Pos
+	Size                       *uint
+	Character, Varying, RParen sqltoken.Pos
 }
 
 func (v *VarcharType) Pos() sqltoken.Pos {
@@ -37,6 +40,9 @@ func (v *VarcharType) Pos() sqltoken.Pos {
 }
 
 func (v *VarcharType) End() sqltoken.Pos {
+	if v.Size != nil {
+		return v.RParen
+	}
 	return v.Varying
 }
 
@@ -150,16 +156,19 @@ func (d *Decimal) ToSQLString() string {
 }
 
 type Float struct {
-	Size          *uint
-	Float, RParen sqltoken.Pos
+	Size             *uint
+	From, To, RParen sqltoken.Pos
 }
 
 func (f *Float) Pos() sqltoken.Pos {
-	return f.Float
+	return f.From
 }
 
 func (f *Float) End() sqltoken.Pos {
-	return f.RParen
+	if f.Size != nil {
+		return f.RParen
+	}
+	return f.To
 }
 
 func (f *Float) ToSQLString() string {
