@@ -42,31 +42,21 @@ func TestParser_ParseStatement(t *testing.T) {
 							&sqlast.UnnamedSelectItem{
 								Node: &sqlast.Ident{
 									Value: "test",
-									From: sqltoken.Pos{
-										Line: 1,
-										Col:  7,
-									},
-									To: sqltoken.Pos{
-										Line: 1,
-										Col:  11,
-									},
+									From:  sqltoken.Pos{Line: 1, Col: 7},
+									To:    sqltoken.Pos{Line: 1, Col: 11},
 								},
 							},
 						},
 						FromClause: []sqlast.TableReference{
 							&sqlast.Table{
 								Name: &sqlast.ObjectName{
-									Idents: []*sqlast.Ident{&sqlast.Ident{
-										Value: "test_table",
-										From: sqltoken.Pos{
-											Line: 1,
-											Col:  17,
+									Idents: []*sqlast.Ident{
+										{
+											Value: "test_table",
+											From:  sqltoken.Pos{Line: 1, Col: 17},
+											To:    sqltoken.Pos{Line: 1, Col: 27},
 										},
-										To: sqltoken.Pos{
-											Line: 1,
-											Col:  27,
-										},
-									}},
+									},
 								},
 							},
 						},
@@ -86,31 +76,21 @@ func TestParser_ParseStatement(t *testing.T) {
 							&sqlast.UnnamedSelectItem{
 								Node: &sqlast.Ident{
 									Value: "test",
-									From: sqltoken.Pos{
-										Line: 1,
-										Col:  7,
-									},
-									To: sqltoken.Pos{
-										Line: 1,
-										Col:  11,
-									},
+									From:  sqltoken.Pos{Line: 1, Col: 7},
+									To:    sqltoken.Pos{Line: 1, Col: 11},
 								},
 							},
 						},
 						FromClause: []sqlast.TableReference{
 							&sqlast.Table{
 								Name: &sqlast.ObjectName{
-									Idents: []*sqlast.Ident{&sqlast.Ident{
-										Value: "test_table",
-										From: sqltoken.Pos{
-											Line: 1,
-											Col:  17,
+									Idents: []*sqlast.Ident{
+										{
+											Value: "test_table",
+											From:  sqltoken.Pos{Line: 1, Col: 17},
+											To:    sqltoken.Pos{Line: 1, Col: 27},
 										},
-										To: sqltoken.Pos{
-											Line: 1,
-											Col:  27,
-										},
-									}},
+									},
 								},
 							},
 						},
@@ -119,48 +99,24 @@ func TestParser_ParseStatement(t *testing.T) {
 								Idents: []*sqlast.Ident{
 									{
 										Value: "test_table",
-										From: sqltoken.Pos{
-											Line: 1,
-											Col:  34,
-										},
-										To: sqltoken.Pos{
-											Line: 1,
-											Col:  44,
-										},
+										From:  sqltoken.Pos{Line: 1, Col: 34},
+										To:    sqltoken.Pos{Line: 1, Col: 44},
 									},
 									{
 										Value: "column1",
-										From: sqltoken.Pos{
-											Line: 1,
-											Col:  45,
-										},
-										To: sqltoken.Pos{
-											Line: 1,
-											Col:  52,
-										},
+										From:  sqltoken.Pos{Line: 1, Col: 45},
+										To:    sqltoken.Pos{Line: 1, Col: 52},
 									},
 								},
 							},
 							Op: &sqlast.Operator{
 								Type: sqlast.Eq,
-								From: sqltoken.Pos{
-									Line: 1,
-									Col:  53,
-								},
-								To: sqltoken.Pos{
-									Line: 1,
-									Col:  54,
-								},
+								From: sqltoken.Pos{Line: 1, Col: 53},
+								To:   sqltoken.Pos{Line: 1, Col: 54},
 							},
 							Right: &sqlast.SingleQuotedString{
-								From: sqltoken.Pos{
-									Line: 1,
-									Col:  55,
-								},
-								To: sqltoken.Pos{
-									Line: 1,
-									Col:  61,
-								},
+								From:   sqltoken.Pos{Line: 1, Col: 55},
+								To:     sqltoken.Pos{Line: 1, Col: 61},
 								String: "test",
 							},
 						},
@@ -168,20 +124,44 @@ func TestParser_ParseStatement(t *testing.T) {
 				},
 			},
 			{
-				skip: true,
 				name: "count and join",
 				in:   "SELECT COUNT(t1.id) AS c FROM test_table AS t1 LEFT JOIN test_table2 AS t2 ON t1.id = t2.test_table_id",
 				out: &sqlast.Query{
 					Body: &sqlast.SQLSelect{
+						Select: sqltoken.Pos{Line: 1, Col: 0},
 						Projection: []sqlast.SQLSelectItem{
 							&sqlast.AliasSelectItem{
 								Expr: &sqlast.Function{
-									Name: sqlast.NewObjectName("COUNT"),
+									Name: &sqlast.ObjectName{
+										Idents: []*sqlast.Ident{
+											{
+												Value: "COUNT",
+												From:  sqltoken.Pos{Line: 1, Col: 7},
+												To:    sqltoken.Pos{Line: 1, Col: 12},
+											},
+										},
+									},
 									Args: []sqlast.Node{&sqlast.CompoundIdent{
-										Idents: []*sqlast.Ident{sqlast.NewIdent("t1"), sqlast.NewIdent("id")},
+										Idents: []*sqlast.Ident{
+											{
+												Value: "t1",
+												From:  sqltoken.Pos{Line: 1, Col: 13},
+												To:    sqltoken.Pos{Line: 1, Col: 15},
+											},
+											{
+												Value: "id",
+												From:  sqltoken.Pos{Line: 1, Col: 16},
+												To:    sqltoken.Pos{Line: 1, Col: 18},
+											},
+										},
 									}},
+									ArgsRParen: sqltoken.Pos{Line: 1, Col: 19},
 								},
-								Alias: sqlast.NewIdent("c"),
+								Alias: &sqlast.Ident{
+									Value: "c",
+									From:  sqltoken.Pos{Line: 1, Col: 23},
+									To:    sqltoken.Pos{Line: 1, Col: 24},
+								},
 							},
 						},
 						FromClause: []sqlast.TableReference{
