@@ -1664,7 +1664,7 @@ func (p *Parser) parseInfix(expr sqlast.Node, precedence uint) (sqlast.Node, err
 
 		return &sqlast.BinaryExpr{
 			Left:  expr,
-			Op:    &sqlast.Operator{Type: operator},
+			Op:    &sqlast.Operator{Type: operator, From: tok.From, To: tok.To},
 			Right: right,
 		}, nil
 	}
@@ -1705,6 +1705,7 @@ func (p *Parser) parseInfix(expr sqlast.Node, precedence uint) (sqlast.Node, err
 	return nil, nil
 }
 
+// TODO position
 func (p *Parser) parsePGCast(expr sqlast.Node) (sqlast.Node, error) {
 	tp, err := p.ParseDataType()
 	if err != nil {
@@ -1727,7 +1728,12 @@ func (p *Parser) parseIn(expr sqlast.Node, negated bool) (sqlast.Node, error) {
 		if err != nil {
 			return nil, errors.Errorf("parseQuery failed: %w", err)
 		}
+		r, _ := p.nextToken()
+		if r.Kind != sqltoken.RParen {
+			return nil, errors.Errorf("expected RParen but %+v", r)
+		}
 		inop = &sqlast.InSubQuery{
+			RParen:   r.To,
 			Negated:  negated,
 			Expr:     expr,
 			SubQuery: q,
@@ -1737,15 +1743,17 @@ func (p *Parser) parseIn(expr sqlast.Node, negated bool) (sqlast.Node, error) {
 		if err != nil {
 			return nil, errors.Errorf("parseExprList failed: %w", err)
 		}
+		r, _ := p.nextToken()
+		if r.Kind != sqltoken.RParen {
+			return nil, errors.Errorf("expected RParen but %+v", r)
+		}
 		inop = &sqlast.InList{
+			RParen:  r.To,
 			Expr:    expr,
 			Negated: negated,
 			List:    list,
 		}
 	}
-
-	p.expectToken(sqltoken.RParen)
-
 	return inop, nil
 }
 
@@ -1837,20 +1845,23 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 			}
 			return ast, nil
 		case "CAST":
+			p.prevToken()
 			ast, err := p.parseCastExpression()
 			if err != nil {
 				return nil, errors.Errorf("parseCastExpression failed: %w", err)
 			}
 			return ast, nil
 		case "EXISTS":
-			ast, err := p.parseExistsExpression(false)
+			p.prevToken()
+			ast, err := p.parseExistsExpression(nil)
 			if err != nil {
 				return nil, errors.Errorf("parseExistsExpression: %w", err)
 			}
 			return ast, nil
 		case "NOT":
 			if ok, _, _ := p.parseKeyword("EXISTS"); ok {
-				ast, err := p.parseExistsExpression(true)
+				p.prevToken()
+				ast, err := p.parseExistsExpression(tok)
 				if err != nil {
 					return nil, errors.Errorf("parseExistsExpression: %w", err)
 				}
@@ -1868,15 +1879,21 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 				return nil, errors.Errorf("parseSubexpr failed: %w", err)
 			}
 			return &sqlast.UnaryExpr{
+				From: tok.From,
 				Op:   &sqlast.Operator{Type: sqlast.Not},
 				Expr: expr,
 			}, nil
 		default:
 			t, _ := p.peekToken()
 			if t == nil || (t.Kind != sqltoken.LParen && t.Kind != sqltoken.Period) {
-				return sqlast.NewIdentFromWord(word), nil
+				return &sqlast.Ident{Value: word.String(),
+					From: tok.From,
+					To:   tok.To,
+				}, nil
 			}
-			idParts := []*sqlast.Ident{sqlast.NewIdentFromWord(word)}
+			idParts := []*sqlast.Ident{
+				{Value: word.String(), From: tok.From, To: tok.To},
+			}
 			endWithWildcard := false
 
 			for {
@@ -1890,7 +1907,10 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 
 				if n.Kind == sqltoken.SQLKeyword {
 					w := n.Value.(*sqltoken.SQLWord)
-					idParts = append(idParts, sqlast.NewIdentFromWord(w))
+					idParts = append(idParts, &sqlast.Ident{Value: w.String(),
+						From: n.From,
+						To:   n.To,
+					})
 					continue
 				}
 				if n.Kind == sqltoken.Mult {
@@ -1924,7 +1944,9 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 			}, nil
 		}
 	case sqltoken.Mult:
-		return &sqlast.Wildcard{}, nil
+		return &sqlast.Wildcard{
+			Wildcard: tok.From,
+		}, nil
 	case sqltoken.Plus:
 		precedence := p.getPrecedence(tok)
 		expr, err := p.parseSubexpr(precedence)
@@ -1932,7 +1954,8 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 			return nil, errors.Errorf("parseSubexpr failed: %w", err)
 		}
 		return &sqlast.UnaryExpr{
-			Op:   &sqlast.Operator{Type: sqlast.Plus},
+			From: tok.From,
+			Op:   &sqlast.Operator{Type: sqlast.Plus, From: tok.From, To: tok.To},
 			Expr: expr,
 		}, nil
 	case sqltoken.Minus:
@@ -1942,7 +1965,8 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 			return nil, errors.Errorf("parseSubexpr failed: %w", err)
 		}
 		return &sqlast.UnaryExpr{
-			Op:   &sqlast.Operator{Type: sqlast.Minus},
+			From: tok.From,
+			Op:   &sqlast.Operator{Type: sqlast.Minus, From: tok.From, To: tok.To},
 			Expr: expr,
 		}, nil
 	case sqltoken.Number, sqltoken.SingleQuotedString, sqltoken.NationalStringLiteral:
@@ -1964,19 +1988,30 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 			if err != nil {
 				return nil, errors.Errorf("parseQuery failed: %w", err)
 			}
+			r, _ := p.nextToken()
+			if r.Kind != sqltoken.RParen {
+				return nil, errors.Errorf("expected RParen but %+v", r)
+			}
 			ast = &sqlast.SubQuery{
-				Query: expr,
+				LParen: tok.From,
+				RParen: r.To,
+				Query:  expr,
 			}
 		} else {
 			expr, err := p.ParseExpr()
 			if err != nil {
 				return nil, errors.Errorf("parseQuery failed: %w", err)
 			}
+			r, _ := p.nextToken()
+			if r.Kind != sqltoken.RParen {
+				return nil, errors.Errorf("expected RParen but %+v", r)
+			}
 			ast = &sqlast.Nested{
-				AST: expr,
+				LParen: tok.From,
+				RParen: r.To,
+				AST:    expr,
 			}
 		}
-		p.expectToken(sqltoken.RParen)
 		return ast, nil
 	}
 	log.Fatal("prefix parser expected a keyword but hit EOF")
@@ -2387,6 +2422,10 @@ func (p *Parser) parseCaseExpression() (sqlast.Node, error) {
 }
 
 func (p *Parser) parseCastExpression() (sqlast.Node, error) {
+	ok, tok, _ := p.parseKeyword("CAST")
+	if !ok {
+		return nil, errors.Errorf("expected CAST but %+v", tok)
+	}
 	p.expectToken(sqltoken.LParen)
 	expr, err := p.ParseExpr()
 	if err != nil {
@@ -2397,25 +2436,50 @@ func (p *Parser) parseCastExpression() (sqlast.Node, error) {
 	if err != nil {
 		return nil, errors.Errorf("ParseDataType")
 	}
-	p.expectToken(sqltoken.RParen)
+	r, _ := p.nextToken()
+	if r.Kind != sqltoken.RParen {
+		return nil, errors.Errorf("expect RParen but %+v", r)
+	}
 
 	return &sqlast.Cast{
 		Expr:     expr,
 		DateType: dataType,
+		Cast:     tok.From,
+		RParen:   r.To,
 	}, nil
 }
 
-func (p *Parser) parseExistsExpression(negated bool) (sqlast.Node, error) {
+func (p *Parser) parseExistsExpression(negatedTok *sqltoken.Token) (sqlast.Node, error) {
+	ok, tok, _ := p.parseKeyword("EXISTS")
+	if !ok {
+		return nil, errors.Errorf("expect EXISTS but %+v", tok)
+	}
+
 	p.expectToken(sqltoken.LParen)
 	expr, err := p.parseQuery()
 	if err != nil {
 		return nil, errors.Errorf("parseQuery failed: %w", err)
 	}
-	p.expectToken(sqltoken.RParen)
+
+	r, _ := p.nextToken()
+	if r.Kind != sqltoken.RParen {
+		return nil, errors.Errorf("expect RParen but %+v", r)
+	}
+
+	if negatedTok != nil {
+		return &sqlast.Exists{
+			Negated: true,
+			Query:   expr,
+			Not:     negatedTok.From,
+			Exists:  tok.From,
+			RParen:  r.To,
+		}, nil
+	}
 
 	return &sqlast.Exists{
-		Negated: negated,
-		Query:   expr,
+		Query:  expr,
+		Exists: tok.From,
+		RParen: r.To,
 	}, nil
 }
 

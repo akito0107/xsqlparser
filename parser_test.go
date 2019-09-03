@@ -74,27 +74,95 @@ func TestParser_ParseStatement(t *testing.T) {
 				},
 			},
 			{
-				skip: true,
 				name: "where",
 				in:   "SELECT test FROM test_table WHERE test_table.column1 = 'test'",
 				out: &sqlast.Query{
 					Body: &sqlast.SQLSelect{
+						Select: sqltoken.Pos{
+							Line: 1,
+							Col:  0,
+						},
 						Projection: []sqlast.SQLSelectItem{
 							&sqlast.UnnamedSelectItem{
-								Node: sqlast.NewIdent("test"),
+								Node: &sqlast.Ident{
+									Value: "test",
+									From: sqltoken.Pos{
+										Line: 1,
+										Col:  7,
+									},
+									To: sqltoken.Pos{
+										Line: 1,
+										Col:  11,
+									},
+								},
 							},
 						},
 						FromClause: []sqlast.TableReference{
 							&sqlast.Table{
-								Name: sqlast.NewObjectName("test_table"),
+								Name: &sqlast.ObjectName{
+									Idents: []*sqlast.Ident{&sqlast.Ident{
+										Value: "test_table",
+										From: sqltoken.Pos{
+											Line: 1,
+											Col:  17,
+										},
+										To: sqltoken.Pos{
+											Line: 1,
+											Col:  27,
+										},
+									}},
+								},
 							},
 						},
 						WhereClause: &sqlast.BinaryExpr{
 							Left: &sqlast.CompoundIdent{
-								Idents: []*sqlast.Ident{sqlast.NewIdent("test_table"), sqlast.NewIdent("column1")},
+								Idents: []*sqlast.Ident{
+									{
+										Value: "test_table",
+										From: sqltoken.Pos{
+											Line: 1,
+											Col:  34,
+										},
+										To: sqltoken.Pos{
+											Line: 1,
+											Col:  44,
+										},
+									},
+									{
+										Value: "column1",
+										From: sqltoken.Pos{
+											Line: 1,
+											Col:  45,
+										},
+										To: sqltoken.Pos{
+											Line: 1,
+											Col:  52,
+										},
+									},
+								},
 							},
-							Op:    &sqlast.Operator{Type: sqlast.Eq},
-							Right: sqlast.NewSingleQuotedString("test"),
+							Op: &sqlast.Operator{
+								Type: sqlast.Eq,
+								From: sqltoken.Pos{
+									Line: 1,
+									Col:  53,
+								},
+								To: sqltoken.Pos{
+									Line: 1,
+									Col:  54,
+								},
+							},
+							Right: &sqlast.SingleQuotedString{
+								From: sqltoken.Pos{
+									Line: 1,
+									Col:  55,
+								},
+								To: sqltoken.Pos{
+									Line: 1,
+									Col:  61,
+								},
+								String: "test",
+							},
 						},
 					},
 				},
