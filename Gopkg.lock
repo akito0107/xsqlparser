@@ -10,7 +10,7 @@
   revision = "c7f18ee00883bfd3b00e0a2bf7607827e0148ad4"
 
 [[projects]]
-  digest = "1:48b4bcbe6d3afdb3cf9fa474b694b508e360920453b0f680c345839e13586509"
+  digest = "1:1d1cbf539d9ac35eb3148129f96be5537f1a1330cadcc7e3a83b4e72a59672a3"
   name = "github.com/google/go-cmp"
   packages = [
     "cmp",
@@ -65,7 +65,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:200b026ac664079d04cd6e22db1b613733d18f8c22e9705c0409ad39a6f7266e"
+  digest = "1:7b5ce208ea2ca1f96322e6a5b616839fe49ea798648a013039f300475a1aadfc"
   name = "golang.org/x/xerrors"
   packages = [
     ".",

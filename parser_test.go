@@ -168,23 +168,56 @@ func TestParser_ParseStatement(t *testing.T) {
 							&sqlast.QualifiedJoin{
 								LeftElement: &sqlast.TableJoinElement{
 									Ref: &sqlast.Table{
-										Name:  sqlast.NewObjectName("test_table"),
-										Alias: sqlast.NewIdent("t1"),
+										Name: &sqlast.ObjectName{
+											Idents: []*sqlast.Ident{
+												{
+													Value: "test_table",
+													From:  sqltoken.Pos{Line: 1, Col: 30},
+													To:    sqltoken.Pos{Line: 1, Col: 40},
+												},
+											},
+										},
+										Alias: &sqlast.Ident{
+											Value: "t1",
+											From:  sqltoken.Pos{Line: 1, Col: 44},
+											To:    sqltoken.Pos{Line: 1, Col: 46},
+										},
 									},
 								},
-								Type: &sqlast.JoinType{Condition: sqlast.LEFT},
+								Type: &sqlast.JoinType{
+									Condition: sqlast.LEFT,
+									From:      sqltoken.Pos{Line: 1, Col: 47},
+									To:        sqltoken.Pos{Line: 1, Col: 51},
+								},
 								RightElement: &sqlast.TableJoinElement{
 									Ref: &sqlast.Table{
-										Name:  sqlast.NewObjectName("test_table2"),
-										Alias: sqlast.NewIdent("t2"),
+										Name: &sqlast.ObjectName{
+											Idents: []*sqlast.Ident{
+												{
+													Value: "test_table2",
+													From:  sqltoken.Pos{Line: 1, Col: 57},
+													To:    sqltoken.Pos{Line: 1, Col: 68},
+												},
+											},
+										},
+										Alias: &sqlast.Ident{
+											Value: "t2",
+											From:  sqltoken.Pos{Line: 1, Col: 72},
+											To:    sqltoken.Pos{Line: 1, Col: 74},
+										},
 									},
 								},
 								Spec: &sqlast.JoinCondition{
+									On: sqltoken.Pos{Line: 1, Col: 75},
 									SearchCondition: &sqlast.BinaryExpr{
 										Left: &sqlast.CompoundIdent{
 											Idents: []*sqlast.Ident{sqlast.NewIdent("t1"), sqlast.NewIdent("id")},
 										},
-										Op: &sqlast.Operator{Type: sqlast.Eq},
+										Op: &sqlast.Operator{
+											Type: sqlast.Eq,
+											From: sqltoken.Pos{Line: 1, Col: 84},
+											To:   sqltoken.Pos{Line: 1, Col: 85},
+										},
 										Right: &sqlast.CompoundIdent{
 											Idents: []*sqlast.Ident{sqlast.NewIdent("t2"), sqlast.NewIdent("test_table_id")},
 										},

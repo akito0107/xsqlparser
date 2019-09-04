@@ -1191,7 +1191,11 @@ func (p *Parser) parseOptionalAlias(reservedKeywords map[string]struct{}) *sqlas
 
 		word := maybeAlias.Value.(*sqltoken.SQLWord)
 		if afterAs || !containsStr(reservedKeywords, word.Keyword) {
-			return sqlast.NewIdentFromWord(word)
+			return &sqlast.Ident{
+				Value: word.String(),
+				From:  maybeAlias.From,
+				To:    maybeAlias.To,
+			}
 		}
 	}
 	if afterAs {
@@ -2024,6 +2028,12 @@ func (p *Parser) parseFunction(name *sqlast.ObjectName) (sqlast.Node, error) {
 	if err != nil {
 		return nil, errors.Errorf("parseOptionalArgs failed: %w", err)
 	}
+
+	r, _ := p.nextToken()
+	if r.Kind != sqltoken.RParen {
+		return nil, errors.Errorf("expected RParen but %+v", r)
+	}
+
 	var over *sqlast.WindowSpec
 	if ok, _, _ := p.parseKeyword("OVER"); ok {
 		p.expectToken(sqltoken.LParen)
@@ -2059,9 +2069,10 @@ func (p *Parser) parseFunction(name *sqlast.ObjectName) (sqlast.Node, error) {
 	}
 
 	return &sqlast.Function{
-		Name: name,
-		Args: args,
-		Over: over,
+		Name:       name,
+		Args:       args,
+		Over:       over,
+		ArgsRParen: r.To,
 	}, nil
 }
 
