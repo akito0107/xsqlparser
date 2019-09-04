@@ -1440,13 +1440,14 @@ func (p *Parser) parseJoinType() (*sqlast.JoinType, error) {
 }
 
 func (p *Parser) parseJoinSpec() (sqlast.JoinSpec, error) {
-	if ok, _, _ := p.parseKeyword("ON"); ok {
+	if ok, tok, _ := p.parseKeyword("ON"); ok {
 		expr, err := p.ParseExpr()
 		if err != nil {
 			return nil, errors.Errorf("parse join condition failed: %w", err)
 		}
 		return &sqlast.JoinCondition{
 			SearchCondition: expr,
+			On:              tok.From,
 		}, nil
 	}
 
@@ -2039,21 +2040,31 @@ func (p *Parser) parseFunction(name *sqlast.ObjectName) (sqlast.Node, error) {
 		p.expectToken(sqltoken.LParen)
 
 		var partitionBy []sqlast.Node
-		if ok, _ := p.parseKeywords("PARTITION", "BY"); ok {
+		var partition sqltoken.Pos
+
+		ok, ptok, _ := p.parseKeyword("PARTITION")
+		if ok {
+			p.expectKeyword("BY")
+
 			el, err := p.parseExprList()
 			if err != nil {
 				return nil, errors.Errorf("parseExprList failed: %w", err)
 			}
 			partitionBy = el
+			partition = ptok.From
 		}
 
 		var orderBy []*sqlast.OrderByExpr
-		if ok, _ := p.parseKeywords("ORDER", "BY"); ok {
+		var order sqltoken.Pos
+		ok, otok, _ := p.parseKeyword("PARTITION")
+		if ok {
+			p.expectKeyword("BY")
 			el, err := p.parseOrderByExprList()
 			if err != nil {
 				return nil, errors.Errorf("parseOrderByExprList failed: %w", err)
 			}
 			orderBy = el
+			order = otok.From
 		}
 
 		windowFrame, err := p.parseWindowFrame()
@@ -2065,6 +2076,8 @@ func (p *Parser) parseFunction(name *sqlast.ObjectName) (sqlast.Node, error) {
 			PartitionBy:  partitionBy,
 			OrderBy:      orderBy,
 			WindowsFrame: windowFrame,
+			Partition:    partition,
+			Order:        order,
 		}
 	}
 
@@ -2078,14 +2091,13 @@ func (p *Parser) parseFunction(name *sqlast.ObjectName) (sqlast.Node, error) {
 
 func (p *Parser) parseOptionalArgs() ([]sqlast.Node, error) {
 	if ok, _ := p.consumeToken(sqltoken.RParen); ok {
-		var args []sqlast.Node
-		return args, nil
+		p.prevToken()
+		return nil, nil
 	} else {
 		as, err := p.parseExprList()
 		if err != nil {
 			return nil, errors.Errorf("parseExprList failed: %w", err)
 		}
-		p.expectToken(sqltoken.RParen)
 		return as, nil
 	}
 }

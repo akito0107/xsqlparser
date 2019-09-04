@@ -211,7 +211,18 @@ func TestParser_ParseStatement(t *testing.T) {
 									On: sqltoken.Pos{Line: 1, Col: 75},
 									SearchCondition: &sqlast.BinaryExpr{
 										Left: &sqlast.CompoundIdent{
-											Idents: []*sqlast.Ident{sqlast.NewIdent("t1"), sqlast.NewIdent("id")},
+											Idents: []*sqlast.Ident{
+												{
+													Value: "t1",
+													From:  sqltoken.Pos{Line: 1, Col: 78},
+													To:    sqltoken.Pos{Line: 1, Col: 80},
+												},
+												{
+													Value: "id",
+													From:  sqltoken.Pos{Line: 1, Col: 81},
+													To:    sqltoken.Pos{Line: 1, Col: 83},
+												},
+											},
 										},
 										Op: &sqlast.Operator{
 											Type: sqlast.Eq,
@@ -219,7 +230,18 @@ func TestParser_ParseStatement(t *testing.T) {
 											To:   sqltoken.Pos{Line: 1, Col: 85},
 										},
 										Right: &sqlast.CompoundIdent{
-											Idents: []*sqlast.Ident{sqlast.NewIdent("t2"), sqlast.NewIdent("test_table_id")},
+											Idents: []*sqlast.Ident{
+												{
+													Value: "t2",
+													From:  sqltoken.Pos{Line: 1, Col: 86},
+													To:    sqltoken.Pos{Line: 1, Col: 88},
+												},
+												{
+													Value: "test_table_id",
+													From:  sqltoken.Pos{Line: 1, Col: 89},
+													To:    sqltoken.Pos{Line: 1, Col: 102},
+												},
+											},
 										},
 									},
 								},
