@@ -426,17 +426,33 @@ func (s *ObjectName) ToSQLString() string {
 }
 
 type WindowSpec struct {
-	PartitionBy  []Node
-	OrderBy      []*OrderByExpr
-	WindowsFrame *WindowFrame
+	PartitionBy      []Node
+	OrderBy          []*OrderByExpr
+	WindowsFrame     *WindowFrame
+	Partition, Order sqltoken.Pos
 }
 
 func (s *WindowSpec) Pos() sqltoken.Pos {
-	panic("implement me")
+	if len(s.PartitionBy) != 0 {
+		return s.Partition
+	}
+	if len(s.OrderBy) != 0 {
+		return s.Order
+	}
+
+	return s.WindowsFrame.Pos()
 }
 
 func (s *WindowSpec) End() sqltoken.Pos {
-	panic("implement me")
+	if s.WindowsFrame != nil {
+		return s.WindowsFrame.End()
+	}
+
+	if len(s.OrderBy) != 0 {
+		return s.OrderBy[len(s.OrderBy)-1].End()
+	}
+
+	return s.PartitionBy[len(s.PartitionBy)-1].End()
 }
 
 func (s *WindowSpec) ToSQLString() string {
@@ -462,11 +478,15 @@ type WindowFrame struct {
 }
 
 func (s *WindowFrame) Pos() sqltoken.Pos {
-	panic("implement me")
+	return s.Units.From
 }
 
 func (s *WindowFrame) End() sqltoken.Pos {
-	panic("implement me")
+	if s.EndBound != nil {
+		return s.EndBound.End()
+	}
+
+	return s.StartBound.End()
 }
 
 func (s *WindowFrame) ToSQLString() string {
