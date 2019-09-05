@@ -700,63 +700,125 @@ GROUP BY region, product`,
 				},
 			},
 			{
-				skip: true,
 				name: "exists",
-				in: "SELECT * FROM user WHERE NOT EXISTS (" +
-					"SELECT * FROM user_sub WHERE user.id = user_sub.id AND user_sub.job = 'job'" +
-					");",
+				in: `SELECT * FROM user WHERE NOT EXISTS 
+(SELECT * 
+FROM user_sub 
+WHERE user.id = user_sub.id AND user_sub.job = 'job');`,
 				out: &sqlast.Query{
 					Body: &sqlast.SQLSelect{
+						Select: sqltoken.Pos{Line: 1, Col: 0},
 						Projection: []sqlast.SQLSelectItem{
 							&sqlast.UnnamedSelectItem{
-								Node: &sqlast.Wildcard{},
+								Node: &sqlast.Wildcard{
+									Wildcard: sqltoken.Pos{Line: 1, Col: 7},
+								},
 							},
 						},
 						FromClause: []sqlast.TableReference{
 							&sqlast.Table{
-								Name: sqlast.NewObjectName("user"),
+								Name: &sqlast.ObjectName{
+									Idents: []*sqlast.Ident{
+										{
+											Value: "user",
+											From:  sqltoken.Pos{Line: 1, Col: 14},
+											To:    sqltoken.Pos{Line: 1, Col: 18},
+										},
+									},
+								},
 							},
 						},
 						WhereClause: &sqlast.Exists{
 							Negated: true,
+							Exists: sqltoken.Pos{
+								Line: 1,
+								Col:  29,
+							},
+							Not: sqltoken.Pos{
+								Line: 1,
+								Col:  25,
+							},
+							RParen: sqltoken.Pos{
+								Line: 4,
+								Col:  53,
+							},
 							Query: &sqlast.Query{
 								Body: &sqlast.SQLSelect{
+									Select: sqltoken.Pos{Line: 2, Col: 1},
 									Projection: []sqlast.SQLSelectItem{
 										&sqlast.UnnamedSelectItem{
-											Node: &sqlast.Wildcard{},
+											Node: &sqlast.Wildcard{
+												Wildcard: sqltoken.Pos{Line: 2, Col: 8},
+											},
 										},
 									},
 									FromClause: []sqlast.TableReference{
 										&sqlast.Table{
-											Name: sqlast.NewObjectName("user_sub"),
+											Name: &sqlast.ObjectName{
+												Idents: []*sqlast.Ident{
+													{
+														Value: "user_sub",
+														From:  sqltoken.Pos{Line: 3, Col: 5},
+														To:    sqltoken.Pos{Line: 3, Col: 13},
+													},
+												},
+											},
 										},
 									},
 									WhereClause: &sqlast.BinaryExpr{
-										Op: &sqlast.Operator{Type: sqlast.And},
+										Op: &sqlast.Operator{Type: sqlast.And, From: sqltoken.Pos{Line: 4, Col: 28}, To: sqltoken.Pos{Line: 4, Col: 31}},
 										Left: &sqlast.BinaryExpr{
-											Op: &sqlast.Operator{Type: sqlast.Eq},
+											Op: &sqlast.Operator{Type: sqlast.Eq, From: sqltoken.Pos{Line: 4, Col: 14}, To: sqltoken.Pos{Line: 4, Col: 15}},
 											Left: &sqlast.CompoundIdent{
 												Idents: []*sqlast.Ident{
-													sqlast.NewIdent("user"),
-													sqlast.NewIdent("id"),
+													{
+														Value: "user",
+														From:  sqltoken.Pos{Line: 4, Col: 6},
+														To:    sqltoken.Pos{Line: 4, Col: 10},
+													},
+													{
+														Value: "id",
+														From:  sqltoken.Pos{Line: 4, Col: 11},
+														To:    sqltoken.Pos{Line: 4, Col: 13},
+													},
 												},
 											},
 											Right: &sqlast.CompoundIdent{
 												Idents: []*sqlast.Ident{
-													sqlast.NewIdent("user_sub"),
-													sqlast.NewIdent("id"),
+													{
+														Value: "user_sub",
+														From:  sqltoken.Pos{Line: 4, Col: 16},
+														To:    sqltoken.Pos{Line: 4, Col: 24},
+													},
+													{
+														Value: "id",
+														From:  sqltoken.Pos{Line: 4, Col: 25},
+														To:    sqltoken.Pos{Line: 4, Col: 27},
+													},
 												},
 											},
 										},
 										Right: &sqlast.BinaryExpr{
-											Op: &sqlast.Operator{Type: sqlast.Eq},
+											Op: &sqlast.Operator{Type: sqlast.Eq, From: sqltoken.Pos{Line: 4, Col: 45}, To: sqltoken.Pos{Line: 4, Col: 46}},
 											Left: &sqlast.CompoundIdent{
 												Idents: []*sqlast.Ident{
-													sqlast.NewIdent("user_sub"),
-													sqlast.NewIdent("job"),
+													{
+														Value: "user_sub",
+														From:  sqltoken.Pos{Line: 4, Col: 32},
+														To:    sqltoken.Pos{Line: 4, Col: 40},
+													},
+													{
+														Value: "job",
+														From:  sqltoken.Pos{Line: 4, Col: 41},
+														To:    sqltoken.Pos{Line: 4, Col: 44},
+													},
 												},
 											},
-											Right: sqlast.NewSingleQuotedString("job"),
+											Right: &sqlast.SingleQuotedString{
+												From:   sqltoken.Pos{Line: 4, Col: 47},
+												To:     sqltoken.Pos{Line: 4, Col: 52},
+												String: "job",
+											},
 										},
 									},
 								},
@@ -766,45 +828,112 @@ GROUP BY region, product`,
 				},
 			},
 			{
-				skip: true,
 				name: "between / case",
-				in: "SELECT CASE WHEN expr1 = '1' THEN 'test1' WHEN expr2 = '2' THEN 'test2' ELSE 'other' END AS alias " +
-					"FROM user WHERE id BETWEEN 1 AND 2",
+				in: `SELECT 
+CASE
+ WHEN expr1 = '1' THEN 'test1' 
+ WHEN expr2 = '2' THEN 'test2' 
+ ELSE 'other' 
+END AS alias
+FROM user WHERE id BETWEEN 1 AND 2`,
 				out: &sqlast.Query{
 					Body: &sqlast.SQLSelect{
+						Select: sqltoken.Pos{Line: 1, Col: 0},
 						Projection: []sqlast.SQLSelectItem{
 							&sqlast.AliasSelectItem{
 								Expr: &sqlast.CaseExpr{
+									Case:    sqltoken.Pos{Line: 2, Col: 0},
+									CaseEnd: sqltoken.Pos{Line: 6, Col: 3},
 									Conditions: []sqlast.Node{
 										&sqlast.BinaryExpr{
-											Op:    &sqlast.Operator{Type: sqlast.Eq},
-											Left:  sqlast.NewIdent("expr1"),
-											Right: sqlast.NewSingleQuotedString("1"),
+											Op: &sqlast.Operator{
+												Type: sqlast.Eq,
+												From: sqltoken.Pos{Line: 3, Col: 12},
+												To:   sqltoken.Pos{Line: 3, Col: 13},
+											},
+											Left: &sqlast.Ident{
+												Value: "expr1",
+												From:  sqltoken.Pos{Line: 3, Col: 6},
+												To:    sqltoken.Pos{Line: 3, Col: 11},
+											},
+											Right: &sqlast.SingleQuotedString{
+												From:   sqltoken.Pos{Line: 3, Col: 14},
+												To:     sqltoken.Pos{Line: 3, Col: 17},
+												String: "1",
+											},
 										},
 										&sqlast.BinaryExpr{
-											Op:    &sqlast.Operator{Type: sqlast.Eq},
-											Left:  sqlast.NewIdent("expr2"),
-											Right: sqlast.NewSingleQuotedString("2"),
+											Op: &sqlast.Operator{
+												Type: sqlast.Eq,
+												From: sqltoken.Pos{Line: 4, Col: 12},
+												To:   sqltoken.Pos{Line: 4, Col: 13},
+											},
+											Left: &sqlast.Ident{
+												Value: "expr2",
+												From:  sqltoken.Pos{Line: 4, Col: 6},
+												To:    sqltoken.Pos{Line: 4, Col: 11},
+											},
+											Right: &sqlast.SingleQuotedString{
+												From:   sqltoken.Pos{Line: 4, Col: 14},
+												To:     sqltoken.Pos{Line: 4, Col: 17},
+												String: "2",
+											},
 										},
 									},
 									Results: []sqlast.Node{
-										sqlast.NewSingleQuotedString("test1"),
-										sqlast.NewSingleQuotedString("test2"),
+										&sqlast.SingleQuotedString{
+											From:   sqltoken.Pos{Line: 3, Col: 23},
+											To:     sqltoken.Pos{Line: 3, Col: 30},
+											String: "test1",
+										},
+										&sqlast.SingleQuotedString{
+											From:   sqltoken.Pos{Line: 4, Col: 23},
+											To:     sqltoken.Pos{Line: 4, Col: 30},
+											String: "test2",
+										},
 									},
-									ElseResult: sqlast.NewSingleQuotedString("other"),
+									ElseResult: &sqlast.SingleQuotedString{
+										From:   sqltoken.Pos{Line: 5, Col: 6},
+										To:     sqltoken.Pos{Line: 5, Col: 13},
+										String: "other",
+									},
 								},
-								Alias: sqlast.NewIdent("alias"),
+								Alias: &sqlast.Ident{
+									Value: "alias",
+									From:  sqltoken.Pos{Line: 6, Col: 7},
+									To:    sqltoken.Pos{Line: 6, Col: 12},
+								},
 							},
 						},
 						FromClause: []sqlast.TableReference{
 							&sqlast.Table{
-								Name: sqlast.NewObjectName("user"),
+								Name: &sqlast.ObjectName{
+									Idents: []*sqlast.Ident{
+										{
+											Value: "user",
+											From:  sqltoken.Pos{Line: 7, Col: 5},
+											To:    sqltoken.Pos{Line: 7, Col: 9},
+										},
+									},
+								},
 							},
 						},
 						WhereClause: &sqlast.Between{
-							Expr: sqlast.NewIdent("id"),
-							High: sqlast.NewLongValue(2),
-							Low:  sqlast.NewLongValue(1),
+							Expr: &sqlast.Ident{
+								Value: "id",
+								From:  sqltoken.Pos{Line: 7, Col: 16},
+								To:    sqltoken.Pos{Line: 7, Col: 18},
+							},
+							High: &sqlast.LongValue{
+								Long: int64(2),
+								From: sqltoken.Pos{Line: 7, Col: 33},
+								To:   sqltoken.Pos{Line: 7, Col: 34},
+							},
+							Low: &sqlast.LongValue{
+								Long: int64(1),
+								From: sqltoken.Pos{Line: 7, Col: 27},
+								To:   sqltoken.Pos{Line: 7, Col: 28},
+							},
 						},
 					},
 				},
