@@ -251,95 +251,248 @@ func TestParser_ParseStatement(t *testing.T) {
 				},
 			},
 			{
-				skip: true,
 				name: "group by",
 				in:   "SELECT COUNT(customer_id), country.* FROM customers GROUP BY country",
 				out: &sqlast.Query{
 					Body: &sqlast.SQLSelect{
+						Select: sqltoken.Pos{Col: 0, Line: 1},
 						Projection: []sqlast.SQLSelectItem{
 							&sqlast.UnnamedSelectItem{
 								Node: &sqlast.Function{
-									Name: sqlast.NewObjectName("COUNT"),
-									Args: []sqlast.Node{sqlast.NewIdent("customer_id")},
+									Name: &sqlast.ObjectName{
+										Idents: []*sqlast.Ident{
+											{
+												Value: "COUNT",
+												From:  sqltoken.Pos{Line: 1, Col: 7},
+												To:    sqltoken.Pos{Line: 1, Col: 12},
+											},
+										},
+									},
+									Args: []sqlast.Node{
+										&sqlast.Ident{
+											Value: "customer_id",
+											From:  sqltoken.Pos{Line: 1, Col: 13},
+											To:    sqltoken.Pos{Line: 1, Col: 24},
+										},
+									},
+									ArgsRParen: sqltoken.Pos{Line: 1, Col: 25},
 								},
 							},
 							&sqlast.QualifiedWildcardSelectItem{
-								Prefix: sqlast.NewObjectName("country"),
+								Prefix: &sqlast.ObjectName{
+									Idents: []*sqlast.Ident{
+										{
+											Value: "country",
+											From:  sqltoken.Pos{Line: 1, Col: 27},
+											To:    sqltoken.Pos{Line: 1, Col: 34},
+										},
+									},
+								},
 							},
 						},
 						FromClause: []sqlast.TableReference{
 							&sqlast.Table{
-								Name: sqlast.NewObjectName("customers"),
+								Name: &sqlast.ObjectName{
+									Idents: []*sqlast.Ident{
+										{
+											Value: "customers",
+											From:  sqltoken.Pos{Line: 1, Col: 42},
+											To:    sqltoken.Pos{Line: 1, Col: 51},
+										},
+									},
+								},
 							},
 						},
-						GroupByClause: []sqlast.Node{sqlast.NewIdent("country")},
+						GroupByClause: []sqlast.Node{
+							&sqlast.Ident{
+								Value: "country",
+								From:  sqltoken.Pos{Line: 1, Col: 61},
+								To:    sqltoken.Pos{Line: 1, Col: 68},
+							},
+						},
 					},
 				},
 			},
 			{
-				skip: true,
 				name: "having",
-				in:   "SELECT COUNT(customer_id), country FROM customers GROUP BY country HAVING COUNT(customer_id) > 3",
+				in: `SELECT COUNT(customer_id), country 
+FROM customers 
+GROUP BY country 
+HAVING COUNT(customer_id) > 3`,
 				out: &sqlast.Query{
 					Body: &sqlast.SQLSelect{
+						Select: sqltoken.Pos{Col: 0, Line: 1},
 						Projection: []sqlast.SQLSelectItem{
 							&sqlast.UnnamedSelectItem{
 								Node: &sqlast.Function{
-									Name: sqlast.NewObjectName("COUNT"),
-									Args: []sqlast.Node{sqlast.NewIdent("customer_id")},
+									Name: &sqlast.ObjectName{
+										Idents: []*sqlast.Ident{
+											{
+												Value: "COUNT",
+												From:  sqltoken.Pos{Line: 1, Col: 7},
+												To:    sqltoken.Pos{Line: 1, Col: 12},
+											},
+										},
+									},
+									Args: []sqlast.Node{
+										&sqlast.Ident{
+											Value: "customer_id",
+											From:  sqltoken.Pos{Line: 1, Col: 13},
+											To:    sqltoken.Pos{Line: 1, Col: 24},
+										},
+									},
+									ArgsRParen: sqltoken.Pos{Line: 1, Col: 25},
 								},
 							},
 							&sqlast.UnnamedSelectItem{
-								Node: sqlast.NewIdent("country"),
+								Node: &sqlast.Ident{
+									Value: "country",
+									From:  sqltoken.Pos{Line: 1, Col: 27},
+									To:    sqltoken.Pos{Line: 1, Col: 34},
+								},
 							},
 						},
 						FromClause: []sqlast.TableReference{
 							&sqlast.Table{
-								Name: sqlast.NewObjectName("customers"),
+								Name: &sqlast.ObjectName{
+									Idents: []*sqlast.Ident{
+										{
+											Value: "customers",
+											From:  sqltoken.Pos{Line: 2, Col: 5},
+											To:    sqltoken.Pos{Line: 2, Col: 14},
+										},
+									},
+								},
 							},
 						},
-						GroupByClause: []sqlast.Node{sqlast.NewIdent("country")},
-						HavingClause: &sqlast.BinaryExpr{
-							Op: &sqlast.Operator{Type: sqlast.Gt},
-							Left: &sqlast.Function{
-								Name: sqlast.NewObjectName("COUNT"),
-								Args: []sqlast.Node{sqlast.NewIdent("customer_id")},
+						GroupByClause: []sqlast.Node{
+							&sqlast.Ident{
+								Value: "country",
+								From:  sqltoken.Pos{Line: 3, Col: 9},
+								To:    sqltoken.Pos{Line: 3, Col: 16},
 							},
-							Right: sqlast.NewLongValue(3),
+						},
+						HavingClause: &sqlast.BinaryExpr{
+							Op: &sqlast.Operator{
+								Type: sqlast.Gt,
+								From: sqltoken.Pos{Line: 4, Col: 26},
+								To:   sqltoken.Pos{Line: 4, Col: 27},
+							},
+							Left: &sqlast.Function{
+								Name: &sqlast.ObjectName{
+									Idents: []*sqlast.Ident{
+										{
+											Value: "COUNT",
+											From:  sqltoken.Pos{Line: 4, Col: 7},
+											To:    sqltoken.Pos{Line: 4, Col: 12},
+										},
+									},
+								},
+								Args: []sqlast.Node{
+									&sqlast.Ident{
+										Value: "customer_id",
+										From:  sqltoken.Pos{Line: 4, Col: 13},
+										To:    sqltoken.Pos{Line: 4, Col: 24},
+									},
+								},
+								ArgsRParen: sqltoken.Pos{Line: 4, Col: 25},
+							},
+							Right: &sqlast.LongValue{
+								From: sqltoken.Pos{Line: 4, Col: 28},
+								To:   sqltoken.Pos{Line: 4, Col: 29},
+								Long: 3,
+							},
 						},
 					},
 				},
 			},
 			{
-				skip: true,
 				name: "order by and limit",
+				in: `SELECT product, SUM(quantity) AS product_units
+FROM orders 
+WHERE region IN (SELECT region FROM top_regions) 
+ORDER BY product_units LIMIT 100`,
 				out: &sqlast.Query{
 					Body: &sqlast.SQLSelect{
+						Select: sqltoken.Pos{Line: 1, Col: 0},
 						Projection: []sqlast.SQLSelectItem{
-							&sqlast.UnnamedSelectItem{Node: sqlast.NewIdent("product")},
+							&sqlast.UnnamedSelectItem{
+								Node: &sqlast.Ident{
+									Value: "product",
+									From:  sqltoken.Pos{Line: 1, Col: 7},
+									To:    sqltoken.Pos{Line: 1, Col: 14},
+								},
+							},
 							&sqlast.AliasSelectItem{
-								Alias: sqlast.NewIdent("product_units"),
+								Alias: &sqlast.Ident{
+									Value: "product_units",
+									From:  sqltoken.Pos{Line: 1, Col: 33},
+									To:    sqltoken.Pos{Line: 1, Col: 46},
+								},
 								Expr: &sqlast.Function{
-									Name: sqlast.NewObjectName("SUM"),
-									Args: []sqlast.Node{sqlast.NewIdent("quantity")},
+									Name: &sqlast.ObjectName{
+										Idents: []*sqlast.Ident{
+											{
+												Value: "SUM",
+												From:  sqltoken.Pos{Line: 1, Col: 16},
+												To:    sqltoken.Pos{Line: 1, Col: 19},
+											},
+										},
+									},
+									Args: []sqlast.Node{
+										&sqlast.Ident{
+											Value: "quantity",
+											From:  sqltoken.Pos{Line: 1, Col: 20},
+											To:    sqltoken.Pos{Line: 1, Col: 28},
+										},
+									},
+									ArgsRParen: sqltoken.Pos{Line: 1, Col: 29},
 								},
 							},
 						},
 						FromClause: []sqlast.TableReference{
 							&sqlast.Table{
-								Name: sqlast.NewObjectName("orders"),
+								Name: &sqlast.ObjectName{
+									Idents: []*sqlast.Ident{
+										{
+											Value: "orders",
+											From:  sqltoken.Pos{Line: 2, Col: 5},
+											To:    sqltoken.Pos{Line: 2, Col: 11},
+										},
+									},
+								},
 							},
 						},
 						WhereClause: &sqlast.InSubQuery{
-							Expr: sqlast.NewIdent("region"),
+							Expr: &sqlast.Ident{
+								Value: "region",
+								From:  sqltoken.Pos{Line: 3, Col: 6},
+								To:    sqltoken.Pos{Line: 3, Col: 12},
+							},
+							RParen: sqltoken.Pos{Line: 3, Col: 48},
 							SubQuery: &sqlast.Query{
 								Body: &sqlast.SQLSelect{
+									Select: sqltoken.Pos{Line: 3, Col: 17},
 									Projection: []sqlast.SQLSelectItem{
-										&sqlast.UnnamedSelectItem{Node: sqlast.NewIdent("region")},
+										&sqlast.UnnamedSelectItem{
+											Node: &sqlast.Ident{
+												Value: "region",
+												From:  sqltoken.Pos{Line: 3, Col: 24},
+												To:    sqltoken.Pos{Line: 3, Col: 30},
+											},
+										},
 									},
 									FromClause: []sqlast.TableReference{
 										&sqlast.Table{
-											Name: sqlast.NewObjectName("top_regions"),
+											Name: &sqlast.ObjectName{
+												Idents: []*sqlast.Ident{
+													{
+														Value: "top_regions",
+														From:  sqltoken.Pos{Line: 3, Col: 36},
+														To:    sqltoken.Pos{Line: 3, Col: 47},
+													},
+												},
+											},
 										},
 									},
 								},
@@ -347,88 +500,204 @@ func TestParser_ParseStatement(t *testing.T) {
 						},
 					},
 					OrderBy: []*sqlast.OrderByExpr{
-						{Expr: sqlast.NewIdent("product_units")},
+						{
+							Expr: &sqlast.Ident{
+								Value: "product_units",
+								From:  sqltoken.Pos{Line: 4, Col: 9},
+								To:    sqltoken.Pos{Line: 4, Col: 22},
+							},
+						},
 					},
 					Limit: &sqlast.LimitExpr{
-						LimitValue: sqlast.NewLongValue(100),
+						LimitValue: &sqlast.LongValue{
+							From: sqltoken.Pos{Line: 4, Col: 29},
+							To:   sqltoken.Pos{Line: 4, Col: 32},
+							Long: 100,
+						},
 					},
 				},
-				in: "SELECT product, SUM(quantity) AS product_units " +
-					"FROM orders " +
-					"WHERE region IN (SELECT region FROM top_regions) " +
-					"ORDER BY product_units LIMIT 100",
 			},
 			{
-				skip: true,
 				// from https://www.postgresql.jp/document/9.3/html/queries-with.html
 				name: "with cte",
+				in: `WITH regional_sales AS (SELECT region, SUM(amount) AS total_sales FROM orders GROUP BY region)
+SELECT product, SUM(quantity) AS product_units
+FROM orders
+WHERE region IN (SELECT region FROM top_regions)
+GROUP BY region, product`,
 				out: &sqlast.Query{
 					CTEs: []*sqlast.CTE{
 						{
-							Alias: sqlast.NewIdent("regional_sales"),
+							Alias: &sqlast.Ident{
+								Value: "regional_sales",
+								From:  sqltoken.Pos{Line: 1, Col: 5},
+								To:    sqltoken.Pos{Line: 1, Col: 19},
+							},
 							Query: &sqlast.Query{
 								Body: &sqlast.SQLSelect{
+									Select: sqltoken.Pos{Line: 1, Col: 24},
 									Projection: []sqlast.SQLSelectItem{
-										&sqlast.UnnamedSelectItem{Node: sqlast.NewIdent("region")},
+										&sqlast.UnnamedSelectItem{
+											Node: &sqlast.Ident{
+												Value: "region",
+												From:  sqltoken.Pos{Line: 1, Col: 31},
+												To:    sqltoken.Pos{Line: 1, Col: 37},
+											},
+										},
 										&sqlast.AliasSelectItem{
-											Alias: sqlast.NewIdent("total_sales"),
+											Alias: &sqlast.Ident{
+												Value: "total_sales",
+												From:  sqltoken.Pos{Line: 1, Col: 54},
+												To:    sqltoken.Pos{Line: 1, Col: 65},
+											},
 											Expr: &sqlast.Function{
-												Name: sqlast.NewObjectName("SUM"),
-												Args: []sqlast.Node{sqlast.NewIdent("amount")},
+												Name: &sqlast.ObjectName{
+													Idents: []*sqlast.Ident{
+														{
+															Value: "SUM",
+															From:  sqltoken.Pos{Line: 1, Col: 39},
+															To:    sqltoken.Pos{Line: 1, Col: 42},
+														},
+													},
+												},
+												Args: []sqlast.Node{
+													&sqlast.Ident{
+														Value: "amount",
+														From:  sqltoken.Pos{Line: 1, Col: 43},
+														To:    sqltoken.Pos{Line: 1, Col: 49},
+													},
+												},
+												ArgsRParen: sqltoken.Pos{Line: 1, Col: 50},
 											},
 										},
 									},
 									FromClause: []sqlast.TableReference{
 										&sqlast.Table{
-											Name: sqlast.NewObjectName("orders"),
+											Name: &sqlast.ObjectName{
+												Idents: []*sqlast.Ident{
+													{
+														Value: "orders",
+														From:  sqltoken.Pos{Line: 1, Col: 71},
+														To:    sqltoken.Pos{Line: 1, Col: 77},
+													},
+												},
+											},
 										},
 									},
-									GroupByClause: []sqlast.Node{sqlast.NewIdent("region")},
+									GroupByClause: []sqlast.Node{
+										&sqlast.Ident{
+											Value: "region",
+											From:  sqltoken.Pos{Line: 1, Col: 87},
+											To:    sqltoken.Pos{Line: 1, Col: 93},
+										},
+									},
 								},
 							},
 						},
 					},
 					Body: &sqlast.SQLSelect{
+						Select: sqltoken.Pos{Line: 2, Col: 0},
 						Projection: []sqlast.SQLSelectItem{
-							&sqlast.UnnamedSelectItem{Node: sqlast.NewIdent("product")},
+							&sqlast.UnnamedSelectItem{Node: &sqlast.Ident{
+								Value: "product",
+								From:  sqltoken.Pos{Line: 2, Col: 7},
+								To:    sqltoken.Pos{Line: 2, Col: 14},
+							}},
 							&sqlast.AliasSelectItem{
-								Alias: sqlast.NewIdent("product_units"),
+								Alias: &sqlast.Ident{
+									Value: "product_units",
+									From:  sqltoken.Pos{Line: 2, Col: 33},
+									To:    sqltoken.Pos{Line: 2, Col: 46},
+								},
 								Expr: &sqlast.Function{
-									Name: sqlast.NewObjectName("SUM"),
-									Args: []sqlast.Node{sqlast.NewIdent("quantity")},
+									Name: &sqlast.ObjectName{
+										Idents: []*sqlast.Ident{
+											{
+												Value: "SUM",
+												From:  sqltoken.Pos{Line: 2, Col: 16},
+												To:    sqltoken.Pos{Line: 2, Col: 19},
+											},
+										},
+									},
+									Args: []sqlast.Node{
+										&sqlast.Ident{
+											Value: "quantity",
+											From:  sqltoken.Pos{Line: 2, Col: 20},
+											To:    sqltoken.Pos{Line: 2, Col: 28},
+										},
+									},
+									ArgsRParen: sqltoken.Pos{Line: 2, Col: 29},
 								},
 							},
 						},
 						FromClause: []sqlast.TableReference{
 							&sqlast.Table{
-								Name: sqlast.NewObjectName("orders"),
-							},
-						},
-						WhereClause: &sqlast.InSubQuery{
-							Expr: sqlast.NewIdent("region"),
-							SubQuery: &sqlast.Query{
-								Body: &sqlast.SQLSelect{
-									Projection: []sqlast.SQLSelectItem{
-										&sqlast.UnnamedSelectItem{Node: sqlast.NewIdent("region")},
-									},
-									FromClause: []sqlast.TableReference{
-										&sqlast.Table{
-											Name: sqlast.NewObjectName("top_regions"),
+								Name: &sqlast.ObjectName{
+									Idents: []*sqlast.Ident{
+										{
+											Value: "orders",
+											From:  sqltoken.Pos{Line: 3, Col: 5},
+											To:    sqltoken.Pos{Line: 3, Col: 11},
 										},
 									},
 								},
 							},
 						},
-						GroupByClause: []sqlast.Node{sqlast.NewIdent("region"), sqlast.NewIdent("product")},
+						WhereClause: &sqlast.InSubQuery{
+							RParen: sqltoken.Pos{
+								Line: 4,
+								Col:  48,
+							},
+							Expr: &sqlast.Ident{
+								Value: "region",
+								From:  sqltoken.Pos{Line: 4, Col: 6},
+								To:    sqltoken.Pos{Line: 4, Col: 12},
+							},
+							SubQuery: &sqlast.Query{
+								Body: &sqlast.SQLSelect{
+									Select: sqltoken.Pos{
+										Line: 4,
+										Col:  17,
+									},
+									Projection: []sqlast.SQLSelectItem{
+										&sqlast.UnnamedSelectItem{
+											Node: &sqlast.Ident{
+												Value: "region",
+												From:  sqltoken.Pos{Line: 4, Col: 24},
+												To:    sqltoken.Pos{Line: 4, Col: 30},
+											},
+										},
+									},
+									FromClause: []sqlast.TableReference{
+										&sqlast.Table{
+											Name: &sqlast.ObjectName{
+												Idents: []*sqlast.Ident{
+													{
+														Value: "top_regions",
+														From:  sqltoken.Pos{Line: 4, Col: 36},
+														To:    sqltoken.Pos{Line: 4, Col: 47},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+						GroupByClause: []sqlast.Node{
+							&sqlast.Ident{
+								Value: "region",
+								From:  sqltoken.Pos{Line: 5, Col: 9},
+								To:    sqltoken.Pos{Line: 5, Col: 15},
+							},
+							&sqlast.Ident{
+								Value: "product",
+								From:  sqltoken.Pos{Line: 5, Col: 17},
+								To:    sqltoken.Pos{Line: 5, Col: 24},
+							},
+						},
 					},
 				},
-				in: "WITH regional_sales AS (" +
-					"SELECT region, SUM(amount) AS total_sales " +
-					"FROM orders GROUP BY region) " +
-					"SELECT product, SUM(quantity) AS product_units " +
-					"FROM orders " +
-					"WHERE region IN (SELECT region FROM top_regions) " +
-					"GROUP BY region, product",
 			},
 			{
 				skip: true,

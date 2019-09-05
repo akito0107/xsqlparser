@@ -71,7 +71,7 @@ type CTE struct {
 }
 
 func (c *CTE) Pos() sqltoken.Pos {
-	return c.Query.Pos()
+	return c.Alias.Pos()
 }
 
 func (c *CTE) End() sqltoken.Pos {

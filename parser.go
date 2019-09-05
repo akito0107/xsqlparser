@@ -1530,22 +1530,30 @@ func (p *Parser) parseLimit() (*sqlast.LimitExpr, error) {
 		return &sqlast.LimitExpr{All: true}, nil
 	}
 
-	i, err := p.parseLiteralInt()
+	i, tok, err := p.parseLiteralInt()
 	if err != nil {
 		return nil, errors.Errorf("invalid limit value: %w", err)
 	}
 
 	var offset *sqlast.LongValue
-	if ok, _, _ := p.parseKeyword("OFFSET"); ok {
-		o, err := p.parseLiteralInt()
+	if ok, tok, _ := p.parseKeyword("OFFSET"); ok {
+		o, _, err := p.parseLiteralInt()
 		if err != nil {
 			return nil, errors.Errorf("invalid offset value: %w", err)
 		}
-		offset = sqlast.NewLongValue(int64(o))
+		offset = &sqlast.LongValue{
+			Long: int64(o),
+			From: tok.From,
+			To:   tok.To,
+		}
 	}
 
 	return &sqlast.LimitExpr{
-		LimitValue:  sqlast.NewLongValue(int64(i)),
+		LimitValue: &sqlast.LongValue{
+			Long: int64(i),
+			From: tok.From,
+			To:   tok.To,
+		},
 		OffsetValue: offset,
 	}, nil
 }
@@ -2191,7 +2199,7 @@ func (p *Parser) parseWindowFrameBound() (sqlast.SQLWindowFrameBound, error) {
 			return &sqlast.UnboundedFollowing{}, nil
 		}
 	} else {
-		i, err := p.parseLiteralInt()
+		i, _, err := p.parseLiteralInt()
 		if err != nil {
 			return nil, errors.Errorf("parseLiteralInt failed: %w", err)
 		}
@@ -2299,7 +2307,7 @@ func (p *Parser) parseValue() (sqlast.Node, error) {
 
 func (p *Parser) parseOptionalPrecision() (*uint, sqltoken.Pos, error) {
 	if ok, _ := p.consumeToken(sqltoken.LParen); ok {
-		n, err := p.parseLiteralInt()
+		n, _, err := p.parseLiteralInt()
 		if err != nil {
 			return nil, sqltoken.Pos{}, errors.Errorf("parseLiteralInt failed: %w", err)
 		}
@@ -2319,13 +2327,13 @@ func (p *Parser) parseOptionalPrecisionScale() (*uint, *uint, error) {
 	if ok, _ := p.consumeToken(sqltoken.LParen); !ok {
 		return nil, nil, nil
 	}
-	n, err := p.parseLiteralInt()
+	n, _, err := p.parseLiteralInt()
 	if err != nil {
 		return nil, nil, errors.Errorf("parseLiteralInt failed: %w", err)
 	}
 	var scale *uint
 	if ok, _ := p.consumeToken(sqltoken.Comma); ok {
-		s, err := p.parseLiteralInt()
+		s, _, err := p.parseLiteralInt()
 		if err != nil {
 			return nil, nil, errors.Errorf("parseLiteralInt failed: %w", err)
 		}
@@ -2337,18 +2345,18 @@ func (p *Parser) parseOptionalPrecisionScale() (*uint, *uint, error) {
 	return &i, scale, nil
 }
 
-func (p *Parser) parseLiteralInt() (int, error) {
+func (p *Parser) parseLiteralInt() (int, *sqltoken.Token, error) {
 	tok, _ := p.nextToken()
 	if tok.Kind != sqltoken.Number {
-		return 0, errors.Errorf("expect literal int but %v", tok.Kind)
+		return 0, nil, errors.Errorf("expect literal int but %v", tok.Kind)
 	}
 	istr := tok.Value.(string)
 	i, err := strconv.Atoi(istr)
 	if err != nil {
-		return 0, errors.Errorf("strconv.Atoi failed: %w", err)
+		return 0, nil, errors.Errorf("strconv.Atoi failed: %w", err)
 	}
 
-	return i, nil
+	return i, tok, nil
 }
 
 func (p *Parser) parseListOfIds(separator sqltoken.Kind) ([]*sqlast.Ident, error) {
