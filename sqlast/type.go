@@ -304,14 +304,13 @@ func (*Time) ToSQLString() string {
 }
 
 type Timestamp struct {
-	WithTimeZone  bool
-	TimestampFrom sqltoken.Pos
-	TimestampTo   sqltoken.Pos
-	Zone          sqltoken.Pos
+	WithTimeZone bool
+	Timestamp    sqltoken.Pos
+	Zone         sqltoken.Pos
 }
 
 func (t *Timestamp) Pos() sqltoken.Pos {
-	return t.TimestampFrom
+	return t.Timestamp
 }
 
 func (t *Timestamp) End() sqltoken.Pos {
@@ -319,7 +318,10 @@ func (t *Timestamp) End() sqltoken.Pos {
 		return t.Zone
 	}
 
-	return t.TimestampTo
+	return sqltoken.Pos{
+		Line: t.Timestamp.Line,
+		Col:  t.Timestamp.Col + 9,
+	}
 }
 
 func (t *Timestamp) ToSQLString() string {

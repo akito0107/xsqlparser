@@ -603,9 +603,13 @@ func (p *Parser) parseColumnDef() (*sqlast.ColumnDef, error) {
 
 	return &sqlast.ColumnDef{
 		Constraints: specs,
-		Name:        sqlast.NewIdentFromWord(columnName),
-		DataType:    dataType,
-		Default:     def,
+		Name: &sqlast.Ident{
+			From:  tok.From,
+			To:    tok.To,
+			Value: columnName.String(),
+		},
+		DataType: dataType,
+		Default:  def,
 	}, nil
 }
 
@@ -778,15 +782,26 @@ CONSTRAINT_LOOP:
 		switch word.Keyword {
 		case "NOT":
 			p.mustNextToken()
-			p.expectKeyword("NULL")
-			spec = &sqlast.NotNullColumnSpec{}
+			ok, ntok, _ := p.parseKeyword("NULL")
+			if !ok {
+				return nil, errors.Errorf("expected NULL but +%v", ntok)
+			}
+			spec = &sqlast.NotNullColumnSpec{
+				Not:  tok.From,
+				Null: ntok.To,
+			}
 		case "UNIQUE":
 			p.mustNextToken()
-			spec = &sqlast.UniqueColumnSpec{}
+			spec = &sqlast.UniqueColumnSpec{
+				Unique: tok.From,
+			}
 		case "PRIMARY":
 			p.mustNextToken()
-			p.expectKeyword("KEY")
-			spec = &sqlast.UniqueColumnSpec{IsPrimaryKey: true}
+			ok, ktok, _ := p.parseKeyword("KEY")
+			if !ok {
+				return nil, errors.Errorf("expected KEY but +%v", ktok)
+			}
+			spec = &sqlast.UniqueColumnSpec{IsPrimaryKey: true, Primary: tok.From, Key: ktok.To}
 		case "REFERENCES":
 			p.mustNextToken()
 			tname, err := p.parseObjectName()
@@ -798,10 +813,15 @@ CONSTRAINT_LOOP:
 			if err != nil {
 				return nil, errors.Errorf("parseColumnNames failed: %w", err)
 			}
-			p.expectToken(sqltoken.RParen)
+			r, _ := p.nextToken()
+			if r.Kind != sqltoken.RParen {
+				return nil, errors.Errorf("expected RParen but %+v", r)
+			}
 			spec = &sqlast.ReferencesColumnSpec{
-				TableName: tname,
-				Columns:   columns,
+				TableName:  tname,
+				Columns:    columns,
+				References: tok.From,
+				RParen:     r.To,
 			}
 		case "CHECK":
 			p.mustNextToken()
@@ -810,11 +830,15 @@ CONSTRAINT_LOOP:
 			if err != nil {
 				return nil, errors.Errorf("ParseExpr failed: %w", err)
 			}
-
-			spec = &sqlast.CheckColumnSpec{
-				Expr: expr,
+			r, _ := p.nextToken()
+			if r.Kind != sqltoken.RParen {
+				return nil, errors.Errorf("expected RParen but %+v", r)
 			}
-			p.expectToken(sqltoken.RParen)
+			spec = &sqlast.CheckColumnSpec{
+				Check:  tok.From,
+				Expr:   expr,
+				RParen: r.To,
+			}
 		default:
 			break CONSTRAINT_LOOP
 		}

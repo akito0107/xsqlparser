@@ -454,15 +454,15 @@ type ColumnConstraintSpec interface {
 }
 
 type NotNullColumnSpec struct {
-	From, To sqltoken.Pos
+	Not, Null sqltoken.Pos
 }
 
 func (n *NotNullColumnSpec) Pos() sqltoken.Pos {
-	return n.From
+	return n.Not
 }
 
 func (n *NotNullColumnSpec) End() sqltoken.Pos {
-	return n.To
+	return n.Null
 }
 
 func (*NotNullColumnSpec) ToSQLString() string {
@@ -470,23 +470,26 @@ func (*NotNullColumnSpec) ToSQLString() string {
 }
 
 type UniqueColumnSpec struct {
-	IsPrimaryKey           bool
-	PrimaryFrom, PrimaryTo sqltoken.Pos
-	UniqueFrom, UniqueTo   sqltoken.Pos
+	IsPrimaryKey bool
+	Primary, Key sqltoken.Pos
+	Unique       sqltoken.Pos
 }
 
 func (u *UniqueColumnSpec) Pos() sqltoken.Pos {
 	if u.IsPrimaryKey {
-		return u.PrimaryFrom
+		return u.Primary
 	}
-	return u.UniqueFrom
+	return u.Unique
 }
 
 func (u *UniqueColumnSpec) End() sqltoken.Pos {
 	if u.IsPrimaryKey {
-		return u.PrimaryTo
+		return u.Key
 	}
-	return u.UniqueTo
+	return sqltoken.Pos{
+		Line: u.Unique.Line,
+		Col:  u.Unique.Col + 6,
+	}
 }
 
 func (u *UniqueColumnSpec) ToSQLString() string {
