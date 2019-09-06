@@ -1004,26 +1004,14 @@ CREATE TABLE persons (
 								{
 									Spec: &sqlast.UniqueColumnSpec{
 										IsPrimaryKey: true,
-										Primary: sqltoken.Pos{
-											Line: 3,
-											Col:  16,
-										},
-										Key: sqltoken.Pos{
-											Line: 3,
-											Col:  27,
-										},
+										Primary:      sqltoken.Pos{Line: 3, Col: 16},
+										Key:          sqltoken.Pos{Line: 3, Col: 27},
 									},
 								},
 								{
 									Spec: &sqlast.NotNullColumnSpec{
-										Not: sqltoken.Pos{
-											Line: 3,
-											Col:  28,
-										},
-										Null: sqltoken.Pos{
-											Line: 3,
-											Col:  36,
-										},
+										Not:  sqltoken.Pos{Line: 3, Col: 28},
+										Null: sqltoken.Pos{Line: 3, Col: 36},
 									},
 								},
 							},
@@ -1042,10 +1030,7 @@ CREATE TABLE persons (
 							Constraints: []*sqlast.ColumnConstraint{
 								{
 									Spec: &sqlast.UniqueColumnSpec{
-										Unique: sqltoken.Pos{
-											Line: 4,
-											Col:  31,
-										},
+										Unique: sqltoken.Pos{Line: 4, Col: 25},
 									},
 								},
 							},
@@ -1054,7 +1039,7 @@ CREATE TABLE persons (
 							Name: &sqlast.Ident{
 								Value: "last_name",
 								From:  sqltoken.Pos{Line: 5, Col: 1},
-								To:    sqltoken.Pos{Line: 5, Col: 9},
+								To:    sqltoken.Pos{Line: 5, Col: 10},
 							},
 							DataType: &sqlast.VarcharType{
 								Size:      sqlast.NewSize(255),
@@ -1065,14 +1050,8 @@ CREATE TABLE persons (
 							Constraints: []*sqlast.ColumnConstraint{
 								{
 									Spec: &sqlast.NotNullColumnSpec{
-										Not: sqltoken.Pos{
-											Line: 5,
-											Col:  28,
-										},
-										Null: sqltoken.Pos{
-											Line: 5,
-											Col:  36,
-										},
+										Not:  sqltoken.Pos{Line: 5, Col: 34},
+										Null: sqltoken.Pos{Line: 5, Col: 42},
 									},
 								},
 							},
@@ -1081,13 +1060,10 @@ CREATE TABLE persons (
 							Name: &sqlast.Ident{
 								Value: "created_at",
 								From:  sqltoken.Pos{Line: 6, Col: 1},
-								To:    sqltoken.Pos{Line: 6, Col: 9},
+								To:    sqltoken.Pos{Line: 6, Col: 11},
 							},
 							DataType: &sqlast.Timestamp{
-								Timestamp: sqltoken.Pos{
-									Line: 6,
-									Col:  12,
-								},
+								Timestamp: sqltoken.Pos{Line: 6, Col: 12},
 							},
 							Default: &sqlast.Ident{
 								Value: "CURRENT_TIMESTAMP",
@@ -1114,91 +1090,114 @@ CREATE TABLE persons (
 			},
 			{
 				name: "with case",
-				skip: true,
-				in: "CREATE TABLE persons (" +
-					"person_id int PRIMARY KEY NOT NULL, " +
-					"last_name character varying(255) NOT NULL, " +
-					"test_id int NOT NULL REFERENCES test(id1, id2), " +
-					"email character varying(255) UNIQUE NOT NULL, " +
-					"age int NOT NULL CHECK(age > 0 AND age < 100), " +
-					"created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL)",
+				in: `CREATE TABLE persons (
+person_id int PRIMARY KEY NOT NULL,
+last_name character varying(255) NOT NULL,
+test_id int NOT NULL REFERENCES test(id1),
+email character varying(255) UNIQUE NOT NULL,
+age int NOT NULL CHECK(age > 0 AND age < 100),
+created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL
+)`,
 				out: &sqlast.CreateTableStmt{
-					Name: sqlast.NewObjectName("persons"),
+					Create: sqltoken.Pos{Line: 1, Col: 0},
+					Name: &sqlast.ObjectName{
+						Idents: []*sqlast.Ident{
+							{
+								Value: "persons",
+								From:  sqltoken.Pos{Line: 1, Col: 13},
+								To:    sqltoken.Pos{Line: 1, Col: 20},
+							},
+						},
+					},
 					Elements: []sqlast.TableElement{
 						&sqlast.ColumnDef{
-							Name:     sqlast.NewIdent("person_id"),
-							DataType: &sqlast.Int{},
+							Name: &sqlast.Ident{
+								Value: "person_id",
+								From:  sqltoken.Pos{Line: 2, Col: 0},
+								To:    sqltoken.Pos{Line: 2, Col: 9},
+							},
+							DataType: &sqlast.Int{
+								From: sqltoken.Pos{Line: 2, Col: 10},
+								To:   sqltoken.Pos{Line: 2, Col: 13},
+							},
 							Constraints: []*sqlast.ColumnConstraint{
 								{
 									Spec: &sqlast.UniqueColumnSpec{
 										IsPrimaryKey: true,
+										Primary:      sqltoken.Pos{Line: 2, Col: 14},
+										Key:          sqltoken.Pos{Line: 2, Col: 25},
 									},
 								},
 								{
-									Spec: &sqlast.NotNullColumnSpec{},
+									Spec: &sqlast.NotNullColumnSpec{
+										Not:  sqltoken.Pos{Line: 2, Col: 26},
+										Null: sqltoken.Pos{Line: 2, Col: 34},
+									},
 								},
 							},
 						},
 						&sqlast.ColumnDef{
-							Name: sqlast.NewIdent("last_name"),
+							Name: &sqlast.Ident{
+								Value: "last_name",
+								From:  sqltoken.Pos{Line: 3, Col: 0},
+								To:    sqltoken.Pos{Line: 3, Col: 9},
+							},
 							DataType: &sqlast.VarcharType{
-								Size: sqlast.NewSize(255),
+								Size:      sqlast.NewSize(255),
+								Character: sqltoken.Pos{Line: 3, Col: 10},
+								Varying:   sqltoken.Pos{Line: 3, Col: 27},
+								RParen:    sqltoken.Pos{Line: 3, Col: 32},
 							},
 							Constraints: []*sqlast.ColumnConstraint{
 								{
-									Spec: &sqlast.NotNullColumnSpec{},
+									Spec: &sqlast.NotNullColumnSpec{
+										Not:  sqltoken.Pos{Line: 3, Col: 33},
+										Null: sqltoken.Pos{Line: 3, Col: 41},
+									},
 								},
 							},
 						},
 						&sqlast.ColumnDef{
-							Name:     sqlast.NewIdent("test_id"),
-							DataType: &sqlast.Int{},
+							Name: &sqlast.Ident{
+								Value: "test_id",
+								From:  sqltoken.Pos{Line: 4, Col: 0},
+								To:    sqltoken.Pos{Line: 4, Col: 7},
+							},
+							DataType: &sqlast.Int{
+								From: sqltoken.Pos{Line: 4, Col: 8},
+								To:   sqltoken.Pos{Line: 4, Col: 11},
+							},
 							Constraints: []*sqlast.ColumnConstraint{
 								{
-									Spec: &sqlast.NotNullColumnSpec{},
+									Spec: &sqlast.NotNullColumnSpec{
+										Not:  sqltoken.Pos{Line: 4, Col: 12},
+										Null: sqltoken.Pos{Line: 4, Col: 20},
+									},
 								},
 								{
 									Spec: &sqlast.ReferencesColumnSpec{
-										TableName: sqlast.NewObjectName("test"),
-										Columns:   []*sqlast.Ident{sqlast.NewIdent("id1"), sqlast.NewIdent("id2")},
-									},
-								},
-							},
-						},
-						&sqlast.ColumnDef{
-							Name: sqlast.NewIdent("email"),
-							DataType: &sqlast.VarcharType{
-								Size: sqlast.NewSize(255),
-							},
-							Constraints: []*sqlast.ColumnConstraint{
-								{
-									Spec: &sqlast.UniqueColumnSpec{},
-								},
-								{
-									Spec: &sqlast.NotNullColumnSpec{},
-								},
-							},
-						},
-						&sqlast.ColumnDef{
-							Name:     sqlast.NewIdent("age"),
-							DataType: &sqlast.Int{},
-							Constraints: []*sqlast.ColumnConstraint{
-								{
-									Spec: &sqlast.NotNullColumnSpec{},
-								},
-								{
-									Spec: &sqlast.CheckColumnSpec{
-										Expr: &sqlast.BinaryExpr{
-											Op: &sqlast.Operator{Type: sqlast.And},
-											Left: &sqlast.BinaryExpr{
-												Op:    &sqlast.Operator{Type: sqlast.Gt},
-												Left:  sqlast.NewIdent("age"),
-												Right: sqlast.NewLongValue(0),
+										References: sqltoken.Pos{
+											Line: 4,
+											Col:  21,
+										},
+										RParen: sqltoken.Pos{
+											Line: 4,
+											Col:  41,
+										},
+										TableName: &sqlast.ObjectName{
+											Idents: []*sqlast.Ident{
+												{
+													Value: "test",
+													From:  sqltoken.Pos{Line: 4, Col: 32},
+													To:    sqltoken.Pos{Line: 4, Col: 36},
+												},
 											},
-											Right: &sqlast.BinaryExpr{
-												Op:    &sqlast.Operator{Type: sqlast.Lt},
-												Left:  sqlast.NewIdent("age"),
-												Right: sqlast.NewLongValue(100),
+										},
+										Columns: []*sqlast.Ident{
+											&sqlast.Ident{
+												Value: "id1",
+												From:  sqltoken.Pos{Line: 4, Col: 37},
+												To:    sqltoken.Pos{Line: 4, Col: 40},
 											},
 										},
 									},
@@ -1206,12 +1205,141 @@ CREATE TABLE persons (
 							},
 						},
 						&sqlast.ColumnDef{
-							Name:     sqlast.NewIdent("created_at"),
-							DataType: &sqlast.Timestamp{},
-							Default:  sqlast.NewIdent("CURRENT_TIMESTAMP"),
+							Name: &sqlast.Ident{
+								Value: "email",
+								From:  sqltoken.Pos{Line: 5, Col: 0},
+								To:    sqltoken.Pos{Line: 5, Col: 5},
+							},
+							DataType: &sqlast.VarcharType{
+								Size:      sqlast.NewSize(255),
+								Character: sqltoken.Pos{Line: 5, Col: 6},
+								Varying:   sqltoken.Pos{Line: 5, Col: 23},
+								RParen:    sqltoken.Pos{Line: 5, Col: 28},
+							},
 							Constraints: []*sqlast.ColumnConstraint{
 								{
-									Spec: &sqlast.NotNullColumnSpec{},
+									Spec: &sqlast.UniqueColumnSpec{
+										Unique: sqltoken.Pos{Line: 5, Col: 29},
+									},
+								},
+								{
+									Spec: &sqlast.NotNullColumnSpec{
+										Not:  sqltoken.Pos{Line: 5, Col: 36},
+										Null: sqltoken.Pos{Line: 5, Col: 44},
+									},
+								},
+							},
+						},
+						&sqlast.ColumnDef{
+							Name: &sqlast.Ident{
+								Value: "age",
+								From:  sqltoken.Pos{Line: 6, Col: 0},
+								To:    sqltoken.Pos{Line: 6, Col: 3},
+							},
+							DataType: &sqlast.Int{
+								From: sqltoken.Pos{Line: 6, Col: 4},
+								To:   sqltoken.Pos{Line: 6, Col: 7},
+							},
+							Constraints: []*sqlast.ColumnConstraint{
+								{
+									Spec: &sqlast.NotNullColumnSpec{
+										Not:  sqltoken.Pos{Line: 6, Col: 8},
+										Null: sqltoken.Pos{Line: 6, Col: 16},
+									},
+								},
+								{
+									Spec: &sqlast.CheckColumnSpec{
+										Check: sqltoken.Pos{
+											Line: 6,
+											Col:  17,
+										},
+										RParen: sqltoken.Pos{
+											Line: 6,
+											Col:  45,
+										},
+										Expr: &sqlast.BinaryExpr{
+											Op: &sqlast.Operator{
+												Type: sqlast.And,
+												From: sqltoken.Pos{Line: 6, Col: 31},
+												To:   sqltoken.Pos{Line: 6, Col: 34},
+											},
+											Left: &sqlast.BinaryExpr{
+												Op: &sqlast.Operator{
+													Type: sqlast.Gt,
+													From: sqltoken.Pos{Line: 6, Col: 27},
+													To:   sqltoken.Pos{Line: 6, Col: 28},
+												},
+												Left: &sqlast.Ident{
+													Value: "age",
+													From:  sqltoken.Pos{Line: 6, Col: 23},
+													To:    sqltoken.Pos{Line: 6, Col: 26},
+												},
+												Right: &sqlast.LongValue{
+													From: sqltoken.Pos{
+														Line: 6,
+														Col:  29,
+													},
+													To:   sqltoken.Pos{Line: 6, Col: 30},
+													Long: 0,
+												},
+											},
+											Right: &sqlast.BinaryExpr{
+												Op: &sqlast.Operator{
+													Type: sqlast.Lt,
+													From: sqltoken.Pos{Line: 6, Col: 39},
+													To: sqltoken.Pos{
+														Line: 6,
+														Col:  40,
+													},
+												},
+												Left: &sqlast.Ident{
+													Value: "age",
+													From:  sqltoken.Pos{Line: 6, Col: 35},
+													To:    sqltoken.Pos{Line: 6, Col: 38},
+												},
+												Right: &sqlast.LongValue{
+													From: sqltoken.Pos{
+														Line: 6,
+														Col:  41,
+													},
+													To: sqltoken.Pos{
+														Line: 6,
+														Col:  44,
+													},
+													Long: 100,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+						&sqlast.ColumnDef{
+							Name: &sqlast.Ident{
+								Value: "created_at",
+								From:  sqltoken.Pos{Line: 7, Col: 0},
+								To:    sqltoken.Pos{Line: 7, Col: 10},
+							},
+							DataType: &sqlast.Timestamp{
+								Timestamp: sqltoken.Pos{Line: 7, Col: 11},
+							},
+							Default: &sqlast.Ident{
+								Value: "CURRENT_TIMESTAMP",
+								From:  sqltoken.Pos{Line: 7, Col: 29},
+								To:    sqltoken.Pos{Line: 7, Col: 46},
+							},
+							Constraints: []*sqlast.ColumnConstraint{
+								{
+									Spec: &sqlast.NotNullColumnSpec{
+										Not: sqltoken.Pos{
+											Line: 7,
+											Col:  47,
+										},
+										Null: sqltoken.Pos{
+											Line: 7,
+											Col:  55,
+										},
+									},
 								},
 							},
 						},

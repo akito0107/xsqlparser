@@ -77,6 +77,7 @@ func (p *Parser) ParseStatement() (sqlast.Stmt, error) {
 		p.prevToken()
 		return p.parseQuery()
 	case "CREATE":
+		p.prevToken()
 		return p.parseCreate()
 	case "DELETE":
 		return p.parseDelete()
@@ -165,6 +166,7 @@ func (p *Parser) ParseDataType() (sqlast.Type, error) {
 			p.expectKeyword("ZONE")
 		}
 		return &sqlast.Timestamp{
+			Timestamp:    tok.From,
 			WithTimeZone: wok,
 		}, nil
 	case "TIME":
@@ -428,8 +430,12 @@ func (p *Parser) parseSelectList() ([]sqlast.SQLSelectItem, error) {
 }
 
 func (p *Parser) parseCreate() (sqlast.Stmt, error) {
+	ok, t, _ := p.parseKeyword("CREATE")
+	if !ok {
+		return nil, errors.Errorf("expect CREATE but %+v", t)
+	}
 	if ok, _, _ := p.parseKeyword("TABLE"); ok {
-		return p.parseCreateTable()
+		return p.parseCreateTable(t)
 	}
 
 	mok, _, _ := p.parseKeyword("MATERIALIZED")
@@ -452,7 +458,7 @@ func (p *Parser) parseCreate() (sqlast.Stmt, error) {
 	return nil, nil
 }
 
-func (p *Parser) parseCreateTable() (sqlast.Stmt, error) {
+func (p *Parser) parseCreateTable(create *sqltoken.Token) (sqlast.Stmt, error) {
 	name, err := p.parseObjectName()
 	if err != nil {
 		return nil, errors.Errorf("parseObjectName failed: %w", err)
@@ -464,6 +470,7 @@ func (p *Parser) parseCreateTable() (sqlast.Stmt, error) {
 	}
 
 	return &sqlast.CreateTableStmt{
+		Create:   create.From,
 		Name:     name,
 		Elements: elements,
 	}, nil
