@@ -1552,18 +1552,36 @@ FOREIGN KEY(test_id) REFERENCES other_table(col1, col2)
 				in:   "INSERT INTO customers (customer_name, contract_name) VALUES('Cardinal', 'Tom B. Erichsen')",
 				name: "simple case",
 				out: &sqlast.InsertStmt{
-					Insert:    sqltoken.NewPos(1, 0),
-					TableName: sqlast.NewObjectName("customers"),
+					Insert: sqltoken.NewPos(1, 0),
+					TableName: &sqlast.ObjectName{
+						Idents: []*sqlast.Ident{
+							{
+								Value: "customers",
+								From:  sqltoken.NewPos(1, 12),
+								To:    sqltoken.NewPos(1, 21),
+							},
+						},
+					},
 					Columns: []*sqlast.Ident{
-						sqlast.NewIdent("customer_name"),
-						sqlast.NewIdent("contract_name"),
+						sqlast.NewIdentWithPos("customer_name", sqltoken.NewPos(1, 23), sqltoken.NewPos(1, 36)),
+						sqlast.NewIdentWithPos("contract_name", sqltoken.NewPos(1, 38), sqltoken.NewPos(1, 51)),
 					},
 					Source: &sqlast.ConstructorSource{
 						Rows: []*sqlast.RowValueExpr{
 							{
+								LParen: sqltoken.NewPos(1, 59),
+								RParen: sqltoken.NewPos(1, 90),
 								Values: []sqlast.Node{
-									sqlast.NewSingleQuotedString("Cardinal"),
-									sqlast.NewSingleQuotedString("Tom B. Erichsen"),
+									&sqlast.SingleQuotedString{
+										From:   sqltoken.NewPos(1, 60),
+										To:     sqltoken.NewPos(1, 70),
+										String: "Cardinal",
+									},
+									&sqlast.SingleQuotedString{
+										From:   sqltoken.NewPos(1, 72),
+										To:     sqltoken.NewPos(1, 89),
+										String: "Tom B. Erichsen",
+									},
 								},
 							},
 						},
@@ -1572,27 +1590,56 @@ FOREIGN KEY(test_id) REFERENCES other_table(col1, col2)
 			},
 			{
 				name: "multi record case",
-				in: "INSERT INTO customers (customer_name, contract_name) VALUES" +
-					"('Cardinal', 'Tom B. Erichsen')," +
-					"('Cardinal', 'Tom B. Erichsen')",
+				in: `INSERT INTO customers (customer_name, contract_name) VALUES
+('Cardinal', 'Tom B. Erichsen'),
+('Cardinal', 'Tom B. Erichsen')`,
 				out: &sqlast.InsertStmt{
-					TableName: sqlast.NewObjectName("customers"),
+					Insert: sqltoken.NewPos(1, 0),
+					TableName: &sqlast.ObjectName{
+						Idents: []*sqlast.Ident{
+							{
+								Value: "customers",
+								From:  sqltoken.NewPos(1, 12),
+								To:    sqltoken.NewPos(1, 21),
+							},
+						},
+					},
 					Columns: []*sqlast.Ident{
-						sqlast.NewIdent("customer_name"),
-						sqlast.NewIdent("contract_name"),
+						sqlast.NewIdentWithPos("customer_name", sqltoken.NewPos(1, 23), sqltoken.NewPos(1, 36)),
+						sqlast.NewIdentWithPos("contract_name", sqltoken.NewPos(1, 38), sqltoken.NewPos(1, 51)),
 					},
 					Source: &sqlast.ConstructorSource{
 						Rows: []*sqlast.RowValueExpr{
 							{
+								LParen: sqltoken.NewPos(2, 0),
+								RParen: sqltoken.NewPos(2, 31),
 								Values: []sqlast.Node{
-									sqlast.NewSingleQuotedString("Cardinal"),
-									sqlast.NewSingleQuotedString("Tom B. Erichsen"),
+									&sqlast.SingleQuotedString{
+										From:   sqltoken.NewPos(2, 1),
+										To:     sqltoken.NewPos(2, 11),
+										String: "Cardinal",
+									},
+									&sqlast.SingleQuotedString{
+										From:   sqltoken.NewPos(2, 13),
+										To:     sqltoken.NewPos(2, 30),
+										String: "Tom B. Erichsen",
+									},
 								},
 							},
 							{
+								LParen: sqltoken.NewPos(3, 0),
+								RParen: sqltoken.NewPos(3, 31),
 								Values: []sqlast.Node{
-									sqlast.NewSingleQuotedString("Cardinal"),
-									sqlast.NewSingleQuotedString("Tom B. Erichsen"),
+									&sqlast.SingleQuotedString{
+										From:   sqltoken.NewPos(3, 1),
+										To:     sqltoken.NewPos(3, 11),
+										String: "Cardinal",
+									},
+									&sqlast.SingleQuotedString{
+										From:   sqltoken.NewPos(3, 13),
+										To:     sqltoken.NewPos(3, 30),
+										String: "Tom B. Erichsen",
+									},
 								},
 							},
 						},

@@ -83,6 +83,7 @@ func (p *Parser) ParseStatement() (sqlast.Stmt, error) {
 		p.prevToken()
 		return p.parseDelete()
 	case "INSERT":
+		p.prevToken()
 		return p.parseInsert()
 	case "ALTER":
 		return p.parseAlter()
@@ -979,6 +980,11 @@ func (p *Parser) parseAssignments() ([]*sqlast.Assignment, error) {
 }
 
 func (p *Parser) parseInsert() (sqlast.Stmt, error) {
+	ok, i, _ := p.parseKeyword("INSERT")
+	if !ok {
+		return nil, errors.Errorf("expected INSERT but %+v", i)
+	}
+
 	p.expectKeyword("INTO")
 	tableName, err := p.parseObjectName()
 
@@ -1007,15 +1013,23 @@ func (p *Parser) parseInsert() (sqlast.Stmt, error) {
 	} else {
 		var constSrc sqlast.ConstructorSource
 		for {
-			p.expectToken(sqltoken.LParen)
+			l, _ := p.nextToken()
+			if l.Kind != sqltoken.LParen {
+				return nil, errors.Errorf("expected LParen but %+v", l)
+			}
 			v, err := p.parseExprList()
 			if err != nil {
 				return nil, errors.Errorf("invalid insert value assign: %w", err)
 			}
+			r, _ := p.nextToken()
+			if r.Kind != sqltoken.RParen {
+				return nil, errors.Errorf("expected RParen but %+v", r)
+			}
 			constSrc.Rows = append(constSrc.Rows, &sqlast.RowValueExpr{
 				Values: v,
+				LParen: l.From,
+				RParen: r.To,
 			})
-			p.expectToken(sqltoken.RParen)
 			if ok, _ := p.consumeToken(sqltoken.Comma); !ok {
 				break
 			}
@@ -1034,6 +1048,7 @@ func (p *Parser) parseInsert() (sqlast.Stmt, error) {
 	}
 
 	return &sqlast.InsertStmt{
+		Insert:            i.From,
 		TableName:         tableName,
 		Columns:           columns,
 		Source:            insertSrc,
