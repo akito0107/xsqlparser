@@ -1755,21 +1755,38 @@ FOREIGN KEY(test_id) REFERENCES other_table(col1, col2)
 				name: "simple case",
 				in:   "UPDATE customers SET contract_name = 'Alfred Schmidt', city = 'Frankfurt' WHERE customer_id = 1",
 				out: &sqlast.UpdateStmt{
-					TableName: sqlast.NewObjectName("customers"),
+					Update: sqltoken.NewPos(1, 0),
+					TableName: &sqlast.ObjectName{
+						Idents: []*sqlast.Ident{
+							{
+								Value: "customers",
+								From:  sqltoken.NewPos(1, 7),
+								To:    sqltoken.NewPos(1, 16),
+							},
+						},
+					},
 					Assignments: []*sqlast.Assignment{
 						{
-							ID:    sqlast.NewIdent("contract_name"),
-							Value: sqlast.NewSingleQuotedString("Alfred Schmidt"),
+							ID: sqlast.NewIdentWithPos("contract_name", sqltoken.NewPos(1, 21), sqltoken.NewPos(1, 34)),
+							Value: &sqlast.SingleQuotedString{
+								From:   sqltoken.NewPos(1, 37),
+								To:     sqltoken.NewPos(1, 53),
+								String: "Alfred Schmidt",
+							},
 						},
 						{
-							ID:    sqlast.NewIdent("city"),
-							Value: sqlast.NewSingleQuotedString("Frankfurt"),
+							ID:    sqlast.NewIdentWithPos("city", sqltoken.NewPos(1, 55), sqltoken.NewPos(1, 59)),
+							Value: &sqlast.SingleQuotedString{String: "Frankfurt", From: sqltoken.NewPos(1, 62), To: sqltoken.NewPos(1, 73)},
 						},
 					},
 					Selection: &sqlast.BinaryExpr{
-						Op:    &sqlast.Operator{Type: sqlast.Eq},
-						Left:  sqlast.NewIdent("customer_id"),
-						Right: sqlast.NewLongValue(1),
+						Op:   &sqlast.Operator{Type: sqlast.Eq, From: sqltoken.NewPos(1, 92), To: sqltoken.NewPos(1, 93)},
+						Left: sqlast.NewIdentWithPos("customer_id", sqltoken.NewPos(1, 80), sqltoken.NewPos(1, 91)),
+						Right: &sqlast.LongValue{
+							From: sqltoken.NewPos(1, 94),
+							To:   sqltoken.NewPos(1, 95),
+							Long: 1,
+						},
 					},
 				},
 			},

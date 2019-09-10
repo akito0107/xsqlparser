@@ -87,6 +87,7 @@ func (p *Parser) ParseStatement() (sqlast.Stmt, error) {
 	case "ALTER":
 		return p.parseAlter()
 	case "UPDATE":
+		p.prevToken()
 		return p.parseUpdate()
 	case "DROP":
 		return p.parseDrop()
@@ -914,6 +915,10 @@ func (p *Parser) parseDelete() (sqlast.Stmt, error) {
 }
 
 func (p *Parser) parseUpdate() (sqlast.Stmt, error) {
+	ok, u, _ := p.parseKeyword("UPDATE")
+	if !ok {
+		return nil, errors.Errorf("expect UPDATE but %+v", ok)
+	}
 	tableName, err := p.parseObjectName()
 	if err != nil {
 		return nil, errors.Errorf("parseObjectName failed: %w", err)
@@ -934,6 +939,7 @@ func (p *Parser) parseUpdate() (sqlast.Stmt, error) {
 	}
 
 	return &sqlast.UpdateStmt{
+		Update:      u.From,
 		TableName:   tableName,
 		Assignments: assignments,
 		Selection:   selection,
@@ -960,7 +966,7 @@ func (p *Parser) parseAssignments() ([]*sqlast.Assignment, error) {
 		}
 
 		assignments = append(assignments, &sqlast.Assignment{
-			ID:    sqlast.NewIdentFromWord(word),
+			ID:    sqlast.NewIdentWithPos(word.String(), tok.From, tok.To),
 			Value: val,
 		})
 
