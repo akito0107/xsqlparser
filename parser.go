@@ -628,8 +628,10 @@ func (p *Parser) parseTableConstraints() (*sqlast.TableConstraint, error) {
 
 	word, ok := tok.Value.(*sqltoken.SQLWord)
 
+	var constraintPos sqltoken.Pos
 	var name *sqlast.Ident
 	if ok && word.Keyword == "CONSTRAINT" {
+		constraintPos = tok.From
 		p.mustNextToken()
 		i, err := p.parseIdentifier()
 		if err != nil {
@@ -653,8 +655,13 @@ func (p *Parser) parseTableConstraints() (*sqlast.TableConstraint, error) {
 		if err != nil {
 			return nil, errors.Errorf("parseColumnNames failed: %w", err)
 		}
-		p.expectToken(sqltoken.RParen)
+		r, _ := p.nextToken()
+		if r.Kind != sqltoken.RParen {
+			return nil, errors.Errorf("expected RParen but %+v", r)
+		}
 		spec = &sqlast.UniqueTableConstraint{
+			Unique:  tok.From,
+			RParen:  r.To,
 			Columns: columns,
 		}
 	case "PRIMARY":
@@ -665,8 +672,13 @@ func (p *Parser) parseTableConstraints() (*sqlast.TableConstraint, error) {
 		if err != nil {
 			return nil, errors.Errorf("parseColumnNames failed: %w", err)
 		}
-		p.expectToken(sqltoken.RParen)
+		r, _ := p.nextToken()
+		if r.Kind != sqltoken.RParen {
+			return nil, errors.Errorf("expected RParen but %+v", r)
+		}
 		spec = &sqlast.UniqueTableConstraint{
+			Primary:   tok.From,
+			RParen:    r.To,
 			IsPrimary: true,
 			Columns:   columns,
 		}
@@ -685,14 +697,22 @@ func (p *Parser) parseTableConstraints() (*sqlast.TableConstraint, error) {
 		w := t.Value.(*sqltoken.SQLWord)
 		p.expectToken(sqltoken.LParen)
 		refcolumns, err := p.parseColumnNames()
-		p.expectToken(sqltoken.RParen)
-
+		r, _ := p.nextToken()
+		if r.Kind != sqltoken.RParen {
+			return nil, errors.Errorf("expected RParen but %+v", r)
+		}
 		keys := &sqlast.ReferenceKeyExpr{
-			TableName: sqlast.NewIdentFromWord(w),
-			Columns:   refcolumns,
+			TableName: &sqlast.Ident{
+				From:  t.From,
+				To:    t.To,
+				Value: w.String(),
+			},
+			Columns: refcolumns,
+			RParen:  r.To,
 		}
 
 		spec = &sqlast.ReferentialTableConstraint{
+			Foreign: tok.From,
 			Columns: columns,
 			KeyExpr: keys,
 		}
@@ -703,18 +723,23 @@ func (p *Parser) parseTableConstraints() (*sqlast.TableConstraint, error) {
 		if err != nil {
 			return nil, errors.Errorf("ParseExpr failed: %w", err)
 		}
-
-		spec = &sqlast.CheckTableConstraint{
-			Expr: expr,
+		r, _ := p.nextToken()
+		if r.Kind != sqltoken.RParen {
+			return nil, errors.Errorf("expected RParen but %+v", r)
 		}
-		p.expectToken(sqltoken.RParen)
+		spec = &sqlast.CheckTableConstraint{
+			Expr:   expr,
+			Check:  tok.From,
+			RParen: r.To,
+		}
 	default:
 		return nil, errors.Errorf("unknown table constraint: %v", word)
 	}
 
 	return &sqlast.TableConstraint{
-		Name: name,
-		Spec: spec,
+		Name:       name,
+		Spec:       spec,
+		Constraint: constraintPos,
 	}, nil
 }
 
@@ -1418,8 +1443,6 @@ func (p *Parser) parseTableReferenceRight() (sqlast.TableReference, error) {
 		p.prevToken()
 		return nil, nil
 	}
-
-	return nil, nil
 }
 
 func (p *Parser) parseJoinType() (*sqlast.JoinType, error) {

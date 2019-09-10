@@ -34,28 +34,25 @@ func TestParser_ParseStatement(t *testing.T) {
 				in:   "SELECT test FROM test_table",
 				out: &sqlast.Query{
 					Body: &sqlast.SQLSelect{
-						Select: sqltoken.Pos{
-							Line: 1,
-							Col:  0,
-						},
+						Select: sqltoken.NewPos(1, 0),
 						Projection: []sqlast.SQLSelectItem{
 							&sqlast.UnnamedSelectItem{
-								Node: &sqlast.Ident{
-									Value: "test",
-									From:  sqltoken.Pos{Line: 1, Col: 7},
-									To:    sqltoken.Pos{Line: 1, Col: 11},
-								},
+								Node: sqlast.NewIdentWithPos(
+									"test",
+									sqltoken.NewPos(1, 7),
+									sqltoken.NewPos(1, 11),
+								),
 							},
 						},
 						FromClause: []sqlast.TableReference{
 							&sqlast.Table{
 								Name: &sqlast.ObjectName{
 									Idents: []*sqlast.Ident{
-										{
-											Value: "test_table",
-											From:  sqltoken.Pos{Line: 1, Col: 17},
-											To:    sqltoken.Pos{Line: 1, Col: 27},
-										},
+										sqlast.NewIdentWithPos(
+											"test_table",
+											sqltoken.NewPos(1, 17),
+											sqltoken.NewPos(1, 27),
+										),
 									},
 								},
 							},
@@ -68,28 +65,25 @@ func TestParser_ParseStatement(t *testing.T) {
 				in:   "SELECT test FROM test_table WHERE test_table.column1 = 'test'",
 				out: &sqlast.Query{
 					Body: &sqlast.SQLSelect{
-						Select: sqltoken.Pos{
-							Line: 1,
-							Col:  0,
-						},
+						Select: sqltoken.NewPos(1, 0),
 						Projection: []sqlast.SQLSelectItem{
 							&sqlast.UnnamedSelectItem{
-								Node: &sqlast.Ident{
-									Value: "test",
-									From:  sqltoken.Pos{Line: 1, Col: 7},
-									To:    sqltoken.Pos{Line: 1, Col: 11},
-								},
+								Node: sqlast.NewIdentWithPos(
+									"test",
+									sqltoken.NewPos(1, 7),
+									sqltoken.NewPos(1, 11),
+								),
 							},
 						},
 						FromClause: []sqlast.TableReference{
 							&sqlast.Table{
 								Name: &sqlast.ObjectName{
 									Idents: []*sqlast.Ident{
-										{
-											Value: "test_table",
-											From:  sqltoken.Pos{Line: 1, Col: 17},
-											To:    sqltoken.Pos{Line: 1, Col: 27},
-										},
+										sqlast.NewIdentWithPos(
+											"test_table",
+											sqltoken.NewPos(1, 17),
+											sqltoken.NewPos(1, 27),
+										),
 									},
 								},
 							},
@@ -97,26 +91,26 @@ func TestParser_ParseStatement(t *testing.T) {
 						WhereClause: &sqlast.BinaryExpr{
 							Left: &sqlast.CompoundIdent{
 								Idents: []*sqlast.Ident{
-									{
-										Value: "test_table",
-										From:  sqltoken.Pos{Line: 1, Col: 34},
-										To:    sqltoken.Pos{Line: 1, Col: 44},
-									},
-									{
-										Value: "column1",
-										From:  sqltoken.Pos{Line: 1, Col: 45},
-										To:    sqltoken.Pos{Line: 1, Col: 52},
-									},
+									sqlast.NewIdentWithPos(
+										"test_table",
+										sqltoken.NewPos(1, 34),
+										sqltoken.NewPos(1, 44),
+									),
+									sqlast.NewIdentWithPos(
+										"column1",
+										sqltoken.NewPos(1, 45),
+										sqltoken.NewPos(1, 52),
+									),
 								},
 							},
 							Op: &sqlast.Operator{
 								Type: sqlast.Eq,
-								From: sqltoken.Pos{Line: 1, Col: 53},
-								To:   sqltoken.Pos{Line: 1, Col: 54},
+								From: sqltoken.NewPos(1, 53),
+								To:   sqltoken.NewPos(1, 54),
 							},
 							Right: &sqlast.SingleQuotedString{
-								From:   sqltoken.Pos{Line: 1, Col: 55},
-								To:     sqltoken.Pos{Line: 1, Col: 61},
+								From:   sqltoken.NewPos(1, 55),
+								To:     sqltoken.NewPos(1, 61),
 								String: "test",
 							},
 						},
@@ -128,39 +122,39 @@ func TestParser_ParseStatement(t *testing.T) {
 				in:   "SELECT COUNT(t1.id) AS c FROM test_table AS t1 LEFT JOIN test_table2 AS t2 ON t1.id = t2.test_table_id",
 				out: &sqlast.Query{
 					Body: &sqlast.SQLSelect{
-						Select: sqltoken.Pos{Line: 1, Col: 0},
+						Select: sqltoken.NewPos(1, 0),
 						Projection: []sqlast.SQLSelectItem{
 							&sqlast.AliasSelectItem{
 								Expr: &sqlast.Function{
 									Name: &sqlast.ObjectName{
 										Idents: []*sqlast.Ident{
-											{
-												Value: "COUNT",
-												From:  sqltoken.Pos{Line: 1, Col: 7},
-												To:    sqltoken.Pos{Line: 1, Col: 12},
-											},
+											sqlast.NewIdentWithPos(
+												"COUNT",
+												sqltoken.NewPos(1, 7),
+												sqltoken.NewPos(1, 12),
+											),
 										},
 									},
 									Args: []sqlast.Node{&sqlast.CompoundIdent{
 										Idents: []*sqlast.Ident{
-											{
-												Value: "t1",
-												From:  sqltoken.Pos{Line: 1, Col: 13},
-												To:    sqltoken.Pos{Line: 1, Col: 15},
-											},
-											{
-												Value: "id",
-												From:  sqltoken.Pos{Line: 1, Col: 16},
-												To:    sqltoken.Pos{Line: 1, Col: 18},
-											},
+											sqlast.NewIdentWithPos(
+												"t1",
+												sqltoken.NewPos(1, 13),
+												sqltoken.NewPos(1, 15),
+											),
+											sqlast.NewIdentWithPos(
+												"id",
+												sqltoken.NewPos(1, 16),
+												sqltoken.NewPos(1, 18),
+											),
 										},
 									}},
-									ArgsRParen: sqltoken.Pos{Line: 1, Col: 19},
+									ArgsRParen: sqltoken.NewPos(1, 19),
 								},
 								Alias: &sqlast.Ident{
 									Value: "c",
-									From:  sqltoken.Pos{Line: 1, Col: 23},
-									To:    sqltoken.Pos{Line: 1, Col: 24},
+									From:  sqltoken.NewPos(1, 23),
+									To:    sqltoken.NewPos(1, 24),
 								},
 							},
 						},
@@ -172,22 +166,22 @@ func TestParser_ParseStatement(t *testing.T) {
 											Idents: []*sqlast.Ident{
 												{
 													Value: "test_table",
-													From:  sqltoken.Pos{Line: 1, Col: 30},
-													To:    sqltoken.Pos{Line: 1, Col: 40},
+													From:  sqltoken.NewPos(1, 30),
+													To:    sqltoken.NewPos(1, 40),
 												},
 											},
 										},
 										Alias: &sqlast.Ident{
 											Value: "t1",
-											From:  sqltoken.Pos{Line: 1, Col: 44},
-											To:    sqltoken.Pos{Line: 1, Col: 46},
+											From:  sqltoken.NewPos(1, 44),
+											To:    sqltoken.NewPos(1, 46),
 										},
 									},
 								},
 								Type: &sqlast.JoinType{
 									Condition: sqlast.LEFT,
-									From:      sqltoken.Pos{Line: 1, Col: 47},
-									To:        sqltoken.Pos{Line: 1, Col: 51},
+									From:      sqltoken.NewPos(1, 47),
+									To:        sqltoken.NewPos(1, 51),
 								},
 								RightElement: &sqlast.TableJoinElement{
 									Ref: &sqlast.Table{
@@ -195,51 +189,51 @@ func TestParser_ParseStatement(t *testing.T) {
 											Idents: []*sqlast.Ident{
 												{
 													Value: "test_table2",
-													From:  sqltoken.Pos{Line: 1, Col: 57},
-													To:    sqltoken.Pos{Line: 1, Col: 68},
+													From:  sqltoken.NewPos(1, 57),
+													To:    sqltoken.NewPos(1, 68),
 												},
 											},
 										},
 										Alias: &sqlast.Ident{
 											Value: "t2",
-											From:  sqltoken.Pos{Line: 1, Col: 72},
-											To:    sqltoken.Pos{Line: 1, Col: 74},
+											From:  sqltoken.NewPos(1, 72),
+											To:    sqltoken.NewPos(1, 74),
 										},
 									},
 								},
 								Spec: &sqlast.JoinCondition{
-									On: sqltoken.Pos{Line: 1, Col: 75},
+									On: sqltoken.NewPos(1, 75),
 									SearchCondition: &sqlast.BinaryExpr{
 										Left: &sqlast.CompoundIdent{
 											Idents: []*sqlast.Ident{
 												{
 													Value: "t1",
-													From:  sqltoken.Pos{Line: 1, Col: 78},
-													To:    sqltoken.Pos{Line: 1, Col: 80},
+													From:  sqltoken.NewPos(1, 78),
+													To:    sqltoken.NewPos(1, 80),
 												},
 												{
 													Value: "id",
-													From:  sqltoken.Pos{Line: 1, Col: 81},
-													To:    sqltoken.Pos{Line: 1, Col: 83},
+													From:  sqltoken.NewPos(1, 81),
+													To:    sqltoken.NewPos(1, 83),
 												},
 											},
 										},
 										Op: &sqlast.Operator{
 											Type: sqlast.Eq,
-											From: sqltoken.Pos{Line: 1, Col: 84},
-											To:   sqltoken.Pos{Line: 1, Col: 85},
+											From: sqltoken.NewPos(1, 84),
+											To:   sqltoken.NewPos(1, 85),
 										},
 										Right: &sqlast.CompoundIdent{
 											Idents: []*sqlast.Ident{
 												{
 													Value: "t2",
-													From:  sqltoken.Pos{Line: 1, Col: 86},
-													To:    sqltoken.Pos{Line: 1, Col: 88},
+													From:  sqltoken.NewPos(1, 86),
+													To:    sqltoken.NewPos(1, 88),
 												},
 												{
 													Value: "test_table_id",
-													From:  sqltoken.Pos{Line: 1, Col: 89},
-													To:    sqltoken.Pos{Line: 1, Col: 102},
+													From:  sqltoken.NewPos(1, 89),
+													To:    sqltoken.NewPos(1, 102),
 												},
 											},
 										},
@@ -255,7 +249,7 @@ func TestParser_ParseStatement(t *testing.T) {
 				in:   "SELECT COUNT(customer_id), country.* FROM customers GROUP BY country",
 				out: &sqlast.Query{
 					Body: &sqlast.SQLSelect{
-						Select: sqltoken.Pos{Col: 0, Line: 1},
+						Select: sqltoken.NewPos(1, 0),
 						Projection: []sqlast.SQLSelectItem{
 							&sqlast.UnnamedSelectItem{
 								Node: &sqlast.Function{
@@ -263,19 +257,19 @@ func TestParser_ParseStatement(t *testing.T) {
 										Idents: []*sqlast.Ident{
 											{
 												Value: "COUNT",
-												From:  sqltoken.Pos{Line: 1, Col: 7},
-												To:    sqltoken.Pos{Line: 1, Col: 12},
+												From:  sqltoken.NewPos(1, 7),
+												To:    sqltoken.NewPos(1, 12),
 											},
 										},
 									},
 									Args: []sqlast.Node{
 										&sqlast.Ident{
 											Value: "customer_id",
-											From:  sqltoken.Pos{Line: 1, Col: 13},
-											To:    sqltoken.Pos{Line: 1, Col: 24},
+											From:  sqltoken.NewPos(1, 13),
+											To:    sqltoken.NewPos(1, 24),
 										},
 									},
-									ArgsRParen: sqltoken.Pos{Line: 1, Col: 25},
+									ArgsRParen: sqltoken.NewPos(1, 25),
 								},
 							},
 							&sqlast.QualifiedWildcardSelectItem{
@@ -283,8 +277,8 @@ func TestParser_ParseStatement(t *testing.T) {
 									Idents: []*sqlast.Ident{
 										{
 											Value: "country",
-											From:  sqltoken.Pos{Line: 1, Col: 27},
-											To:    sqltoken.Pos{Line: 1, Col: 34},
+											From:  sqltoken.NewPos(1, 27),
+											To:    sqltoken.NewPos(1, 34),
 										},
 									},
 								},
@@ -296,8 +290,8 @@ func TestParser_ParseStatement(t *testing.T) {
 									Idents: []*sqlast.Ident{
 										{
 											Value: "customers",
-											From:  sqltoken.Pos{Line: 1, Col: 42},
-											To:    sqltoken.Pos{Line: 1, Col: 51},
+											From:  sqltoken.NewPos(1, 42),
+											To:    sqltoken.NewPos(1, 51),
 										},
 									},
 								},
@@ -306,8 +300,8 @@ func TestParser_ParseStatement(t *testing.T) {
 						GroupByClause: []sqlast.Node{
 							&sqlast.Ident{
 								Value: "country",
-								From:  sqltoken.Pos{Line: 1, Col: 61},
-								To:    sqltoken.Pos{Line: 1, Col: 68},
+								From:  sqltoken.NewPos(1, 61),
+								To:    sqltoken.NewPos(1, 68),
 							},
 						},
 					},
@@ -321,7 +315,7 @@ GROUP BY country
 HAVING COUNT(customer_id) > 3`,
 				out: &sqlast.Query{
 					Body: &sqlast.SQLSelect{
-						Select: sqltoken.Pos{Col: 0, Line: 1},
+						Select: sqltoken.NewPos(1, 0),
 						Projection: []sqlast.SQLSelectItem{
 							&sqlast.UnnamedSelectItem{
 								Node: &sqlast.Function{
@@ -329,26 +323,26 @@ HAVING COUNT(customer_id) > 3`,
 										Idents: []*sqlast.Ident{
 											{
 												Value: "COUNT",
-												From:  sqltoken.Pos{Line: 1, Col: 7},
-												To:    sqltoken.Pos{Line: 1, Col: 12},
+												From:  sqltoken.NewPos(1, 7),
+												To:    sqltoken.NewPos(1, 12),
 											},
 										},
 									},
 									Args: []sqlast.Node{
 										&sqlast.Ident{
 											Value: "customer_id",
-											From:  sqltoken.Pos{Line: 1, Col: 13},
-											To:    sqltoken.Pos{Line: 1, Col: 24},
+											From:  sqltoken.NewPos(1, 13),
+											To:    sqltoken.NewPos(1, 24),
 										},
 									},
-									ArgsRParen: sqltoken.Pos{Line: 1, Col: 25},
+									ArgsRParen: sqltoken.NewPos(1, 25),
 								},
 							},
 							&sqlast.UnnamedSelectItem{
 								Node: &sqlast.Ident{
 									Value: "country",
-									From:  sqltoken.Pos{Line: 1, Col: 27},
-									To:    sqltoken.Pos{Line: 1, Col: 34},
+									From:  sqltoken.NewPos(1, 27),
+									To:    sqltoken.NewPos(1, 34),
 								},
 							},
 						},
@@ -358,8 +352,8 @@ HAVING COUNT(customer_id) > 3`,
 									Idents: []*sqlast.Ident{
 										{
 											Value: "customers",
-											From:  sqltoken.Pos{Line: 2, Col: 5},
-											To:    sqltoken.Pos{Line: 2, Col: 14},
+											From:  sqltoken.NewPos(2, 5),
+											To:    sqltoken.NewPos(2, 14),
 										},
 									},
 								},
@@ -368,38 +362,38 @@ HAVING COUNT(customer_id) > 3`,
 						GroupByClause: []sqlast.Node{
 							&sqlast.Ident{
 								Value: "country",
-								From:  sqltoken.Pos{Line: 3, Col: 9},
-								To:    sqltoken.Pos{Line: 3, Col: 16},
+								From:  sqltoken.NewPos(3, 9),
+								To:    sqltoken.NewPos(3, 16),
 							},
 						},
 						HavingClause: &sqlast.BinaryExpr{
 							Op: &sqlast.Operator{
 								Type: sqlast.Gt,
-								From: sqltoken.Pos{Line: 4, Col: 26},
-								To:   sqltoken.Pos{Line: 4, Col: 27},
+								From: sqltoken.NewPos(4, 26),
+								To:   sqltoken.NewPos(4, 27),
 							},
 							Left: &sqlast.Function{
 								Name: &sqlast.ObjectName{
 									Idents: []*sqlast.Ident{
 										{
 											Value: "COUNT",
-											From:  sqltoken.Pos{Line: 4, Col: 7},
-											To:    sqltoken.Pos{Line: 4, Col: 12},
+											From:  sqltoken.NewPos(4, 7),
+											To:    sqltoken.NewPos(4, 12),
 										},
 									},
 								},
 								Args: []sqlast.Node{
 									&sqlast.Ident{
 										Value: "customer_id",
-										From:  sqltoken.Pos{Line: 4, Col: 13},
-										To:    sqltoken.Pos{Line: 4, Col: 24},
+										From:  sqltoken.NewPos(4, 13),
+										To:    sqltoken.NewPos(4, 24),
 									},
 								},
-								ArgsRParen: sqltoken.Pos{Line: 4, Col: 25},
+								ArgsRParen: sqltoken.NewPos(4, 25),
 							},
 							Right: &sqlast.LongValue{
-								From: sqltoken.Pos{Line: 4, Col: 28},
-								To:   sqltoken.Pos{Line: 4, Col: 29},
+								From: sqltoken.NewPos(4, 28),
+								To:   sqltoken.NewPos(4, 29),
 								Long: 3,
 							},
 						},
@@ -414,39 +408,39 @@ WHERE region IN (SELECT region FROM top_regions)
 ORDER BY product_units LIMIT 100`,
 				out: &sqlast.Query{
 					Body: &sqlast.SQLSelect{
-						Select: sqltoken.Pos{Line: 1, Col: 0},
+						Select: sqltoken.NewPos(1, 0),
 						Projection: []sqlast.SQLSelectItem{
 							&sqlast.UnnamedSelectItem{
 								Node: &sqlast.Ident{
 									Value: "product",
-									From:  sqltoken.Pos{Line: 1, Col: 7},
-									To:    sqltoken.Pos{Line: 1, Col: 14},
+									From:  sqltoken.NewPos(1, 7),
+									To:    sqltoken.NewPos(1, 14),
 								},
 							},
 							&sqlast.AliasSelectItem{
 								Alias: &sqlast.Ident{
 									Value: "product_units",
-									From:  sqltoken.Pos{Line: 1, Col: 33},
-									To:    sqltoken.Pos{Line: 1, Col: 46},
+									From:  sqltoken.NewPos(1, 33),
+									To:    sqltoken.NewPos(1, 46),
 								},
 								Expr: &sqlast.Function{
 									Name: &sqlast.ObjectName{
 										Idents: []*sqlast.Ident{
 											{
 												Value: "SUM",
-												From:  sqltoken.Pos{Line: 1, Col: 16},
-												To:    sqltoken.Pos{Line: 1, Col: 19},
+												From:  sqltoken.NewPos(1, 16),
+												To:    sqltoken.NewPos(1, 19),
 											},
 										},
 									},
 									Args: []sqlast.Node{
 										&sqlast.Ident{
 											Value: "quantity",
-											From:  sqltoken.Pos{Line: 1, Col: 20},
-											To:    sqltoken.Pos{Line: 1, Col: 28},
+											From:  sqltoken.NewPos(1, 20),
+											To:    sqltoken.NewPos(1, 28),
 										},
 									},
-									ArgsRParen: sqltoken.Pos{Line: 1, Col: 29},
+									ArgsRParen: sqltoken.NewPos(1, 29),
 								},
 							},
 						},
@@ -456,8 +450,8 @@ ORDER BY product_units LIMIT 100`,
 									Idents: []*sqlast.Ident{
 										{
 											Value: "orders",
-											From:  sqltoken.Pos{Line: 2, Col: 5},
-											To:    sqltoken.Pos{Line: 2, Col: 11},
+											From:  sqltoken.NewPos(2, 5),
+											To:    sqltoken.NewPos(2, 11),
 										},
 									},
 								},
@@ -466,19 +460,19 @@ ORDER BY product_units LIMIT 100`,
 						WhereClause: &sqlast.InSubQuery{
 							Expr: &sqlast.Ident{
 								Value: "region",
-								From:  sqltoken.Pos{Line: 3, Col: 6},
-								To:    sqltoken.Pos{Line: 3, Col: 12},
+								From:  sqltoken.NewPos(3, 6),
+								To:    sqltoken.NewPos(3, 12),
 							},
-							RParen: sqltoken.Pos{Line: 3, Col: 48},
+							RParen: sqltoken.NewPos(3, 48),
 							SubQuery: &sqlast.Query{
 								Body: &sqlast.SQLSelect{
-									Select: sqltoken.Pos{Line: 3, Col: 17},
+									Select: sqltoken.NewPos(3, 17),
 									Projection: []sqlast.SQLSelectItem{
 										&sqlast.UnnamedSelectItem{
 											Node: &sqlast.Ident{
 												Value: "region",
-												From:  sqltoken.Pos{Line: 3, Col: 24},
-												To:    sqltoken.Pos{Line: 3, Col: 30},
+												From:  sqltoken.NewPos(3, 24),
+												To:    sqltoken.NewPos(3, 30),
 											},
 										},
 									},
@@ -488,8 +482,8 @@ ORDER BY product_units LIMIT 100`,
 												Idents: []*sqlast.Ident{
 													{
 														Value: "top_regions",
-														From:  sqltoken.Pos{Line: 3, Col: 36},
-														To:    sqltoken.Pos{Line: 3, Col: 47},
+														From:  sqltoken.NewPos(3, 36),
+														To:    sqltoken.NewPos(3, 47),
 													},
 												},
 											},
@@ -503,15 +497,15 @@ ORDER BY product_units LIMIT 100`,
 						{
 							Expr: &sqlast.Ident{
 								Value: "product_units",
-								From:  sqltoken.Pos{Line: 4, Col: 9},
-								To:    sqltoken.Pos{Line: 4, Col: 22},
+								From:  sqltoken.NewPos(4, 9),
+								To:    sqltoken.NewPos(4, 22),
 							},
 						},
 					},
 					Limit: &sqlast.LimitExpr{
 						LimitValue: &sqlast.LongValue{
-							From: sqltoken.Pos{Line: 4, Col: 29},
-							To:   sqltoken.Pos{Line: 4, Col: 32},
+							From: sqltoken.NewPos(4, 29),
+							To:   sqltoken.NewPos(4, 32),
 							Long: 100,
 						},
 					},
@@ -530,44 +524,44 @@ GROUP BY region, product`,
 						{
 							Alias: &sqlast.Ident{
 								Value: "regional_sales",
-								From:  sqltoken.Pos{Line: 1, Col: 5},
-								To:    sqltoken.Pos{Line: 1, Col: 19},
+								From:  sqltoken.NewPos(1, 5),
+								To:    sqltoken.NewPos(1, 19),
 							},
 							Query: &sqlast.Query{
 								Body: &sqlast.SQLSelect{
-									Select: sqltoken.Pos{Line: 1, Col: 24},
+									Select: sqltoken.NewPos(1, 24),
 									Projection: []sqlast.SQLSelectItem{
 										&sqlast.UnnamedSelectItem{
 											Node: &sqlast.Ident{
 												Value: "region",
-												From:  sqltoken.Pos{Line: 1, Col: 31},
-												To:    sqltoken.Pos{Line: 1, Col: 37},
+												From:  sqltoken.NewPos(1, 31),
+												To:    sqltoken.NewPos(1, 37),
 											},
 										},
 										&sqlast.AliasSelectItem{
 											Alias: &sqlast.Ident{
 												Value: "total_sales",
-												From:  sqltoken.Pos{Line: 1, Col: 54},
-												To:    sqltoken.Pos{Line: 1, Col: 65},
+												From:  sqltoken.NewPos(1, 54),
+												To:    sqltoken.NewPos(1, 65),
 											},
 											Expr: &sqlast.Function{
 												Name: &sqlast.ObjectName{
 													Idents: []*sqlast.Ident{
 														{
 															Value: "SUM",
-															From:  sqltoken.Pos{Line: 1, Col: 39},
-															To:    sqltoken.Pos{Line: 1, Col: 42},
+															From:  sqltoken.NewPos(1, 39),
+															To:    sqltoken.NewPos(1, 42),
 														},
 													},
 												},
 												Args: []sqlast.Node{
 													&sqlast.Ident{
 														Value: "amount",
-														From:  sqltoken.Pos{Line: 1, Col: 43},
-														To:    sqltoken.Pos{Line: 1, Col: 49},
+														From:  sqltoken.NewPos(1, 43),
+														To:    sqltoken.NewPos(1, 49),
 													},
 												},
-												ArgsRParen: sqltoken.Pos{Line: 1, Col: 50},
+												ArgsRParen: sqltoken.NewPos(1, 50),
 											},
 										},
 									},
@@ -577,8 +571,8 @@ GROUP BY region, product`,
 												Idents: []*sqlast.Ident{
 													{
 														Value: "orders",
-														From:  sqltoken.Pos{Line: 1, Col: 71},
-														To:    sqltoken.Pos{Line: 1, Col: 77},
+														From:  sqltoken.NewPos(1, 71),
+														To:    sqltoken.NewPos(1, 77),
 													},
 												},
 											},
@@ -587,8 +581,8 @@ GROUP BY region, product`,
 									GroupByClause: []sqlast.Node{
 										&sqlast.Ident{
 											Value: "region",
-											From:  sqltoken.Pos{Line: 1, Col: 87},
-											To:    sqltoken.Pos{Line: 1, Col: 93},
+											From:  sqltoken.NewPos(1, 87),
+											To:    sqltoken.NewPos(1, 93),
 										},
 									},
 								},
@@ -596,37 +590,37 @@ GROUP BY region, product`,
 						},
 					},
 					Body: &sqlast.SQLSelect{
-						Select: sqltoken.Pos{Line: 2, Col: 0},
+						Select: sqltoken.NewPos(2, 0),
 						Projection: []sqlast.SQLSelectItem{
 							&sqlast.UnnamedSelectItem{Node: &sqlast.Ident{
 								Value: "product",
-								From:  sqltoken.Pos{Line: 2, Col: 7},
-								To:    sqltoken.Pos{Line: 2, Col: 14},
+								From:  sqltoken.NewPos(2, 7),
+								To:    sqltoken.NewPos(2, 14),
 							}},
 							&sqlast.AliasSelectItem{
 								Alias: &sqlast.Ident{
 									Value: "product_units",
-									From:  sqltoken.Pos{Line: 2, Col: 33},
-									To:    sqltoken.Pos{Line: 2, Col: 46},
+									From:  sqltoken.NewPos(2, 33),
+									To:    sqltoken.NewPos(2, 46),
 								},
 								Expr: &sqlast.Function{
 									Name: &sqlast.ObjectName{
 										Idents: []*sqlast.Ident{
 											{
 												Value: "SUM",
-												From:  sqltoken.Pos{Line: 2, Col: 16},
-												To:    sqltoken.Pos{Line: 2, Col: 19},
+												From:  sqltoken.NewPos(2, 16),
+												To:    sqltoken.NewPos(2, 19),
 											},
 										},
 									},
 									Args: []sqlast.Node{
 										&sqlast.Ident{
 											Value: "quantity",
-											From:  sqltoken.Pos{Line: 2, Col: 20},
-											To:    sqltoken.Pos{Line: 2, Col: 28},
+											From:  sqltoken.NewPos(2, 20),
+											To:    sqltoken.NewPos(2, 28),
 										},
 									},
-									ArgsRParen: sqltoken.Pos{Line: 2, Col: 29},
+									ArgsRParen: sqltoken.NewPos(2, 29),
 								},
 							},
 						},
@@ -636,35 +630,29 @@ GROUP BY region, product`,
 									Idents: []*sqlast.Ident{
 										{
 											Value: "orders",
-											From:  sqltoken.Pos{Line: 3, Col: 5},
-											To:    sqltoken.Pos{Line: 3, Col: 11},
+											From:  sqltoken.NewPos(3, 5),
+											To:    sqltoken.NewPos(3, 11),
 										},
 									},
 								},
 							},
 						},
 						WhereClause: &sqlast.InSubQuery{
-							RParen: sqltoken.Pos{
-								Line: 4,
-								Col:  48,
-							},
+							RParen: sqltoken.NewPos(4, 48),
 							Expr: &sqlast.Ident{
 								Value: "region",
-								From:  sqltoken.Pos{Line: 4, Col: 6},
-								To:    sqltoken.Pos{Line: 4, Col: 12},
+								From:  sqltoken.NewPos(4, 6),
+								To:    sqltoken.NewPos(4, 12),
 							},
 							SubQuery: &sqlast.Query{
 								Body: &sqlast.SQLSelect{
-									Select: sqltoken.Pos{
-										Line: 4,
-										Col:  17,
-									},
+									Select: sqltoken.NewPos(4, 17),
 									Projection: []sqlast.SQLSelectItem{
 										&sqlast.UnnamedSelectItem{
 											Node: &sqlast.Ident{
 												Value: "region",
-												From:  sqltoken.Pos{Line: 4, Col: 24},
-												To:    sqltoken.Pos{Line: 4, Col: 30},
+												From:  sqltoken.NewPos(4, 24),
+												To:    sqltoken.NewPos(4, 30),
 											},
 										},
 									},
@@ -674,8 +662,8 @@ GROUP BY region, product`,
 												Idents: []*sqlast.Ident{
 													{
 														Value: "top_regions",
-														From:  sqltoken.Pos{Line: 4, Col: 36},
-														To:    sqltoken.Pos{Line: 4, Col: 47},
+														From:  sqltoken.NewPos(4, 36),
+														To:    sqltoken.NewPos(4, 47),
 													},
 												},
 											},
@@ -687,13 +675,13 @@ GROUP BY region, product`,
 						GroupByClause: []sqlast.Node{
 							&sqlast.Ident{
 								Value: "region",
-								From:  sqltoken.Pos{Line: 5, Col: 9},
-								To:    sqltoken.Pos{Line: 5, Col: 15},
+								From:  sqltoken.NewPos(5, 9),
+								To:    sqltoken.NewPos(5, 15),
 							},
 							&sqlast.Ident{
 								Value: "product",
-								From:  sqltoken.Pos{Line: 5, Col: 17},
-								To:    sqltoken.Pos{Line: 5, Col: 24},
+								From:  sqltoken.NewPos(5, 17),
+								To:    sqltoken.NewPos(5, 24),
 							},
 						},
 					},
@@ -707,11 +695,11 @@ FROM user_sub
 WHERE user.id = user_sub.id AND user_sub.job = 'job');`,
 				out: &sqlast.Query{
 					Body: &sqlast.SQLSelect{
-						Select: sqltoken.Pos{Line: 1, Col: 0},
+						Select: sqltoken.NewPos(1, 0),
 						Projection: []sqlast.SQLSelectItem{
 							&sqlast.UnnamedSelectItem{
 								Node: &sqlast.Wildcard{
-									Wildcard: sqltoken.Pos{Line: 1, Col: 7},
+									Wildcard: sqltoken.NewPos(1, 7),
 								},
 							},
 						},
@@ -721,8 +709,8 @@ WHERE user.id = user_sub.id AND user_sub.job = 'job');`,
 									Idents: []*sqlast.Ident{
 										{
 											Value: "user",
-											From:  sqltoken.Pos{Line: 1, Col: 14},
-											To:    sqltoken.Pos{Line: 1, Col: 18},
+											From:  sqltoken.NewPos(1, 14),
+											To:    sqltoken.NewPos(1, 18),
 										},
 									},
 								},
@@ -730,25 +718,16 @@ WHERE user.id = user_sub.id AND user_sub.job = 'job');`,
 						},
 						WhereClause: &sqlast.Exists{
 							Negated: true,
-							Exists: sqltoken.Pos{
-								Line: 1,
-								Col:  29,
-							},
-							Not: sqltoken.Pos{
-								Line: 1,
-								Col:  25,
-							},
-							RParen: sqltoken.Pos{
-								Line: 4,
-								Col:  53,
-							},
+							Exists:  sqltoken.NewPos(1, 29),
+							Not:     sqltoken.NewPos(1, 25),
+							RParen:  sqltoken.NewPos(4, 53),
 							Query: &sqlast.Query{
 								Body: &sqlast.SQLSelect{
-									Select: sqltoken.Pos{Line: 2, Col: 1},
+									Select: sqltoken.NewPos(2, 1),
 									Projection: []sqlast.SQLSelectItem{
 										&sqlast.UnnamedSelectItem{
 											Node: &sqlast.Wildcard{
-												Wildcard: sqltoken.Pos{Line: 2, Col: 8},
+												Wildcard: sqltoken.NewPos(2, 8),
 											},
 										},
 									},
@@ -758,28 +737,28 @@ WHERE user.id = user_sub.id AND user_sub.job = 'job');`,
 												Idents: []*sqlast.Ident{
 													{
 														Value: "user_sub",
-														From:  sqltoken.Pos{Line: 3, Col: 5},
-														To:    sqltoken.Pos{Line: 3, Col: 13},
+														From:  sqltoken.NewPos(3, 5),
+														To:    sqltoken.NewPos(3, 13),
 													},
 												},
 											},
 										},
 									},
 									WhereClause: &sqlast.BinaryExpr{
-										Op: &sqlast.Operator{Type: sqlast.And, From: sqltoken.Pos{Line: 4, Col: 28}, To: sqltoken.Pos{Line: 4, Col: 31}},
+										Op: &sqlast.Operator{Type: sqlast.And, From: sqltoken.NewPos(4, 28), To: sqltoken.NewPos(4, 31)},
 										Left: &sqlast.BinaryExpr{
-											Op: &sqlast.Operator{Type: sqlast.Eq, From: sqltoken.Pos{Line: 4, Col: 14}, To: sqltoken.Pos{Line: 4, Col: 15}},
+											Op: &sqlast.Operator{Type: sqlast.Eq, From: sqltoken.NewPos(4, 14), To: sqltoken.NewPos(4, 15)},
 											Left: &sqlast.CompoundIdent{
 												Idents: []*sqlast.Ident{
 													{
 														Value: "user",
-														From:  sqltoken.Pos{Line: 4, Col: 6},
-														To:    sqltoken.Pos{Line: 4, Col: 10},
+														From:  sqltoken.NewPos(4, 6),
+														To:    sqltoken.NewPos(4, 10),
 													},
 													{
 														Value: "id",
-														From:  sqltoken.Pos{Line: 4, Col: 11},
-														To:    sqltoken.Pos{Line: 4, Col: 13},
+														From:  sqltoken.NewPos(4, 11),
+														To:    sqltoken.NewPos(4, 13),
 													},
 												},
 											},
@@ -787,36 +766,36 @@ WHERE user.id = user_sub.id AND user_sub.job = 'job');`,
 												Idents: []*sqlast.Ident{
 													{
 														Value: "user_sub",
-														From:  sqltoken.Pos{Line: 4, Col: 16},
-														To:    sqltoken.Pos{Line: 4, Col: 24},
+														From:  sqltoken.NewPos(4, 16),
+														To:    sqltoken.NewPos(4, 24),
 													},
 													{
 														Value: "id",
-														From:  sqltoken.Pos{Line: 4, Col: 25},
-														To:    sqltoken.Pos{Line: 4, Col: 27},
+														From:  sqltoken.NewPos(4, 25),
+														To:    sqltoken.NewPos(4, 27),
 													},
 												},
 											},
 										},
 										Right: &sqlast.BinaryExpr{
-											Op: &sqlast.Operator{Type: sqlast.Eq, From: sqltoken.Pos{Line: 4, Col: 45}, To: sqltoken.Pos{Line: 4, Col: 46}},
+											Op: &sqlast.Operator{Type: sqlast.Eq, From: sqltoken.NewPos(4, 45), To: sqltoken.NewPos(4, 46)},
 											Left: &sqlast.CompoundIdent{
 												Idents: []*sqlast.Ident{
 													{
 														Value: "user_sub",
-														From:  sqltoken.Pos{Line: 4, Col: 32},
-														To:    sqltoken.Pos{Line: 4, Col: 40},
+														From:  sqltoken.NewPos(4, 32),
+														To:    sqltoken.NewPos(4, 40),
 													},
 													{
 														Value: "job",
-														From:  sqltoken.Pos{Line: 4, Col: 41},
-														To:    sqltoken.Pos{Line: 4, Col: 44},
+														From:  sqltoken.NewPos(4, 41),
+														To:    sqltoken.NewPos(4, 44),
 													},
 												},
 											},
 											Right: &sqlast.SingleQuotedString{
-												From:   sqltoken.Pos{Line: 4, Col: 47},
-												To:     sqltoken.Pos{Line: 4, Col: 52},
+												From:   sqltoken.NewPos(4, 47),
+												To:     sqltoken.NewPos(4, 52),
 												String: "job",
 											},
 										},
@@ -838,70 +817,70 @@ END AS alias
 FROM user WHERE id BETWEEN 1 AND 2`,
 				out: &sqlast.Query{
 					Body: &sqlast.SQLSelect{
-						Select: sqltoken.Pos{Line: 1, Col: 0},
+						Select: sqltoken.NewPos(1, 0),
 						Projection: []sqlast.SQLSelectItem{
 							&sqlast.AliasSelectItem{
 								Expr: &sqlast.CaseExpr{
-									Case:    sqltoken.Pos{Line: 2, Col: 0},
-									CaseEnd: sqltoken.Pos{Line: 6, Col: 3},
+									Case:    sqltoken.NewPos(2, 0),
+									CaseEnd: sqltoken.NewPos(6, 3),
 									Conditions: []sqlast.Node{
 										&sqlast.BinaryExpr{
 											Op: &sqlast.Operator{
 												Type: sqlast.Eq,
-												From: sqltoken.Pos{Line: 3, Col: 12},
-												To:   sqltoken.Pos{Line: 3, Col: 13},
+												From: sqltoken.NewPos(3, 12),
+												To:   sqltoken.NewPos(3, 13),
 											},
 											Left: &sqlast.Ident{
 												Value: "expr1",
-												From:  sqltoken.Pos{Line: 3, Col: 6},
-												To:    sqltoken.Pos{Line: 3, Col: 11},
+												From:  sqltoken.NewPos(3, 6),
+												To:    sqltoken.NewPos(3, 11),
 											},
 											Right: &sqlast.SingleQuotedString{
-												From:   sqltoken.Pos{Line: 3, Col: 14},
-												To:     sqltoken.Pos{Line: 3, Col: 17},
+												From:   sqltoken.NewPos(3, 14),
+												To:     sqltoken.NewPos(3, 17),
 												String: "1",
 											},
 										},
 										&sqlast.BinaryExpr{
 											Op: &sqlast.Operator{
 												Type: sqlast.Eq,
-												From: sqltoken.Pos{Line: 4, Col: 12},
-												To:   sqltoken.Pos{Line: 4, Col: 13},
+												From: sqltoken.NewPos(4, 12),
+												To:   sqltoken.NewPos(4, 13),
 											},
 											Left: &sqlast.Ident{
 												Value: "expr2",
-												From:  sqltoken.Pos{Line: 4, Col: 6},
-												To:    sqltoken.Pos{Line: 4, Col: 11},
+												From:  sqltoken.NewPos(4, 6),
+												To:    sqltoken.NewPos(4, 11),
 											},
 											Right: &sqlast.SingleQuotedString{
-												From:   sqltoken.Pos{Line: 4, Col: 14},
-												To:     sqltoken.Pos{Line: 4, Col: 17},
+												From:   sqltoken.NewPos(4, 14),
+												To:     sqltoken.NewPos(4, 17),
 												String: "2",
 											},
 										},
 									},
 									Results: []sqlast.Node{
 										&sqlast.SingleQuotedString{
-											From:   sqltoken.Pos{Line: 3, Col: 23},
-											To:     sqltoken.Pos{Line: 3, Col: 30},
+											From:   sqltoken.NewPos(3, 23),
+											To:     sqltoken.NewPos(3, 30),
 											String: "test1",
 										},
 										&sqlast.SingleQuotedString{
-											From:   sqltoken.Pos{Line: 4, Col: 23},
-											To:     sqltoken.Pos{Line: 4, Col: 30},
+											From:   sqltoken.NewPos(4, 23),
+											To:     sqltoken.NewPos(4, 30),
 											String: "test2",
 										},
 									},
 									ElseResult: &sqlast.SingleQuotedString{
-										From:   sqltoken.Pos{Line: 5, Col: 6},
-										To:     sqltoken.Pos{Line: 5, Col: 13},
+										From:   sqltoken.NewPos(5, 6),
+										To:     sqltoken.NewPos(5, 13),
 										String: "other",
 									},
 								},
 								Alias: &sqlast.Ident{
 									Value: "alias",
-									From:  sqltoken.Pos{Line: 6, Col: 7},
-									To:    sqltoken.Pos{Line: 6, Col: 12},
+									From:  sqltoken.NewPos(6, 7),
+									To:    sqltoken.NewPos(6, 12),
 								},
 							},
 						},
@@ -911,8 +890,8 @@ FROM user WHERE id BETWEEN 1 AND 2`,
 									Idents: []*sqlast.Ident{
 										{
 											Value: "user",
-											From:  sqltoken.Pos{Line: 7, Col: 5},
-											To:    sqltoken.Pos{Line: 7, Col: 9},
+											From:  sqltoken.NewPos(7, 5),
+											To:    sqltoken.NewPos(7, 9),
 										},
 									},
 								},
@@ -921,18 +900,18 @@ FROM user WHERE id BETWEEN 1 AND 2`,
 						WhereClause: &sqlast.Between{
 							Expr: &sqlast.Ident{
 								Value: "id",
-								From:  sqltoken.Pos{Line: 7, Col: 16},
-								To:    sqltoken.Pos{Line: 7, Col: 18},
+								From:  sqltoken.NewPos(7, 16),
+								To:    sqltoken.NewPos(7, 18),
 							},
 							High: &sqlast.LongValue{
 								Long: int64(2),
-								From: sqltoken.Pos{Line: 7, Col: 33},
-								To:   sqltoken.Pos{Line: 7, Col: 34},
+								From: sqltoken.NewPos(7, 33),
+								To:   sqltoken.NewPos(7, 34),
 							},
 							Low: &sqlast.LongValue{
 								Long: int64(1),
-								From: sqltoken.Pos{Line: 7, Col: 27},
-								To:   sqltoken.Pos{Line: 7, Col: 28},
+								From: sqltoken.NewPos(7, 27),
+								To:   sqltoken.NewPos(7, 28),
 							},
 						},
 					},
@@ -979,13 +958,13 @@ CREATE TABLE persons (
  created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL
 )`,
 				out: &sqlast.CreateTableStmt{
-					Create: sqltoken.Pos{Line: 2, Col: 0},
+					Create: sqltoken.NewPos(2, 0),
 					Name: &sqlast.ObjectName{
 						Idents: []*sqlast.Ident{
 							{
 								Value: "persons",
-								From:  sqltoken.Pos{Line: 2, Col: 13},
-								To:    sqltoken.Pos{Line: 2, Col: 20},
+								From:  sqltoken.NewPos(2, 13),
+								To:    sqltoken.NewPos(2, 20),
 							},
 						},
 					},
@@ -993,25 +972,25 @@ CREATE TABLE persons (
 						&sqlast.ColumnDef{
 							Name: &sqlast.Ident{
 								Value: "person_id",
-								From:  sqltoken.Pos{Line: 3, Col: 1},
-								To:    sqltoken.Pos{Line: 3, Col: 10},
+								From:  sqltoken.NewPos(3, 1),
+								To:    sqltoken.NewPos(3, 10),
 							},
 							DataType: &sqlast.UUID{
-								From: sqltoken.Pos{Line: 3, Col: 11},
-								To:   sqltoken.Pos{Line: 3, Col: 15},
+								From: sqltoken.NewPos(3, 11),
+								To:   sqltoken.NewPos(3, 15),
 							},
 							Constraints: []*sqlast.ColumnConstraint{
 								{
 									Spec: &sqlast.UniqueColumnSpec{
 										IsPrimaryKey: true,
-										Primary:      sqltoken.Pos{Line: 3, Col: 16},
-										Key:          sqltoken.Pos{Line: 3, Col: 27},
+										Primary:      sqltoken.NewPos(3, 16),
+										Key:          sqltoken.NewPos(3, 27),
 									},
 								},
 								{
 									Spec: &sqlast.NotNullColumnSpec{
-										Not:  sqltoken.Pos{Line: 3, Col: 28},
-										Null: sqltoken.Pos{Line: 3, Col: 36},
+										Not:  sqltoken.NewPos(3, 28),
+										Null: sqltoken.NewPos(3, 36),
 									},
 								},
 							},
@@ -1019,18 +998,18 @@ CREATE TABLE persons (
 						&sqlast.ColumnDef{
 							Name: &sqlast.Ident{
 								Value: "first_name",
-								From:  sqltoken.Pos{Line: 4, Col: 1},
-								To:    sqltoken.Pos{Line: 4, Col: 11},
+								From:  sqltoken.NewPos(4, 1),
+								To:    sqltoken.NewPos(4, 11),
 							},
 							DataType: &sqlast.VarcharType{
 								Size:      sqlast.NewSize(255),
-								Character: sqltoken.Pos{Line: 4, Col: 12},
-								RParen:    sqltoken.Pos{Line: 4, Col: 24},
+								Character: sqltoken.NewPos(4, 12),
+								RParen:    sqltoken.NewPos(4, 24),
 							},
 							Constraints: []*sqlast.ColumnConstraint{
 								{
 									Spec: &sqlast.UniqueColumnSpec{
-										Unique: sqltoken.Pos{Line: 4, Col: 25},
+										Unique: sqltoken.NewPos(4, 25),
 									},
 								},
 							},
@@ -1038,20 +1017,20 @@ CREATE TABLE persons (
 						&sqlast.ColumnDef{
 							Name: &sqlast.Ident{
 								Value: "last_name",
-								From:  sqltoken.Pos{Line: 5, Col: 1},
-								To:    sqltoken.Pos{Line: 5, Col: 10},
+								From:  sqltoken.NewPos(5, 1),
+								To:    sqltoken.NewPos(5, 10),
 							},
 							DataType: &sqlast.VarcharType{
 								Size:      sqlast.NewSize(255),
-								Character: sqltoken.Pos{Line: 5, Col: 11},
-								Varying:   sqltoken.Pos{Line: 5, Col: 28},
-								RParen:    sqltoken.Pos{Line: 5, Col: 33},
+								Character: sqltoken.NewPos(5, 11),
+								Varying:   sqltoken.NewPos(5, 28),
+								RParen:    sqltoken.NewPos(5, 33),
 							},
 							Constraints: []*sqlast.ColumnConstraint{
 								{
 									Spec: &sqlast.NotNullColumnSpec{
-										Not:  sqltoken.Pos{Line: 5, Col: 34},
-										Null: sqltoken.Pos{Line: 5, Col: 42},
+										Not:  sqltoken.NewPos(5, 34),
+										Null: sqltoken.NewPos(5, 42),
 									},
 								},
 							},
@@ -1059,28 +1038,22 @@ CREATE TABLE persons (
 						&sqlast.ColumnDef{
 							Name: &sqlast.Ident{
 								Value: "created_at",
-								From:  sqltoken.Pos{Line: 6, Col: 1},
-								To:    sqltoken.Pos{Line: 6, Col: 11},
+								From:  sqltoken.NewPos(6, 1),
+								To:    sqltoken.NewPos(6, 11),
 							},
 							DataType: &sqlast.Timestamp{
-								Timestamp: sqltoken.Pos{Line: 6, Col: 12},
+								Timestamp: sqltoken.NewPos(6, 12),
 							},
 							Default: &sqlast.Ident{
 								Value: "CURRENT_TIMESTAMP",
-								From:  sqltoken.Pos{Line: 6, Col: 30},
-								To:    sqltoken.Pos{Line: 6, Col: 47},
+								From:  sqltoken.NewPos(6, 30),
+								To:    sqltoken.NewPos(6, 47),
 							},
 							Constraints: []*sqlast.ColumnConstraint{
 								{
 									Spec: &sqlast.NotNullColumnSpec{
-										Not: sqltoken.Pos{
-											Line: 6,
-											Col:  48,
-										},
-										Null: sqltoken.Pos{
-											Line: 6,
-											Col:  56,
-										},
+										Not:  sqltoken.NewPos(6, 48),
+										Null: sqltoken.NewPos(6, 56),
 									},
 								},
 							},
@@ -1099,13 +1072,13 @@ age int NOT NULL CHECK(age > 0 AND age < 100),
 created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL
 )`,
 				out: &sqlast.CreateTableStmt{
-					Create: sqltoken.Pos{Line: 1, Col: 0},
+					Create: sqltoken.NewPos(1, 0),
 					Name: &sqlast.ObjectName{
 						Idents: []*sqlast.Ident{
 							{
 								Value: "persons",
-								From:  sqltoken.Pos{Line: 1, Col: 13},
-								To:    sqltoken.Pos{Line: 1, Col: 20},
+								From:  sqltoken.NewPos(1, 13),
+								To:    sqltoken.NewPos(1, 20),
 							},
 						},
 					},
@@ -1113,25 +1086,25 @@ created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL
 						&sqlast.ColumnDef{
 							Name: &sqlast.Ident{
 								Value: "person_id",
-								From:  sqltoken.Pos{Line: 2, Col: 0},
-								To:    sqltoken.Pos{Line: 2, Col: 9},
+								From:  sqltoken.NewPos(2, 0),
+								To:    sqltoken.NewPos(2, 9),
 							},
 							DataType: &sqlast.Int{
-								From: sqltoken.Pos{Line: 2, Col: 10},
-								To:   sqltoken.Pos{Line: 2, Col: 13},
+								From: sqltoken.NewPos(2, 10),
+								To:   sqltoken.NewPos(2, 13),
 							},
 							Constraints: []*sqlast.ColumnConstraint{
 								{
 									Spec: &sqlast.UniqueColumnSpec{
 										IsPrimaryKey: true,
-										Primary:      sqltoken.Pos{Line: 2, Col: 14},
-										Key:          sqltoken.Pos{Line: 2, Col: 25},
+										Primary:      sqltoken.NewPos(2, 14),
+										Key:          sqltoken.NewPos(2, 25),
 									},
 								},
 								{
 									Spec: &sqlast.NotNullColumnSpec{
-										Not:  sqltoken.Pos{Line: 2, Col: 26},
-										Null: sqltoken.Pos{Line: 2, Col: 34},
+										Not:  sqltoken.NewPos(2, 26),
+										Null: sqltoken.NewPos(2, 34),
 									},
 								},
 							},
@@ -1139,20 +1112,20 @@ created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL
 						&sqlast.ColumnDef{
 							Name: &sqlast.Ident{
 								Value: "last_name",
-								From:  sqltoken.Pos{Line: 3, Col: 0},
-								To:    sqltoken.Pos{Line: 3, Col: 9},
+								From:  sqltoken.NewPos(3, 0),
+								To:    sqltoken.NewPos(3, 9),
 							},
 							DataType: &sqlast.VarcharType{
 								Size:      sqlast.NewSize(255),
-								Character: sqltoken.Pos{Line: 3, Col: 10},
-								Varying:   sqltoken.Pos{Line: 3, Col: 27},
-								RParen:    sqltoken.Pos{Line: 3, Col: 32},
+								Character: sqltoken.NewPos(3, 10),
+								Varying:   sqltoken.NewPos(3, 27),
+								RParen:    sqltoken.NewPos(3, 32),
 							},
 							Constraints: []*sqlast.ColumnConstraint{
 								{
 									Spec: &sqlast.NotNullColumnSpec{
-										Not:  sqltoken.Pos{Line: 3, Col: 33},
-										Null: sqltoken.Pos{Line: 3, Col: 41},
+										Not:  sqltoken.NewPos(3, 33),
+										Null: sqltoken.NewPos(3, 41),
 									},
 								},
 							},
@@ -1160,44 +1133,38 @@ created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL
 						&sqlast.ColumnDef{
 							Name: &sqlast.Ident{
 								Value: "test_id",
-								From:  sqltoken.Pos{Line: 4, Col: 0},
-								To:    sqltoken.Pos{Line: 4, Col: 7},
+								From:  sqltoken.NewPos(4, 0),
+								To:    sqltoken.NewPos(4, 7),
 							},
 							DataType: &sqlast.Int{
-								From: sqltoken.Pos{Line: 4, Col: 8},
-								To:   sqltoken.Pos{Line: 4, Col: 11},
+								From: sqltoken.NewPos(4, 8),
+								To:   sqltoken.NewPos(4, 11),
 							},
 							Constraints: []*sqlast.ColumnConstraint{
 								{
 									Spec: &sqlast.NotNullColumnSpec{
-										Not:  sqltoken.Pos{Line: 4, Col: 12},
-										Null: sqltoken.Pos{Line: 4, Col: 20},
+										Not:  sqltoken.NewPos(4, 12),
+										Null: sqltoken.NewPos(4, 20),
 									},
 								},
 								{
 									Spec: &sqlast.ReferencesColumnSpec{
-										References: sqltoken.Pos{
-											Line: 4,
-											Col:  21,
-										},
-										RParen: sqltoken.Pos{
-											Line: 4,
-											Col:  41,
-										},
+										References: sqltoken.NewPos(4, 21),
+										RParen:     sqltoken.NewPos(4, 41),
 										TableName: &sqlast.ObjectName{
 											Idents: []*sqlast.Ident{
 												{
 													Value: "test",
-													From:  sqltoken.Pos{Line: 4, Col: 32},
-													To:    sqltoken.Pos{Line: 4, Col: 36},
+													From:  sqltoken.NewPos(4, 32),
+													To:    sqltoken.NewPos(4, 36),
 												},
 											},
 										},
 										Columns: []*sqlast.Ident{
 											&sqlast.Ident{
 												Value: "id1",
-												From:  sqltoken.Pos{Line: 4, Col: 37},
-												To:    sqltoken.Pos{Line: 4, Col: 40},
+												From:  sqltoken.NewPos(4, 37),
+												To:    sqltoken.NewPos(4, 40),
 											},
 										},
 									},
@@ -1207,25 +1174,25 @@ created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL
 						&sqlast.ColumnDef{
 							Name: &sqlast.Ident{
 								Value: "email",
-								From:  sqltoken.Pos{Line: 5, Col: 0},
-								To:    sqltoken.Pos{Line: 5, Col: 5},
+								From:  sqltoken.NewPos(5, 0),
+								To:    sqltoken.NewPos(5, 5),
 							},
 							DataType: &sqlast.VarcharType{
 								Size:      sqlast.NewSize(255),
-								Character: sqltoken.Pos{Line: 5, Col: 6},
-								Varying:   sqltoken.Pos{Line: 5, Col: 23},
-								RParen:    sqltoken.Pos{Line: 5, Col: 28},
+								Character: sqltoken.NewPos(5, 6),
+								Varying:   sqltoken.NewPos(5, 23),
+								RParen:    sqltoken.NewPos(5, 28),
 							},
 							Constraints: []*sqlast.ColumnConstraint{
 								{
 									Spec: &sqlast.UniqueColumnSpec{
-										Unique: sqltoken.Pos{Line: 5, Col: 29},
+										Unique: sqltoken.NewPos(5, 29),
 									},
 								},
 								{
 									Spec: &sqlast.NotNullColumnSpec{
-										Not:  sqltoken.Pos{Line: 5, Col: 36},
-										Null: sqltoken.Pos{Line: 5, Col: 44},
+										Not:  sqltoken.NewPos(5, 36),
+										Null: sqltoken.NewPos(5, 44),
 									},
 								},
 							},
@@ -1233,79 +1200,61 @@ created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL
 						&sqlast.ColumnDef{
 							Name: &sqlast.Ident{
 								Value: "age",
-								From:  sqltoken.Pos{Line: 6, Col: 0},
-								To:    sqltoken.Pos{Line: 6, Col: 3},
+								From:  sqltoken.NewPos(6, 0),
+								To:    sqltoken.NewPos(6, 3),
 							},
 							DataType: &sqlast.Int{
-								From: sqltoken.Pos{Line: 6, Col: 4},
-								To:   sqltoken.Pos{Line: 6, Col: 7},
+								From: sqltoken.NewPos(6, 4),
+								To:   sqltoken.NewPos(6, 7),
 							},
 							Constraints: []*sqlast.ColumnConstraint{
 								{
 									Spec: &sqlast.NotNullColumnSpec{
-										Not:  sqltoken.Pos{Line: 6, Col: 8},
-										Null: sqltoken.Pos{Line: 6, Col: 16},
+										Not:  sqltoken.NewPos(6, 8),
+										Null: sqltoken.NewPos(6, 16),
 									},
 								},
 								{
 									Spec: &sqlast.CheckColumnSpec{
-										Check: sqltoken.Pos{
-											Line: 6,
-											Col:  17,
-										},
-										RParen: sqltoken.Pos{
-											Line: 6,
-											Col:  45,
-										},
+										Check:  sqltoken.NewPos(6, 17),
+										RParen: sqltoken.NewPos(6, 45),
 										Expr: &sqlast.BinaryExpr{
 											Op: &sqlast.Operator{
 												Type: sqlast.And,
-												From: sqltoken.Pos{Line: 6, Col: 31},
-												To:   sqltoken.Pos{Line: 6, Col: 34},
+												From: sqltoken.NewPos(6, 31),
+												To:   sqltoken.NewPos(6, 34),
 											},
 											Left: &sqlast.BinaryExpr{
 												Op: &sqlast.Operator{
 													Type: sqlast.Gt,
-													From: sqltoken.Pos{Line: 6, Col: 27},
-													To:   sqltoken.Pos{Line: 6, Col: 28},
+													From: sqltoken.NewPos(6, 27),
+													To:   sqltoken.NewPos(6, 28),
 												},
 												Left: &sqlast.Ident{
 													Value: "age",
-													From:  sqltoken.Pos{Line: 6, Col: 23},
-													To:    sqltoken.Pos{Line: 6, Col: 26},
+													From:  sqltoken.NewPos(6, 23),
+													To:    sqltoken.NewPos(6, 26),
 												},
 												Right: &sqlast.LongValue{
-													From: sqltoken.Pos{
-														Line: 6,
-														Col:  29,
-													},
-													To:   sqltoken.Pos{Line: 6, Col: 30},
+													From: sqltoken.NewPos(6, 29),
+													To:   sqltoken.NewPos(6, 30),
 													Long: 0,
 												},
 											},
 											Right: &sqlast.BinaryExpr{
 												Op: &sqlast.Operator{
 													Type: sqlast.Lt,
-													From: sqltoken.Pos{Line: 6, Col: 39},
-													To: sqltoken.Pos{
-														Line: 6,
-														Col:  40,
-													},
+													From: sqltoken.NewPos(6, 39),
+													To:   sqltoken.NewPos(6, 40),
 												},
 												Left: &sqlast.Ident{
 													Value: "age",
-													From:  sqltoken.Pos{Line: 6, Col: 35},
-													To:    sqltoken.Pos{Line: 6, Col: 38},
+													From:  sqltoken.NewPos(6, 35),
+													To:    sqltoken.NewPos(6, 38),
 												},
 												Right: &sqlast.LongValue{
-													From: sqltoken.Pos{
-														Line: 6,
-														Col:  41,
-													},
-													To: sqltoken.Pos{
-														Line: 6,
-														Col:  44,
-													},
+													From: sqltoken.NewPos(6, 41),
+													To:   sqltoken.NewPos(6, 44),
 													Long: 100,
 												},
 											},
@@ -1317,28 +1266,22 @@ created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL
 						&sqlast.ColumnDef{
 							Name: &sqlast.Ident{
 								Value: "created_at",
-								From:  sqltoken.Pos{Line: 7, Col: 0},
-								To:    sqltoken.Pos{Line: 7, Col: 10},
+								From:  sqltoken.NewPos(7, 0),
+								To:    sqltoken.NewPos(7, 10),
 							},
 							DataType: &sqlast.Timestamp{
-								Timestamp: sqltoken.Pos{Line: 7, Col: 11},
+								Timestamp: sqltoken.NewPos(7, 11),
 							},
 							Default: &sqlast.Ident{
 								Value: "CURRENT_TIMESTAMP",
-								From:  sqltoken.Pos{Line: 7, Col: 29},
-								To:    sqltoken.Pos{Line: 7, Col: 46},
+								From:  sqltoken.NewPos(7, 29),
+								To:    sqltoken.NewPos(7, 46),
 							},
 							Constraints: []*sqlast.ColumnConstraint{
 								{
 									Spec: &sqlast.NotNullColumnSpec{
-										Not: sqltoken.Pos{
-											Line: 7,
-											Col:  47,
-										},
-										Null: sqltoken.Pos{
-											Line: 7,
-											Col:  55,
-										},
+										Not:  sqltoken.NewPos(7, 47),
+										Null: sqltoken.NewPos(7, 55),
 									},
 								},
 							},
@@ -1348,48 +1291,115 @@ created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL
 			},
 			{
 				name: "with table constraint",
-				skip: true,
-				in: "CREATE TABLE persons (" +
-					"person_id int, " +
-					"CONSTRAINT production UNIQUE(test_column), " +
-					"PRIMARY KEY(person_id), " +
-					"CHECK(id > 100), " +
-					"FOREIGN KEY(test_id) REFERENCES other_table(col1, col2)" +
-					")",
+				in: `CREATE TABLE persons (
+person_id int,
+CONSTRAINT production UNIQUE(test_column),
+PRIMARY KEY(person_id),
+CHECK(id > 100),
+FOREIGN KEY(test_id) REFERENCES other_table(col1, col2)
+)`,
 				out: &sqlast.CreateTableStmt{
-					Name: sqlast.NewObjectName("persons"),
+					Create: sqltoken.NewPos(1, 0),
+					Name: &sqlast.ObjectName{
+						Idents: []*sqlast.Ident{
+							{
+								Value: "persons",
+								From:  sqltoken.NewPos(1, 13),
+								To:    sqltoken.NewPos(1, 20),
+							},
+						},
+					},
 					Elements: []sqlast.TableElement{
 						&sqlast.ColumnDef{
-							Name:     sqlast.NewIdent("person_id"),
-							DataType: &sqlast.Int{},
+							Name: &sqlast.Ident{
+								Value: "person_id",
+								From:  sqltoken.NewPos(2, 0),
+								To:    sqltoken.NewPos(2, 9),
+							},
+							DataType: &sqlast.Int{
+								From: sqltoken.NewPos(2, 10),
+								To:   sqltoken.NewPos(2, 13),
+							},
 						},
 						&sqlast.TableConstraint{
-							Name: sqlast.NewIdent("production"),
+							Constraint: sqltoken.NewPos(3, 0),
+							Name: &sqlast.Ident{
+								Value: "production",
+								From:  sqltoken.NewPos(3, 11),
+								To:    sqltoken.NewPos(3, 21),
+							},
 							Spec: &sqlast.UniqueTableConstraint{
-								Columns: []*sqlast.Ident{sqlast.NewIdent("test_column")},
+								Unique: sqltoken.NewPos(3, 22),
+								RParen: sqltoken.NewPos(3, 41),
+								Columns: []*sqlast.Ident{&sqlast.Ident{
+									Value: "test_column",
+									From:  sqltoken.NewPos(3, 29),
+									To:    sqltoken.NewPos(3, 40),
+								}},
 							},
 						},
 						&sqlast.TableConstraint{
 							Spec: &sqlast.UniqueTableConstraint{
-								Columns:   []*sqlast.Ident{sqlast.NewIdent("person_id")},
+								Primary: sqltoken.NewPos(4, 0),
+								RParen:  sqltoken.NewPos(4, 22),
+								Columns: []*sqlast.Ident{&sqlast.Ident{
+									Value: "person_id",
+									From:  sqltoken.NewPos(4, 12),
+									To:    sqltoken.NewPos(4, 21),
+								}},
 								IsPrimary: true,
 							},
 						},
 						&sqlast.TableConstraint{
 							Spec: &sqlast.CheckTableConstraint{
+								Check:  sqltoken.NewPos(5, 0),
+								RParen: sqltoken.NewPos(5, 15),
 								Expr: &sqlast.BinaryExpr{
-									Left:  sqlast.NewIdent("id"),
-									Op:    &sqlast.Operator{Type: sqlast.Gt},
-									Right: sqlast.NewLongValue(100),
+									Left: &sqlast.Ident{
+										Value: "id",
+										From:  sqltoken.NewPos(5, 6),
+										To:    sqltoken.NewPos(5, 8),
+									},
+									Op: &sqlast.Operator{
+										Type: sqlast.Gt,
+										From: sqltoken.NewPos(5, 9),
+										To:   sqltoken.NewPos(5, 10),
+									},
+									Right: &sqlast.LongValue{
+										From: sqltoken.NewPos(5, 11),
+										To:   sqltoken.NewPos(5, 14),
+										Long: 100,
+									},
 								},
 							},
 						},
 						&sqlast.TableConstraint{
 							Spec: &sqlast.ReferentialTableConstraint{
-								Columns: []*sqlast.Ident{sqlast.NewIdent("test_id")},
+								Foreign: sqltoken.NewPos(6, 0),
+								Columns: []*sqlast.Ident{&sqlast.Ident{
+									Value: "test_id",
+									From:  sqltoken.NewPos(6, 12),
+									To:    sqltoken.NewPos(6, 19),
+								}},
 								KeyExpr: &sqlast.ReferenceKeyExpr{
-									TableName: sqlast.NewIdent("other_table"),
-									Columns:   []*sqlast.Ident{sqlast.NewIdent("col1"), sqlast.NewIdent("col2")},
+									TableName: &sqlast.Ident{
+										Value: "other_table",
+										From:  sqltoken.NewPos(6, 32),
+										To:    sqltoken.NewPos(6, 43),
+									},
+									Columns: []*sqlast.Ident{
+										&sqlast.Ident{
+											Value: "col1",
+											From:  sqltoken.NewPos(6, 44),
+											To:    sqltoken.NewPos(6, 48),
+										},
+										&sqlast.Ident{
+											Value: "col2",
+											From:  sqltoken.NewPos(6, 50),
+											To:    sqltoken.NewPos(6, 54),
+										},
+									},
+									RParen: sqltoken.NewPos(6, 55),
 								},
 							},
 						},
@@ -1398,7 +1408,6 @@ created_at timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL
 			},
 			{
 				name: "create view",
-				skip: true,
 				in:   "CREATE VIEW comedies AS SELECT * FROM films WHERE kind = 'Comedy'",
 				out: &sqlast.CreateViewStmt{
 					Name: sqlast.NewObjectName("comedies"),

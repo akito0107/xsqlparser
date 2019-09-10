@@ -34,6 +34,14 @@ func NewIdent(str string) *Ident {
 	return &Ident{Value: str}
 }
 
+func NewIdentWithPos(str string, from, to sqltoken.Pos) *Ident {
+	return &Ident{
+		Value: str,
+		From:  from,
+		To:    to,
+	}
+}
+
 func (s *Ident) ToSQLString() string {
 	return s.Value
 }
