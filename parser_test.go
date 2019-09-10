@@ -1410,19 +1410,48 @@ FOREIGN KEY(test_id) REFERENCES other_table(col1, col2)
 				name: "create view",
 				in:   "CREATE VIEW comedies AS SELECT * FROM films WHERE kind = 'Comedy'",
 				out: &sqlast.CreateViewStmt{
-					Name: sqlast.NewObjectName("comedies"),
+					Create: sqltoken.NewPos(1, 0),
+					Name: &sqlast.ObjectName{
+						Idents: []*sqlast.Ident{
+							{
+								Value: "comedies",
+								From:  sqltoken.NewPos(1, 12),
+								To:    sqltoken.NewPos(1, 20),
+							},
+						},
+					},
 					Query: &sqlast.Query{
 						Body: &sqlast.SQLSelect{
-							Projection: []sqlast.SQLSelectItem{&sqlast.UnnamedSelectItem{Node: &sqlast.Wildcard{}}},
+							Select: sqltoken.NewPos(1, 24),
+							Projection: []sqlast.SQLSelectItem{
+								&sqlast.UnnamedSelectItem{Node: &sqlast.Wildcard{
+									Wildcard: sqltoken.NewPos(1, 31),
+								}}},
 							FromClause: []sqlast.TableReference{
 								&sqlast.Table{
-									Name: sqlast.NewObjectName("films"),
+									Name: &sqlast.ObjectName{
+										Idents: []*sqlast.Ident{
+											{
+												Value: "films",
+												From:  sqltoken.NewPos(1, 38),
+												To:    sqltoken.NewPos(1, 43),
+											},
+										},
+									},
 								},
 							},
 							WhereClause: &sqlast.BinaryExpr{
-								Op:    &sqlast.Operator{Type: sqlast.Eq},
-								Left:  sqlast.NewIdent("kind"),
-								Right: sqlast.NewSingleQuotedString("Comedy"),
+								Op: &sqlast.Operator{
+									Type: sqlast.Eq,
+									From: sqltoken.NewPos(1, 55),
+									To:   sqltoken.NewPos(1, 56),
+								},
+								Left: sqlast.NewIdentWithPos("kind", sqltoken.NewPos(1, 50), sqltoken.NewPos(1, 54)),
+								Right: &sqlast.SingleQuotedString{
+									From:   sqltoken.NewPos(1, 57),
+									To:     sqltoken.NewPos(1, 65),
+									String: "Comedy",
+								},
 							},
 						},
 					},
@@ -1463,11 +1492,28 @@ FOREIGN KEY(test_id) REFERENCES other_table(col1, col2)
 				in:   "DELETE FROM customers WHERE customer_id = 1",
 				name: "simple case",
 				out: &sqlast.DeleteStmt{
-					TableName: sqlast.NewObjectName("customers"),
+					Delete: sqltoken.NewPos(1, 0),
+					TableName: &sqlast.ObjectName{
+						Idents: []*sqlast.Ident{
+							{
+								Value: "customers",
+								From:  sqltoken.NewPos(1, 12),
+								To:    sqltoken.NewPos(1, 21),
+							},
+						},
+					},
 					Selection: &sqlast.BinaryExpr{
-						Op:    &sqlast.Operator{Type: sqlast.Eq},
-						Left:  sqlast.NewIdent("customer_id"),
-						Right: sqlast.NewLongValue(1),
+						Op: &sqlast.Operator{
+							Type: sqlast.Eq,
+							From: sqltoken.NewPos(1, 40),
+							To:   sqltoken.NewPos(1, 41),
+						},
+						Left: sqlast.NewIdentWithPos("customer_id", sqltoken.NewPos(1, 28), sqltoken.NewPos(1, 39)),
+						Right: &sqlast.LongValue{
+							From: sqltoken.NewPos(1, 42),
+							To:   sqltoken.NewPos(1, 43),
+							Long: 1,
+						},
 					},
 				},
 			},
@@ -1506,6 +1552,7 @@ FOREIGN KEY(test_id) REFERENCES other_table(col1, col2)
 				in:   "INSERT INTO customers (customer_name, contract_name) VALUES('Cardinal', 'Tom B. Erichsen')",
 				name: "simple case",
 				out: &sqlast.InsertStmt{
+					Insert:    sqltoken.NewPos(1, 0),
 					TableName: sqlast.NewObjectName("customers"),
 					Columns: []*sqlast.Ident{
 						sqlast.NewIdent("customer_name"),

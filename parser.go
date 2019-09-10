@@ -80,6 +80,7 @@ func (p *Parser) ParseStatement() (sqlast.Stmt, error) {
 		p.prevToken()
 		return p.parseCreate()
 	case "DELETE":
+		p.prevToken()
 		return p.parseDelete()
 	case "INSERT":
 		return p.parseInsert()
@@ -443,7 +444,7 @@ func (p *Parser) parseCreate() (sqlast.Stmt, error) {
 
 	if mok || vok {
 		p.prevToken()
-		return p.parseCreateView()
+		return p.parseCreateView(t)
 	}
 
 	iok, _, _ := p.parseKeyword("INDEX")
@@ -476,7 +477,7 @@ func (p *Parser) parseCreateTable(create *sqltoken.Token) (sqlast.Stmt, error) {
 	}, nil
 }
 
-func (p *Parser) parseCreateView() (sqlast.Stmt, error) {
+func (p *Parser) parseCreateView(create *sqltoken.Token) (sqlast.Stmt, error) {
 	materialized, _, _ := p.parseKeyword("MATERIALIZED")
 	p.expectKeyword("VIEW")
 	name, err := p.parseObjectName()
@@ -490,6 +491,7 @@ func (p *Parser) parseCreateView() (sqlast.Stmt, error) {
 	}
 
 	return &sqlast.CreateViewStmt{
+		Create:       create.From,
 		Materialized: materialized,
 		Name:         name,
 		Query:        q,
@@ -885,6 +887,11 @@ CONSTRAINT_LOOP:
 }
 
 func (p *Parser) parseDelete() (sqlast.Stmt, error) {
+	ok, d, _ := p.parseKeyword("DELETE")
+	if !ok {
+		return nil, errors.Errorf("expect DELETE but %+v", d)
+	}
+
 	p.expectKeyword("FROM")
 	tableName, err := p.parseObjectName()
 	if err != nil {
@@ -900,6 +907,7 @@ func (p *Parser) parseDelete() (sqlast.Stmt, error) {
 	}
 
 	return &sqlast.DeleteStmt{
+		Delete:    d.From,
 		TableName: tableName,
 		Selection: selection,
 	}, nil
