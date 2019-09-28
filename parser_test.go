@@ -1555,11 +1555,7 @@ FOREIGN KEY(test_id) REFERENCES other_table(col1, col2)
 					Insert: sqltoken.NewPos(1, 0),
 					TableName: &sqlast.ObjectName{
 						Idents: []*sqlast.Ident{
-							{
-								Value: "customers",
-								From:  sqltoken.NewPos(1, 12),
-								To:    sqltoken.NewPos(1, 21),
-							},
+							sqlast.NewIdentWithPos("customers", sqltoken.NewPos(1, 12), sqltoken.NewPos(1, 21)),
 						},
 					},
 					Columns: []*sqlast.Ident{
@@ -1679,93 +1675,147 @@ FOREIGN KEY(test_id) REFERENCES other_table(col1, col2)
 		}{
 			{
 				name: "add column",
+				in: `
+ALTER TABLE customers
+ADD COLUMN email character varying(255)`,
 				out: &sqlast.AlterTableStmt{
-					TableName: sqlast.NewObjectName("customers"),
+					Alter: sqltoken.NewPos(2, 0),
+					TableName: &sqlast.ObjectName{
+						Idents: []*sqlast.Ident{
+							sqlast.NewIdentWithPos("customers", sqltoken.NewPos(2, 12), sqltoken.NewPos(2, 21)),
+						},
+					},
 					Action: &sqlast.AddColumnTableAction{
+						Add: sqltoken.NewPos(3, 0),
 						Column: &sqlast.ColumnDef{
-							Name: sqlast.NewIdent("email"),
+							Name: sqlast.NewIdentWithPos("email", sqltoken.NewPos(3, 11), sqltoken.NewPos(3, 16)),
 							DataType: &sqlast.VarcharType{
-								Size: sqlast.NewSize(255),
+								Size:      sqlast.NewSize(255),
+								Character: sqltoken.NewPos(3, 17),
+								Varying:   sqltoken.NewPos(3, 34),
+								RParen:    sqltoken.NewPos(3, 39),
 							},
 						},
 					},
 				},
-				in: "ALTER TABLE customers " +
-					"ADD COLUMN email character varying(255)",
 			},
 			{
 				name: "add constraint",
+				in: `
+ALTER TABLE products
+ADD FOREIGN KEY(test_id) REFERENCES other_table(col1, col2)`,
 				out: &sqlast.AlterTableStmt{
-					TableName: sqlast.NewObjectName("products"),
+					Alter: sqltoken.NewPos(2, 0),
+					TableName: &sqlast.ObjectName{
+						Idents: []*sqlast.Ident{
+							sqlast.NewIdentWithPos("products", sqltoken.NewPos(2, 12), sqltoken.NewPos(2, 20)),
+						},
+					},
 					Action: &sqlast.AddConstraintTableAction{
+						Add: sqltoken.NewPos(3, 0),
 						Constraint: &sqlast.TableConstraint{
 							Spec: &sqlast.ReferentialTableConstraint{
-								Columns: []*sqlast.Ident{sqlast.NewIdent("test_id")},
+								Foreign: sqltoken.NewPos(3, 4),
+								Columns: []*sqlast.Ident{
+									sqlast.NewIdentWithPos("test_id", sqltoken.NewPos(3, 16), sqltoken.NewPos(3, 23)),
+								},
 								KeyExpr: &sqlast.ReferenceKeyExpr{
-									TableName: sqlast.NewIdent("other_table"),
-									Columns:   []*sqlast.Ident{sqlast.NewIdent("col1"), sqlast.NewIdent("col2")},
+									TableName: sqlast.NewIdentWithPos("other_table", sqltoken.NewPos(3, 36), sqltoken.NewPos(3, 47)),
+									Columns: []*sqlast.Ident{
+										sqlast.NewIdentWithPos("col1", sqltoken.NewPos(3, 48), sqltoken.NewPos(3, 52)),
+										sqlast.NewIdentWithPos("col2", sqltoken.NewPos(3, 54), sqltoken.NewPos(3, 58)),
+									},
+									RParen: sqltoken.NewPos(3, 59),
 								},
 							},
 						},
 					},
 				},
-				in: "ALTER TABLE products " +
-					"ADD FOREIGN KEY(test_id) REFERENCES other_table(col1, col2)",
 			},
 			{
 				name: "drop constraint",
+				in: `ALTER TABLE products
+DROP CONSTRAINT fk CASCADE`,
 				out: &sqlast.AlterTableStmt{
-					TableName: sqlast.NewObjectName("products"),
+					Alter: sqltoken.NewPos(1, 0),
+					TableName: &sqlast.ObjectName{
+						Idents: []*sqlast.Ident{
+							sqlast.NewIdentWithPos("products", sqltoken.NewPos(1, 12), sqltoken.NewPos(1, 20)),
+						},
+					},
 					Action: &sqlast.DropConstraintTableAction{
-						Name:    sqlast.NewIdent("fk"),
-						Cascade: true,
+						Drop:       sqltoken.NewPos(2, 0),
+						Name:       sqlast.NewIdentWithPos("fk", sqltoken.NewPos(2, 16), sqltoken.NewPos(2, 18)),
+						Cascade:    true,
+						CascadePos: sqltoken.NewPos(2, 26),
 					},
 				},
-				in: "ALTER TABLE products " +
-					"DROP CONSTRAINT fk CASCADE",
 			},
 			{
 				name: "remove column",
+				in: `ALTER TABLE products
+DROP COLUMN description CASCADE`,
 				out: &sqlast.AlterTableStmt{
-					TableName: sqlast.NewObjectName("products"),
+					Alter: sqltoken.NewPos(1, 0),
+					TableName: &sqlast.ObjectName{
+						Idents: []*sqlast.Ident{
+							sqlast.NewIdentWithPos("products", sqltoken.NewPos(1, 12), sqltoken.NewPos(1, 20)),
+						},
+					},
 					Action: &sqlast.RemoveColumnTableAction{
-						Name:    sqlast.NewIdent("description"),
-						Cascade: true,
+						Drop:       sqltoken.NewPos(2, 0),
+						Name:       sqlast.NewIdentWithPos("description", sqltoken.NewPos(2, 12), sqltoken.NewPos(2, 23)),
+						Cascade:    true,
+						CascadePos: sqltoken.NewPos(2, 31),
 					},
 				},
-				in: "ALTER TABLE products " +
-					"DROP COLUMN description CASCADE",
 			},
 			{
 				name: "alter column",
+				in: `ALTER TABLE products
+ALTER COLUMN created_at SET DEFAULT current_timestamp`,
 				out: &sqlast.AlterTableStmt{
-					TableName: sqlast.NewObjectName("products"),
+					Alter: sqltoken.NewPos(1, 0),
+					TableName: &sqlast.ObjectName{
+						Idents: []*sqlast.Ident{
+							sqlast.NewIdentWithPos("products", sqltoken.NewPos(1, 12), sqltoken.NewPos(1, 20)),
+						},
+					},
 					Action: &sqlast.AlterColumnTableAction{
-						ColumnName: sqlast.NewIdent("created_at"),
+						Alter:      sqltoken.NewPos(2, 0),
+						ColumnName: sqlast.NewIdentWithPos("created_at", sqltoken.NewPos(2, 13), sqltoken.NewPos(2, 23)),
 						Action: &sqlast.SetDefaultColumnAction{
-							Default: sqlast.NewIdent("current_timestamp"),
+							Set:     sqltoken.NewPos(2, 24),
+							Default: sqlast.NewIdentWithPos("current_timestamp", sqltoken.NewPos(2, 36), sqltoken.NewPos(2, 53)),
 						},
 					},
 				},
-				in: "ALTER TABLE products " +
-					"ALTER COLUMN created_at SET DEFAULT current_timestamp",
 			},
 			{
 				name: "pg change type",
+				in: `ALTER TABLE products
+ALTER COLUMN number TYPE numeric(255,10)`,
 				out: &sqlast.AlterTableStmt{
-					TableName: sqlast.NewObjectName("products"),
+					Alter: sqltoken.NewPos(1, 0),
+					TableName: &sqlast.ObjectName{
+						Idents: []*sqlast.Ident{
+							sqlast.NewIdentWithPos("products", sqltoken.NewPos(1, 12), sqltoken.NewPos(1, 20)),
+						},
+					},
 					Action: &sqlast.AlterColumnTableAction{
-						ColumnName: sqlast.NewIdent("number"),
+						Alter:      sqltoken.NewPos(2, 0),
+						ColumnName: sqlast.NewIdentWithPos("number", sqltoken.NewPos(2, 13), sqltoken.NewPos(2, 19)),
 						Action: &sqlast.PGAlterDataTypeColumnAction{
+							Type: sqltoken.NewPos(2, 20),
 							DataType: &sqlast.Decimal{
 								Scale:     sqlast.NewSize(10),
 								Precision: sqlast.NewSize(255),
+								Numeric:   sqltoken.NewPos(2, 25),
+								RParen:    sqltoken.NewPos(2, 40),
 							},
 						},
 					},
 				},
-				in: "ALTER TABLE products " +
-					"ALTER COLUMN number TYPE numeric(255,10)",
 			},
 		}
 

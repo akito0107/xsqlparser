@@ -674,15 +674,15 @@ func (s *SetDefaultColumnAction) ToSQLString() string {
 
 type DropDefaultColumnAction struct {
 	alterColumnAction
-	From, To sqltoken.Pos
+	Drop, Default sqltoken.Pos
 }
 
 func (d *DropDefaultColumnAction) Pos() sqltoken.Pos {
-	return d.From
+	return d.Drop
 }
 
 func (d *DropDefaultColumnAction) End() sqltoken.Pos {
-	return d.To
+	return d.Default
 }
 
 func (*DropDefaultColumnAction) ToSQLString() string {
@@ -710,15 +710,15 @@ func (p *PGAlterDataTypeColumnAction) ToSQLString() string {
 
 type PGSetNotNullColumnAction struct {
 	alterColumnAction
-	From, To sqltoken.Pos
+	Set, Null sqltoken.Pos
 }
 
 func (p *PGSetNotNullColumnAction) Pos() sqltoken.Pos {
-	return p.From
+	return p.Set
 }
 
 func (p *PGSetNotNullColumnAction) End() sqltoken.Pos {
-	return p.To
+	return p.Null
 }
 
 func (p *PGSetNotNullColumnAction) ToSQLString() string {
@@ -727,15 +727,15 @@ func (p *PGSetNotNullColumnAction) ToSQLString() string {
 
 type PGDropNotNullColumnAction struct {
 	alterColumnAction
-	From, To sqltoken.Pos
+	Drop, Null sqltoken.Pos
 }
 
 func (p *PGDropNotNullColumnAction) Pos() sqltoken.Pos {
-	return p.From
+	return p.Drop
 }
 
 func (p *PGDropNotNullColumnAction) End() sqltoken.Pos {
-	return p.To
+	return p.Null
 }
 
 func (p *PGDropNotNullColumnAction) ToSQLString() string {

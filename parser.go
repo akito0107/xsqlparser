@@ -86,6 +86,7 @@ func (p *Parser) ParseStatement() (sqlast.Stmt, error) {
 		p.prevToken()
 		return p.parseInsert()
 	case "ALTER":
+		p.prevToken()
 		return p.parseAlter()
 	case "UPDATE":
 		p.prevToken()
@@ -197,9 +198,16 @@ func (p *Parser) ParseDataType() (sqlast.Type, error) {
 		if err != nil {
 			return nil, errors.Errorf("parseOptionalPrecisionScale failed: %w", err)
 		}
+		p.prevToken()
+		r, _ := p.nextToken()
+		if r.Kind != sqltoken.RParen {
+			return nil, errors.Errorf("expected RParen but %s", r)
+		}
 		return &sqlast.Decimal{
 			Precision: precision,
 			Scale:     scale,
+			Numeric:   tok.From,
+			RParen:    r.To,
 		}, nil
 
 	default:
@@ -235,7 +243,7 @@ func (p *Parser) parseQuery() (*sqlast.Query, error) {
 	}
 
 	var orderBy []*sqlast.OrderByExpr
-	if ok, _ := p.parseKeywords("ORDER", "BY"); ok {
+	if ok, _, _ := p.parseKeywords("ORDER", "BY"); ok {
 		o, err := p.parseOrderByExprList()
 		if err != nil {
 			return nil, errors.Errorf("parseOrderByExprList failed: %w", err)
@@ -364,7 +372,7 @@ func (p *Parser) parseSelect() (*sqlast.SQLSelect, error) {
 	}
 
 	var groupBy []sqlast.Node
-	if ok, _ := p.parseKeywords("GROUP", "BY"); ok {
+	if ok, _, _ := p.parseKeywords("GROUP", "BY"); ok {
 		g, err := p.parseExprList()
 		if err != nil {
 			return nil, errors.Errorf("parseExprList failed: %w", err)
@@ -450,7 +458,7 @@ func (p *Parser) parseCreate() (sqlast.Stmt, error) {
 	}
 
 	iok, _, _ := p.parseKeyword("INDEX")
-	uiok, _ := p.parseKeywords("UNIQUE", "INDEX")
+	uiok, _, _ := p.parseKeywords("UNIQUE", "INDEX")
 
 	if iok || uiok {
 		return p.parseCreateIndex(uiok)
@@ -1039,7 +1047,7 @@ func (p *Parser) parseInsert() (sqlast.Stmt, error) {
 	}
 
 	var assigns []*sqlast.Assignment
-	if ok, _ := p.parseKeywords("ON", "DUPLICATE", "KEY", "UPDATE"); ok {
+	if ok, _, _ := p.parseKeywords("ON", "DUPLICATE", "KEY", "UPDATE"); ok {
 		assignments, err := p.parseAssignments()
 		if err != nil {
 			return nil, errors.Errorf("invalid DUPLICATE KEY UPDATE assignments: %w", err)
@@ -1057,6 +1065,11 @@ func (p *Parser) parseInsert() (sqlast.Stmt, error) {
 }
 
 func (p *Parser) parseAlter() (sqlast.Stmt, error) {
+	ok, tok, _ := p.parseKeyword("ALTER")
+	if !ok {
+		return nil, errors.Errorf("expected ALTER but %s", tok)
+	}
+
 	p.expectKeyword("TABLE")
 
 	tableName, err := p.parseObjectName()
@@ -1064,7 +1077,7 @@ func (p *Parser) parseAlter() (sqlast.Stmt, error) {
 		return nil, errors.Errorf("parseObjectName failed: %w", err)
 	}
 
-	if ok, _ := p.parseKeywords("ADD", "COLUMN"); ok {
+	if ok, toks, _ := p.parseKeywords("ADD", "COLUMN"); ok {
 		columnDef, err := p.parseColumnDef()
 		if err != nil {
 			return nil, errors.Errorf("parseColumnDef failed: %w", err)
@@ -1072,13 +1085,15 @@ func (p *Parser) parseAlter() (sqlast.Stmt, error) {
 
 		return &sqlast.AlterTableStmt{
 			TableName: tableName,
+			Alter:     tok.From,
 			Action: &sqlast.AddColumnTableAction{
+				Add:    toks[0].From,
 				Column: columnDef,
 			},
 		}, nil
 	}
 
-	if ok, _, _ := p.parseKeyword("ADD"); ok {
+	if ok, add, _ := p.parseKeyword("ADD"); ok {
 		constraint, err := p.parseTableConstraints()
 		if err != nil {
 			return nil, errors.Errorf("parseTableConstraints failed: %w", err)
@@ -1086,51 +1101,60 @@ func (p *Parser) parseAlter() (sqlast.Stmt, error) {
 
 		return &sqlast.AlterTableStmt{
 			TableName: tableName,
+			Alter:     tok.From,
 			Action: &sqlast.AddConstraintTableAction{
+				Add:        add.From,
 				Constraint: constraint,
 			},
 		}, nil
 	}
 
-	if ok, _ := p.parseKeywords("DROP", "CONSTRAINT"); ok {
+	if ok, toks, _ := p.parseKeywords("DROP", "CONSTRAINT"); ok {
 		constraintName, err := p.parseIdentifier()
 		if err != nil {
 			return nil, errors.Errorf("parseIdentifier failed: %w", err)
 		}
-		cascade, _, _ := p.parseKeyword("CASCADE")
+		cascade, castok, _ := p.parseKeyword("CASCADE")
 
 		return &sqlast.AlterTableStmt{
 			TableName: tableName,
+			Alter:     tok.From,
 			Action: &sqlast.DropConstraintTableAction{
-				Name:    constraintName,
-				Cascade: cascade,
+				Drop:       toks[0].From,
+				Name:       constraintName,
+				Cascade:    cascade,
+				CascadePos: castok.To,
 			},
 		}, nil
 	}
 
-	if ok, _ := p.parseKeywords("DROP", "COLUMN"); ok {
+	if ok, toks, _ := p.parseKeywords("DROP", "COLUMN"); ok {
 		constraintName, err := p.parseIdentifier()
 		if err != nil {
 			return nil, errors.Errorf("parseIdentifier failed: %w", err)
 		}
-		cascade, _, _ := p.parseKeyword("CASCADE")
+		cascade, castok, _ := p.parseKeyword("CASCADE")
 
 		return &sqlast.AlterTableStmt{
 			TableName: tableName,
+			Alter:     tok.From,
 			Action: &sqlast.RemoveColumnTableAction{
-				Name:    constraintName,
-				Cascade: cascade,
+				Name:       constraintName,
+				Drop:       toks[0].From,
+				Cascade:    cascade,
+				CascadePos: castok.To,
 			},
 		}, nil
 	}
 
-	if ok, _ := p.parseKeywords("ALTER", "COLUMN"); ok {
-		action, err := p.parseAlterColumn()
+	if ok, toks, _ := p.parseKeywords("ALTER", "COLUMN"); ok {
+		action, err := p.parseAlterColumn(toks[0])
 		if err != nil {
 			return nil, errors.Errorf("parseAlterColumn failed: %w", err)
 		}
 
 		return &sqlast.AlterTableStmt{
+			Alter:     tok.From,
 			TableName: tableName,
 			Action:    action,
 		}, nil
@@ -1155,7 +1179,7 @@ func (p *Parser) parseDrop() (sqlast.Stmt, error) {
 			IndexNames: idents,
 		}, nil
 	}
-	exists, _ := p.parseKeywords("IF", "EXISTS")
+	exists, _, _ := p.parseKeywords("IF", "EXISTS")
 	tableName, err := p.parseObjectName()
 	if err != nil {
 		return nil, errors.Errorf("parseObjectName failed: %w", err)
@@ -1169,7 +1193,7 @@ func (p *Parser) parseDrop() (sqlast.Stmt, error) {
 	}, nil
 }
 
-func (p *Parser) parseAlterColumn() (*sqlast.AlterColumnTableAction, error) {
+func (p *Parser) parseAlterColumn(alt *sqltoken.Token) (*sqlast.AlterColumnTableAction, error) {
 	columnName, err := p.parseIdentifier()
 	if err != nil {
 		return nil, errors.Errorf("parseIdentifier failed: %w", err)
@@ -1191,30 +1215,44 @@ func (p *Parser) parseAlterColumn() (*sqlast.AlterColumnTableAction, error) {
 			}
 			return &sqlast.AlterColumnTableAction{
 				ColumnName: columnName,
+				Alter:      alt.From,
 				Action: &sqlast.SetDefaultColumnAction{
+					Set:     tok.From,
 					Default: def,
 				},
 			}, nil
 		}
-		if ok, _ := p.parseKeywords("NOT", "NULL"); ok {
+		if ok, toks, _ := p.parseKeywords("NOT", "NULL"); ok {
 			return &sqlast.AlterColumnTableAction{
 				ColumnName: columnName,
-				Action:     &sqlast.PGSetNotNullColumnAction{},
+				Alter:      alt.From,
+				Action: &sqlast.PGSetNotNullColumnAction{
+					Set:  tok.From,
+					Null: toks[1].To,
+				},
 			}, nil
 		}
 
 		return nil, errors.Errorf("unknown SET action")
 	case "DROP":
-		if ok, _, _ := p.parseKeyword("DEFAULT"); ok {
+		if ok, deftok, _ := p.parseKeyword("DEFAULT"); ok {
 			return &sqlast.AlterColumnTableAction{
 				ColumnName: columnName,
-				Action:     &sqlast.DropDefaultColumnAction{},
+				Alter:      alt.From,
+				Action: &sqlast.DropDefaultColumnAction{
+					Drop:    tok.From,
+					Default: deftok.To,
+				},
 			}, nil
 		}
-		if ok, _ := p.parseKeywords("NOT", "NULL"); ok {
+		if ok, toks, _ := p.parseKeywords("NOT", "NULL"); ok {
 			return &sqlast.AlterColumnTableAction{
 				ColumnName: columnName,
-				Action:     &sqlast.PGDropNotNullColumnAction{},
+				Alter:      alt.From,
+				Action: &sqlast.PGDropNotNullColumnAction{
+					Drop: tok.From,
+					Null: toks[1].To,
+				},
 			}, nil
 		}
 		return nil, errors.Errorf("unknown DROP action")
@@ -1226,7 +1264,9 @@ func (p *Parser) parseAlterColumn() (*sqlast.AlterColumnTableAction, error) {
 
 		return &sqlast.AlterColumnTableAction{
 			ColumnName: columnName,
+			Alter:      alt.From,
 			Action: &sqlast.PGAlterDataTypeColumnAction{
+				Type:     tok.From,
 				DataType: tp,
 			},
 		}, nil
@@ -1775,7 +1815,7 @@ func (p *Parser) parseInfix(expr sqlast.Node, precedence uint) (sqlast.Node, err
 					X: expr,
 				}, nil
 			}
-			if ok, _ := p.parseKeywords("NOT", "NULL"); ok {
+			if ok, _, _ := p.parseKeywords("NOT", "NULL"); ok {
 				return &sqlast.IsNotNull{
 					X: expr,
 				}, nil
@@ -2269,7 +2309,7 @@ func (p *Parser) parseWindowFrame() (*sqlast.WindowFrame, error) {
 }
 
 func (p *Parser) parseWindowFrameBound() (sqlast.SQLWindowFrameBound, error) {
-	if ok, _ := p.parseKeywords("CURRENT", "ROW"); ok {
+	if ok, _, _ := p.parseKeywords("CURRENT", "ROW"); ok {
 		return &sqlast.CurrentRow{}, nil
 	}
 
@@ -2712,18 +2752,20 @@ func (p *Parser) tilNonWhitespace() (uint, error) {
 	}
 }
 
-// Deprecated
-func (p *Parser) parseKeywords(keywords ...string) (bool, error) {
+func (p *Parser) parseKeywords(keywords ...string) (bool, []*sqltoken.Token, error) {
 	idx := p.index
 
+	var toks []*sqltoken.Token
 	for _, k := range keywords {
-		if ok, _, _ := p.parseKeyword(k); !ok {
+		ok, tok, _ := p.parseKeyword(k)
+		toks = append(toks, tok)
+		if !ok {
 			p.index = idx
-			return false, nil
+			return false, toks, nil
 		}
 	}
 
-	return true, nil
+	return true, toks, nil
 }
 
 func (p *Parser) parseKeyword(expected string) (bool, *sqltoken.Token, error) {
