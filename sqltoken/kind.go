@@ -1,11 +1,11 @@
-package xsqlparser
+package sqltoken
 
-type Token int
+type Kind int
 
-//go:generate stringer -type Token token.go
+//go:generate stringer -type Kind kind.go
 const (
 	// A keyword (like SELECT)
-	SQLKeyword Token = iota
+	SQLKeyword Kind = iota
 	// Numeric literal
 	Number
 	// A character that cloud not be tokenized
@@ -18,6 +18,8 @@ const (
 	Comma
 	// Whitespace
 	Whitespace
+	// comment node
+	Comment
 	// = operator
 	Eq
 	// != or <> operator
@@ -64,6 +66,6 @@ const (
 	LBrace
 	// Right brace `}`
 	RBrace
-	// ILLEGAL token
+	// ILLEGAL sqltoken
 	ILLEGAL
 )

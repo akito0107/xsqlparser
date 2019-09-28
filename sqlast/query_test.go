@@ -43,7 +43,9 @@ func TestSQLSelect_ToSQLString(t *testing.T) {
 								Name: NewObjectName("test_table"),
 							},
 						},
-						Type: IMPLICIT,
+						Type: &JoinType{
+							Condition: IMPLICIT,
+						},
 						RightElement: &TableJoinElement{
 							Ref: &Table{
 								Name: NewObjectName("test_table2"),
@@ -71,7 +73,9 @@ func TestSQLSelect_ToSQLString(t *testing.T) {
 					Left: &CompoundIdent{
 						Idents: []*Ident{NewIdent("test_table"), NewIdent("column1")},
 					},
-					Op:    Eq,
+					Op: &Operator{
+						Type: Eq,
+					},
 					Right: NewSingleQuotedString("test"),
 				},
 			},
@@ -99,7 +103,9 @@ func TestSQLSelect_ToSQLString(t *testing.T) {
 								Alias: NewIdent("t1"),
 							},
 						},
-						Type: LEFT,
+						Type: &JoinType{
+							Condition: LEFT,
+						},
 						RightElement: &TableJoinElement{
 							Ref: &Table{
 								Name:  NewObjectName("test_table2"),
@@ -111,7 +117,9 @@ func TestSQLSelect_ToSQLString(t *testing.T) {
 								Left: &CompoundIdent{
 									Idents: []*Ident{NewIdent("t1"), NewIdent("id")},
 								},
-								Op: Eq,
+								Op: &Operator{
+									Type: Eq,
+								},
 								Right: &CompoundIdent{
 									Idents: []*Ident{NewIdent("t2"), NewIdent("test_table_id")},
 								},
@@ -166,7 +174,7 @@ func TestSQLSelect_ToSQLString(t *testing.T) {
 				},
 				GroupByClause: []Node{NewIdent("country")},
 				HavingClause: &BinaryExpr{
-					Op: Gt,
+					Op: &Operator{Type: Gt},
 					Left: &Function{
 						Name: NewObjectName("COUNT"),
 						Args: []Node{NewIdent("customer_id")},
@@ -341,9 +349,9 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 									},
 								},
 								WhereClause: &BinaryExpr{
-									Op: And,
+									Op: &Operator{Type: And},
 									Left: &BinaryExpr{
-										Op: Eq,
+										Op: &Operator{Type: Eq},
 										Left: &CompoundIdent{
 											Idents: []*Ident{
 												NewIdent("user"),
@@ -358,7 +366,7 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 										},
 									},
 									Right: &BinaryExpr{
-										Op: Eq,
+										Op: &Operator{Type: Eq},
 										Left: &CompoundIdent{
 											Idents: []*Ident{
 												NewIdent("user_sub"),
@@ -386,12 +394,12 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 							Expr: &CaseExpr{
 								Conditions: []Node{
 									&BinaryExpr{
-										Op:    Eq,
+										Op:    &Operator{Type: Eq},
 										Left:  NewIdent("expr1"),
 										Right: NewSingleQuotedString("1"),
 									},
 									&BinaryExpr{
-										Op:    Eq,
+										Op:    &Operator{Type: Eq},
 										Left:  NewIdent("expr2"),
 										Right: NewSingleQuotedString("2"),
 									},

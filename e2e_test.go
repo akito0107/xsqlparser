@@ -75,11 +75,11 @@ func TestParseQuery(t *testing.T) {
 						t.Fatalf("%+v", err)
 					}
 
-					stmt, err := parser.ParseStatement()
+					orig, err := parser.ParseStatement()
 					if err != nil {
 						t.Fatalf("%+v", err)
 					}
-					recovered := stmt.ToSQLString()
+					recovered := orig.ToSQLString()
 
 					parser, err = xsqlparser.NewParser(bytes.NewBufferString(recovered), &dialect.GenericSQLDialect{})
 					if err != nil {
@@ -92,7 +92,20 @@ func TestParseQuery(t *testing.T) {
 						t.Fatalf("%+v", err)
 					}
 
-					if astdiff := cmp.Diff(stmt, stmt2, xsqlparser.IgnoreMarker); astdiff != "" {
+					recovered2 := stmt2.ToSQLString()
+
+					parser, err = xsqlparser.NewParser(bytes.NewBufferString(recovered2), &dialect.GenericSQLDialect{})
+					if err != nil {
+						t.Log(recovered)
+						t.Fatalf("%+v", err)
+					}
+
+					stmt3, err := parser.ParseStatement()
+					if err != nil {
+						t.Fatalf("%+v", err)
+					}
+
+					if astdiff := cmp.Diff(stmt2, stmt3, xsqlparser.IgnoreMarker); astdiff != "" {
 						t.Logf(recovered)
 						t.Errorf("should be same ast but diff:\n %s", astdiff)
 					}

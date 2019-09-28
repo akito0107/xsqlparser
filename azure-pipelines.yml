@@ -49,7 +49,7 @@ steps:
   displayName: 'Get dependencies, and the test'
 
 - script: |
-    go test -race -coverprofile=coverage.txt -covermode=atomic ./...
+    go test -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./...
   workingDirectory: '$(modulePath)'
   displayName: 'Run test'
 

@@ -20,4 +20,6 @@
 /vendor/
 /Godeps/
 
+bin
+tools/bin/
 # End of https://www.gitignore.io/api/go

@@ -1,4 +1,4 @@
-package xsqlparser
+package sqltoken
 
 import (
 	"fmt"
@@ -9,7 +9,6 @@ import (
 	errors "golang.org/x/xerrors"
 
 	"github.com/akito0107/xsqlparser/dialect"
-	"github.com/akito0107/xsqlparser/sqlast"
 )
 
 type SQLWord struct {
@@ -25,10 +24,6 @@ func (s *SQLWord) String() string {
 		return s.Value
 	}
 	return ""
-}
-
-func (s *SQLWord) AsSQLIdent() *sqlast.Ident {
-	return sqlast.NewIdent(s.String())
 }
 
 func matchingEndQuote(quoteStyle rune) rune {
@@ -62,18 +57,26 @@ func MakeKeyword(word string, quoteStyle rune) *SQLWord {
 	}
 }
 
-type TokenSet struct {
-	Tok   Token
+type Token struct {
+	Kind  Kind
 	Value interface{}
-	Pos   *TokenPos
+	From  Pos
+	To    Pos
 }
 
-type TokenPos struct {
+func NewPos(line, col int) Pos {
+	return Pos{
+		Line: line,
+		Col:  col,
+	}
+}
+
+type Pos struct {
 	Line int
 	Col  int
 }
 
-func (t *TokenPos) String() string {
+func (t *Pos) String() string {
 	return fmt.Sprintf("{Line: %d Col: %d}", t.Line, t.Col)
 }
 
@@ -90,17 +93,20 @@ func NewTokenizer(src io.Reader, dialect dialect.Dialect) *Tokenizer {
 		Dialect: dialect,
 		Scanner: scan.Init(src),
 		Line:    1,
-		Col:     1,
+		Col:     0,
 	}
 }
 
-func (t *Tokenizer) Tokenize() ([]*TokenSet, error) {
-	var tokenset []*TokenSet
+func (t *Tokenizer) Tokenize() ([]*Token, error) {
+	var tokenset []*Token
 
 	for {
 		t, err := t.NextToken()
 		if err == io.EOF {
 			break
+		}
+		if err != nil {
+			return nil, err
 		}
 		tokenset = append(tokenset, t)
 	}
@@ -108,26 +114,27 @@ func (t *Tokenizer) Tokenize() ([]*TokenSet, error) {
 	return tokenset, nil
 }
 
-func (t *Tokenizer) NextToken() (*TokenSet, error) {
+func (t *Tokenizer) NextToken() (*Token, error) {
+	pos := t.Pos()
 	tok, str, err := t.next()
 	if err == io.EOF {
 		return nil, io.EOF
 	}
 	if err != nil {
-		return &TokenSet{Tok: ILLEGAL, Value: "", Pos: t.Pos()}, errors.Errorf("tokenize failed %w", err)
+		return &Token{Kind: ILLEGAL, Value: "", From: pos, To: t.Pos()}, errors.Errorf("tokenize failed %w", err)
 	}
 
-	return &TokenSet{Tok: tok, Value: str, Pos: t.Pos()}, nil
+	return &Token{Kind: tok, Value: str, From: pos, To: t.Pos()}, nil
 }
 
-func (t *Tokenizer) Pos() *TokenPos {
-	return &TokenPos{
+func (t *Tokenizer) Pos() Pos {
+	return Pos{
 		Line: t.Line,
 		Col:  t.Col,
 	}
 }
 
-func (t *Tokenizer) next() (Token, interface{}, error) {
+func (t *Tokenizer) next() (Kind, interface{}, error) {
 	r := t.Scanner.Peek()
 	switch {
 	case ' ' == r:
@@ -143,7 +150,7 @@ func (t *Tokenizer) next() (Token, interface{}, error) {
 	case '\n' == r:
 		t.Scanner.Next()
 		t.Line += 1
-		t.Col = 1
+		t.Col = 0
 		return Whitespace, "\n", nil
 
 	case '\r' == r:
@@ -153,31 +160,28 @@ func (t *Tokenizer) next() (Token, interface{}, error) {
 			t.Scanner.Next()
 		}
 		t.Line += 1
-		t.Col = 1
+		t.Col = 0
 		return Whitespace, "\n", nil
 
 	case 'N' == r:
 		t.Scanner.Next()
 		n := t.Scanner.Peek()
 		if n == '\'' {
-			str := tokenizeSingleQuotedString(t.Scanner)
-			t.Col += 3 + len(str)
+			t.Col += 1
+			str := t.tokenizeSingleQuotedString()
 			return NationalStringLiteral, str, nil
 		}
-		s := tokenizeWord('N', t.Dialect, t.Scanner)
-		t.Col += len(s)
+		s := t.tokenizeWord('N')
 		v := MakeKeyword(s, 0)
 		return SQLKeyword, v, nil
 
 	case t.Dialect.IsIdentifierStart(r):
 		t.Scanner.Next()
-		s := tokenizeWord(r, t.Dialect, t.Scanner)
-		t.Col += len(s)
+		s := t.tokenizeWord(r)
 		return SQLKeyword, MakeKeyword(s, 0), nil
 
 	case '\'' == r:
-		s := tokenizeSingleQuotedString(t.Scanner)
-		t.Col += 2 + len(s)
+		s := t.tokenizeSingleQuotedString()
 		return SingleQuotedString, s, nil
 
 	case t.Dialect.IsDelimitedIdentifierStart(r):
@@ -207,7 +211,7 @@ func (t *Tokenizer) next() (Token, interface{}, error) {
 				break
 			}
 		}
-		t.Col = len(s)
+		t.Col += len(s)
 		return Number, string(s), nil
 
 	case '(' == r:
@@ -233,15 +237,17 @@ func (t *Tokenizer) next() (Token, interface{}, error) {
 
 			var s []rune
 			for {
-				ch := t.Scanner.Next()
+				ch := t.Scanner.Peek()
 				if ch != scanner.EOF && ch != '\n' {
+					t.Scanner.Next()
 					s = append(s, ch)
 				} else {
-					s = append(s, '\n')
-					return Whitespace, string(s), nil // Comment Node
+					t.Col += len(s) + 2
+					return Comment, string(s), nil // Comment Node
 				}
 			}
 		}
+		t.Col += 1
 		return Minus, "-", nil
 
 	case '/' == r:
@@ -249,9 +255,9 @@ func (t *Tokenizer) next() (Token, interface{}, error) {
 
 		if '*' == t.Scanner.Peek() {
 			t.Scanner.Next()
-			return Whitespace, tokenizeMultilineComment(t.Scanner), nil
+			return Comment, t.tokenizeMultilineComment(), nil
 		}
-
+		t.Col += 1
 		return Div, "/", nil
 
 	case '+' == r:
@@ -358,52 +364,67 @@ func (t *Tokenizer) next() (Token, interface{}, error) {
 	}
 }
 
-func tokenizeWord(f rune, dialect dialect.Dialect, s *scanner.Scanner) string {
+func (t *Tokenizer) tokenizeWord(f rune) string {
 	var str []rune
 	str = append(str, f)
 
 	for {
-		r := s.Peek()
-		if dialect.IsIdentifierPart(r) {
-			s.Next()
+		r := t.Scanner.Peek()
+		if t.Dialect.IsIdentifierPart(r) {
+			t.Scanner.Next()
 			str = append(str, r)
 		} else {
 			break
 		}
 	}
-
+	t.Col += len(str)
 	return string(str)
 }
 
-func tokenizeSingleQuotedString(s *scanner.Scanner) string {
+func (t *Tokenizer) tokenizeSingleQuotedString() string {
 	var str []rune
-	s.Next()
+	t.Scanner.Next()
 
 	for {
-		n := s.Peek()
+		n := t.Scanner.Peek()
 		if n == '\'' {
-			s.Next()
-			if s.Peek() == '\'' {
+			t.Scanner.Next()
+			if t.Scanner.Peek() == '\'' {
 				str = append(str, '\'')
-				s.Next()
+				t.Scanner.Next()
 			} else {
 				break
 			}
 			continue
 		}
 
-		s.Next()
+		t.Scanner.Next()
 		str = append(str, n)
 	}
+	t.Col += 2 + len(str)
 
 	return string(str)
 }
 
-func tokenizeMultilineComment(s *scanner.Scanner) string {
+func (t *Tokenizer) tokenizeMultilineComment() string {
 	var str []rune
 	var mayBeClosingComment bool
+	t.Col += 2
 	for {
-		n := s.Next()
+		n := t.Scanner.Next()
+
+		if n == '\r' {
+			if t.Scanner.Peek() == '\n' {
+				t.Scanner.Next()
+			}
+			t.Col = 0
+			t.Line += 1
+		} else if n == '\n' {
+			t.Col = 0
+			t.Line += 1
+		} else {
+			t.Col += 1
+		}
 
 		if mayBeClosingComment {
 			if n == '/' {

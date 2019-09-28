@@ -2,6 +2,8 @@ package sqlast
 
 import (
 	"fmt"
+
+	"github.com/akito0107/xsqlparser/sqltoken"
 )
 
 type Type interface {
@@ -9,7 +11,19 @@ type Type interface {
 }
 
 type CharType struct {
-	Size *uint
+	Size             *uint
+	From, To, RParen sqltoken.Pos
+}
+
+func (c *CharType) Pos() sqltoken.Pos {
+	return c.From
+}
+
+func (c *CharType) End() sqltoken.Pos {
+	if c.Size != nil {
+		return c.RParen
+	}
+	return c.To
 }
 
 func (c *CharType) ToSQLString() string {
@@ -17,7 +31,19 @@ func (c *CharType) ToSQLString() string {
 }
 
 type VarcharType struct {
-	Size *uint
+	Size                       *uint
+	Character, Varying, RParen sqltoken.Pos
+}
+
+func (v *VarcharType) Pos() sqltoken.Pos {
+	return v.Character
+}
+
+func (v *VarcharType) End() sqltoken.Pos {
+	if v.Size != nil {
+		return v.RParen
+	}
+	return v.Varying
 }
 
 func (v *VarcharType) ToSQLString() string {
@@ -25,6 +51,15 @@ func (v *VarcharType) ToSQLString() string {
 }
 
 type UUID struct {
+	From, To sqltoken.Pos
+}
+
+func (u *UUID) Pos() sqltoken.Pos {
+	return u.From
+}
+
+func (u *UUID) End() sqltoken.Pos {
+	return u.To
 }
 
 func (*UUID) ToSQLString() string {
@@ -32,7 +67,16 @@ func (*UUID) ToSQLString() string {
 }
 
 type Clob struct {
-	Size uint
+	Size         uint
+	Clob, RParen sqltoken.Pos
+}
+
+func (c *Clob) Pos() sqltoken.Pos {
+	return c.Clob
+}
+
+func (c *Clob) End() sqltoken.Pos {
+	return c.RParen
 }
 
 func (c *Clob) ToSQLString() string {
@@ -40,7 +84,16 @@ func (c *Clob) ToSQLString() string {
 }
 
 type Binary struct {
-	Size uint
+	Size           uint
+	Binary, RParen sqltoken.Pos
+}
+
+func (b *Binary) Pos() sqltoken.Pos {
+	return b.Binary
+}
+
+func (b *Binary) End() sqltoken.Pos {
+	return b.RParen
 }
 
 func (b *Binary) ToSQLString() string {
@@ -48,7 +101,16 @@ func (b *Binary) ToSQLString() string {
 }
 
 type Varbinary struct {
-	Size uint
+	Size              uint
+	Varbinary, RParen sqltoken.Pos
+}
+
+func (v *Varbinary) Pos() sqltoken.Pos {
+	return v.Varbinary
+}
+
+func (v *Varbinary) End() sqltoken.Pos {
+	return v.RParen
 }
 
 func (v *Varbinary) ToSQLString() string {
@@ -56,7 +118,16 @@ func (v *Varbinary) ToSQLString() string {
 }
 
 type Blob struct {
-	Size uint
+	Size         uint
+	Blob, RParen sqltoken.Pos
+}
+
+func (b *Blob) Pos() sqltoken.Pos {
+	return b.Blob
+}
+
+func (b *Blob) End() sqltoken.Pos {
+	return b.RParen
 }
 
 func (b *Blob) ToSQLString() string {
@@ -64,8 +135,17 @@ func (b *Blob) ToSQLString() string {
 }
 
 type Decimal struct {
-	Precision *uint
-	Scale     *uint
+	Precision       *uint
+	Scale           *uint
+	Numeric, RParen sqltoken.Pos
+}
+
+func (d *Decimal) Pos() sqltoken.Pos {
+	return d.Numeric
+}
+
+func (d *Decimal) End() sqltoken.Pos {
+	return d.RParen
 }
 
 func (d *Decimal) ToSQLString() string {
@@ -76,7 +156,19 @@ func (d *Decimal) ToSQLString() string {
 }
 
 type Float struct {
-	Size *uint
+	Size             *uint
+	From, To, RParen sqltoken.Pos
+}
+
+func (f *Float) Pos() sqltoken.Pos {
+	return f.From
+}
+
+func (f *Float) End() sqltoken.Pos {
+	if f.Size != nil {
+		return f.RParen
+	}
+	return f.To
 }
 
 func (f *Float) ToSQLString() string {
@@ -84,50 +176,128 @@ func (f *Float) ToSQLString() string {
 }
 
 type SmallInt struct {
+	From, To sqltoken.Pos
+}
+
+func (s *SmallInt) Pos() sqltoken.Pos {
+	return s.From
+}
+
+func (s *SmallInt) End() sqltoken.Pos {
+	return s.To
 }
 
 func (s *SmallInt) ToSQLString() string {
 	return "smallint"
 }
 
-type Int struct{}
+type Int struct {
+	From, To sqltoken.Pos
+}
+
+func (i *Int) Pos() sqltoken.Pos {
+	return i.From
+}
+
+func (i *Int) End() sqltoken.Pos {
+	return i.To
+}
 
 func (i *Int) ToSQLString() string {
 	return "int"
 }
 
-type BigInt struct{}
+type BigInt struct {
+	From, To sqltoken.Pos
+}
+
+func (b *BigInt) Pos() sqltoken.Pos {
+	return b.From
+}
+
+func (b *BigInt) End() sqltoken.Pos {
+	return b.To
+}
 
 func (b *BigInt) ToSQLString() string {
 	return "bigint"
 }
 
 type Real struct {
+	From, To sqltoken.Pos
+}
+
+func (r *Real) Pos() sqltoken.Pos {
+	return r.From
+}
+
+func (r *Real) End() sqltoken.Pos {
+	return r.To
 }
 
 func (*Real) ToSQLString() string {
 	return "real"
 }
 
-type Double struct{}
+type Double struct {
+	From, To sqltoken.Pos
+}
+
+func (d *Double) Pos() sqltoken.Pos {
+	return d.From
+}
+
+func (d *Double) End() sqltoken.Pos {
+	return d.To
+}
 
 func (*Double) ToSQLString() string {
 	return "double precision"
 }
 
-type Boolean struct{}
+type Boolean struct {
+	From, To sqltoken.Pos
+}
+
+func (b *Boolean) Pos() sqltoken.Pos {
+	return b.From
+}
+
+func (b *Boolean) End() sqltoken.Pos {
+	return b.To
+}
 
 func (*Boolean) ToSQLString() string {
 	return "boolean"
 }
 
-type Date struct{}
+type Date struct {
+	From, To sqltoken.Pos
+}
+
+func (d *Date) Pos() sqltoken.Pos {
+	return d.From
+}
+
+func (d *Date) End() sqltoken.Pos {
+	return d.To
+}
 
 func (*Date) ToSQLString() string {
 	return "date"
 }
 
-type Time struct{}
+type Time struct {
+	From, To sqltoken.Pos
+}
+
+func (t *Time) Pos() sqltoken.Pos {
+	return t.From
+}
+
+func (t *Time) End() sqltoken.Pos {
+	return t.To
+}
 
 func (*Time) ToSQLString() string {
 	return "time"
@@ -135,6 +305,23 @@ func (*Time) ToSQLString() string {
 
 type Timestamp struct {
 	WithTimeZone bool
+	Timestamp    sqltoken.Pos
+	Zone         sqltoken.Pos
+}
+
+func (t *Timestamp) Pos() sqltoken.Pos {
+	return t.Timestamp
+}
+
+func (t *Timestamp) End() sqltoken.Pos {
+	if t.WithTimeZone {
+		return t.Zone
+	}
+
+	return sqltoken.Pos{
+		Line: t.Timestamp.Line,
+		Col:  t.Timestamp.Col + 9,
+	}
 }
 
 func (t *Timestamp) ToSQLString() string {
@@ -145,26 +332,65 @@ func (t *Timestamp) ToSQLString() string {
 	return "timestamp" + timezone
 }
 
-type Regclass struct{}
+type Regclass struct {
+	From, To sqltoken.Pos
+}
+
+func (r *Regclass) Pos() sqltoken.Pos {
+	return r.From
+}
+
+func (r *Regclass) End() sqltoken.Pos {
+	return r.To
+}
 
 func (*Regclass) ToSQLString() string {
 	return "regclass"
 }
 
-type Text struct{}
+type Text struct {
+	From, To sqltoken.Pos
+}
+
+func (t *Text) Pos() sqltoken.Pos {
+	return t.From
+}
+
+func (t *Text) End() sqltoken.Pos {
+	return t.To
+}
 
 func (*Text) ToSQLString() string {
 	return "text"
 }
 
-type Bytea struct{}
+type Bytea struct {
+	From, To sqltoken.Pos
+}
+
+func (b *Bytea) Pos() sqltoken.Pos {
+	return b.From
+}
+
+func (b *Bytea) End() sqltoken.Pos {
+	return b.To
+}
 
 func (*Bytea) ToSQLString() string {
 	return "bytea"
 }
 
 type Array struct {
-	Ty Type
+	Ty     Type
+	RParen sqltoken.Pos
+}
+
+func (a *Array) Pos() sqltoken.Pos {
+	return a.Ty.Pos()
+}
+
+func (a *Array) End() sqltoken.Pos {
+	return a.RParen
 }
 
 func (a *Array) ToSQLString() string {
@@ -173,6 +399,14 @@ func (a *Array) ToSQLString() string {
 
 type Custom struct {
 	Ty *ObjectName
+}
+
+func (c *Custom) Pos() sqltoken.Pos {
+	return c.Ty.Pos()
+}
+
+func (c *Custom) End() sqltoken.Pos {
+	return c.Ty.End()
 }
 
 func (c *Custom) ToSQLString() string {
