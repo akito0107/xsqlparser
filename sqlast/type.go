@@ -402,11 +402,11 @@ type Custom struct {
 }
 
 func (c *Custom) Pos() sqltoken.Pos {
-	return c.Pos()
+	return c.Ty.Pos()
 }
 
 func (c *Custom) End() sqltoken.Pos {
-	return c.End()
+	return c.Ty.End()
 }
 
 func (c *Custom) ToSQLString() string {

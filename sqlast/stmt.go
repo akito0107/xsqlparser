@@ -85,7 +85,7 @@ func (c *ConstructorSource) ToSQLString() string {
 	str := "VALUES "
 
 	for idx, r := range c.Rows {
-		str += fmt.Sprintf("%s", r.ToSQLString())
+		str += r.ToSQLString()
 		if idx != len(c.Rows)-1 {
 			str += ", "
 		}
@@ -418,7 +418,7 @@ func (c *ColumnDef) ToSQLString() string {
 	}
 
 	for _, cons := range c.Constraints {
-		str += fmt.Sprintf("%s", cons.ToSQLString())
+		str += cons.ToSQLString()
 	}
 	return str
 }
