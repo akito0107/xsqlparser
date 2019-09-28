@@ -10,6 +10,8 @@ import (
 	"log"
 	"strings"
 
+	errors "golang.org/x/xerrors"
+
 	"github.com/akito0107/xsqlparser/sqltoken"
 )
 
@@ -538,22 +540,21 @@ func (s *WindowFrameUnit) ToSQLString() string {
 	return ""
 }
 
-func (WindowFrameUnit) FromStr(str string) *WindowFrameUnit {
+func (WindowFrameUnit) FromStr(str string) (*WindowFrameUnit, error) {
 	if str == "ROWS" {
 		return &WindowFrameUnit{
 			Type: RowsUnit,
-		}
+		}, nil
 	} else if str == "RANGE" {
 		return &WindowFrameUnit{
 			Type: RangeUnit,
-		}
+		}, nil
 	} else if str == "GROUPS" {
 		return &WindowFrameUnit{
 			Type: GroupsUnit,
-		}
+		}, nil
 	}
-	log.Fatalf("expected ROWS, RANGE, GROUPS but: %s", str)
-	return nil
+	return nil, errors.Errorf("expected ROWS, RANGE, GROUPS but: %s", str)
 }
 
 //go:generate genmark -t SQLWindowFrameBound -e Node

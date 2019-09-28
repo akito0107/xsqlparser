@@ -92,6 +92,7 @@ func (p *Parser) ParseStatement() (sqlast.Stmt, error) {
 		p.prevToken()
 		return p.parseUpdate()
 	case "DROP":
+		p.prevToken()
 		return p.parseDrop()
 	case "EXPLAIN":
 		stmt, err := p.ParseStatement()
@@ -1114,7 +1115,11 @@ func (p *Parser) parseAlter() (sqlast.Stmt, error) {
 		if err != nil {
 			return nil, errors.Errorf("parseIdentifier failed: %w", err)
 		}
-		cascade, castok, _ := p.parseKeyword("CASCADE")
+		var caspos sqltoken.Pos
+		cascade, t, _ := p.parseKeyword("CASCADE")
+		if cascade {
+			caspos = t.To
+		}
 
 		return &sqlast.AlterTableStmt{
 			TableName: tableName,
@@ -1123,7 +1128,7 @@ func (p *Parser) parseAlter() (sqlast.Stmt, error) {
 				Drop:       toks[0].From,
 				Name:       constraintName,
 				Cascade:    cascade,
-				CascadePos: castok.To,
+				CascadePos: caspos,
 			},
 		}, nil
 	}
@@ -1133,7 +1138,11 @@ func (p *Parser) parseAlter() (sqlast.Stmt, error) {
 		if err != nil {
 			return nil, errors.Errorf("parseIdentifier failed: %w", err)
 		}
-		cascade, castok, _ := p.parseKeyword("CASCADE")
+		var caspos sqltoken.Pos
+		cascade, t, _ := p.parseKeyword("CASCADE")
+		if cascade {
+			caspos = t.To
+		}
 
 		return &sqlast.AlterTableStmt{
 			TableName: tableName,
@@ -1142,7 +1151,7 @@ func (p *Parser) parseAlter() (sqlast.Stmt, error) {
 				Name:       constraintName,
 				Drop:       toks[0].From,
 				Cascade:    cascade,
-				CascadePos: castok.To,
+				CascadePos: caspos,
 			},
 		}, nil
 	}
@@ -1166,7 +1175,12 @@ func (p *Parser) parseAlter() (sqlast.Stmt, error) {
 }
 
 func (p *Parser) parseDrop() (sqlast.Stmt, error) {
-	ok, _, _ := p.parseKeyword("TABLE")
+	ok, tok, _ := p.parseKeyword("DROP")
+	if !ok {
+		return nil, errors.Errorf("expected DROP but %s", tok)
+	}
+
+	ok, _, _ = p.parseKeyword("TABLE")
 
 	if !ok {
 		p.expectKeyword("INDEX")
@@ -1176,6 +1190,7 @@ func (p *Parser) parseDrop() (sqlast.Stmt, error) {
 		}
 
 		return &sqlast.DropIndexStmt{
+			Drop:       tok.From,
 			IndexNames: idents,
 		}, nil
 	}
@@ -1184,12 +1199,19 @@ func (p *Parser) parseDrop() (sqlast.Stmt, error) {
 	if err != nil {
 		return nil, errors.Errorf("parseObjectName failed: %w", err)
 	}
-	cascade, _, _ := p.parseKeyword("CASCADE")
+
+	var caspos sqltoken.Pos
+	cascade, t, _ := p.parseKeyword("CASCADE")
+	if cascade {
+		caspos = t.To
+	}
 
 	return &sqlast.DropTableStmt{
+		Drop:       tok.From,
 		TableNames: []*sqlast.ObjectName{tableName},
 		Cascade:    cascade,
 		IfExists:   exists,
+		CascadePos: caspos,
 	}, nil
 }
 
@@ -2187,7 +2209,7 @@ func (p *Parser) parseFunction(name *sqlast.ObjectName) (sqlast.Node, error) {
 
 		var orderBy []*sqlast.OrderByExpr
 		var order sqltoken.Pos
-		ok, otok, _ := p.parseKeyword("PARTITION")
+		ok, otok, _ := p.parseKeyword("ORDER")
 		if ok {
 			p.expectKeyword("BY")
 			el, err := p.parseOrderByExprList()
@@ -2272,8 +2294,12 @@ func (p *Parser) parseWindowFrame() (*sqlast.WindowFrame, error) {
 	if t.Kind == sqltoken.SQLKeyword {
 		w := t.Value.(*sqltoken.SQLWord)
 		var u sqlast.WindowFrameUnit
+
 		// FIXME
-		units := u.FromStr(w.Keyword)
+		units, err := u.FromStr(w.Keyword)
+		if err != nil {
+			return nil, errors.Errorf("invalid window frame unit: %w", err)
+		}
 		p.mustNextToken()
 
 		if ok, _, _ := p.parseKeyword("BETWEEN"); ok {
