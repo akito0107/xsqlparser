@@ -24,9 +24,11 @@ type Parser struct {
 
 type ParserOption func(*Parser)
 
-func ParseComment(p *Parser) {
-	p.parseComment = true
-	p.comments = make(map[sqltoken.Pos]*sqlast.CommentGroup)
+func ParseComment() ParserOption {
+	return func(p *Parser) {
+		p.parseComment = true
+		p.comments = make(map[sqltoken.Pos]*sqlast.CommentGroup)
+	}
 }
 
 func NewParser(src io.Reader, dialect dialect.Dialect, opts ...ParserOption) (*Parser, error) {
@@ -58,7 +60,7 @@ func (p *Parser) ParseFile() (*sqlast.File, error) {
 	}
 
 	sort.Slice(comments, func(i, j int) bool {
-		return sqltoken.ComparePos(comments[i].Pos(), comments[j].Pos()) > 0
+		return sqltoken.ComparePos(comments[i].Pos(), comments[j].Pos()) < 0
 	})
 
 	return &sqlast.File{
@@ -2770,9 +2772,12 @@ func (p *Parser) nextToken() (*sqltoken.Token, error) {
 }
 
 func (p *Parser) nextTokenWithParseComment() (*sqltoken.Token, error) {
-	var m *sqlast.CommentGroup
 	var t *sqltoken.Token
 	var skipComment bool // skip comments when already parsed
+
+	var groups []*sqlast.CommentGroup
+
+	m := &sqlast.CommentGroup{}
 
 	for {
 		tok, err := p.nextTokenNoSkip()
@@ -2782,6 +2787,11 @@ func (p *Parser) nextTokenWithParseComment() (*sqltoken.Token, error) {
 		}
 
 		if tok.Kind == sqltoken.Whitespace {
+			// TODO: improve CommentGroup granularity
+			// if tok.Value.(string) == "\n" && len(m.List) > 0 {
+			// 	groups = append(groups, m)
+			// 	m = &sqlast.CommentGroup{}
+			// }
 			continue
 		}
 
@@ -2809,7 +2819,16 @@ func (p *Parser) nextTokenWithParseComment() (*sqltoken.Token, error) {
 		break
 	}
 
-	p.comments[m.List[0].From] = m
+	if len(m.List) > 0 {
+		groups = append(groups, m)
+	}
+
+	for _, g := range groups {
+		if len(g.List) > 0 {
+			p.comments[g.Pos()] = g
+		}
+	}
+
 	return t, nil
 }
 

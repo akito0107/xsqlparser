@@ -1950,4 +1950,115 @@ create table item (
 	}
 }
 
-func TestParser_ParseFile(t *testing.T) {}
+func TestParser_ParseFile(t *testing.T) {
+
+	cases := []struct {
+		name string
+		skip bool
+		in   string
+		out  []*sqlast.CommentGroup
+	}{
+		{
+			name: "single line",
+			in: `--comment
+select 1 from test;`,
+			out: []*sqlast.CommentGroup{
+				{
+					List: []*sqlast.Comment{
+						{
+							Text: "comment",
+							From: sqltoken.NewPos(1, 0),
+							To:   sqltoken.NewPos(1, 9),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "multi line",
+			in: `
+create table account (
+    account_id serial primary key,  --aaa
+	/*bbb*/
+    name varchar(255) not null,
+    email /*ccc*/ varchar(255) unique not null
+);
+
+--ddd
+--eee
+
+/*fff
+ggg
+*/
+select 1 from test;
+`,
+			out: []*sqlast.CommentGroup{
+				{
+					List: []*sqlast.Comment{
+						{
+							Text: "aaa",
+							From: sqltoken.NewPos(3, 36),
+							To:   sqltoken.NewPos(3, 41),
+						},
+						{
+							Text: "bbb",
+							From: sqltoken.NewPos(4, 4),
+							To:   sqltoken.NewPos(4, 11),
+						},
+					},
+				},
+				{
+					List: []*sqlast.Comment{
+						{
+							Text: "ccc",
+							From: sqltoken.NewPos(6, 10),
+							To:   sqltoken.NewPos(6, 17),
+						},
+					},
+				},
+				{
+					List: []*sqlast.Comment{
+						{
+							Text: "ddd",
+							From: sqltoken.NewPos(9, 0),
+							To:   sqltoken.NewPos(9, 5),
+						},
+						{
+							Text: "eee",
+							From: sqltoken.NewPos(10, 0),
+							To:   sqltoken.NewPos(10, 5),
+						},
+						{
+							Text: "fff\nggg\n",
+							From: sqltoken.NewPos(12, 0),
+							To:   sqltoken.NewPos(14, 2),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if c.skip {
+				t.Skip()
+			}
+			parser, err := NewParser(bytes.NewBufferString(c.in), &dialect.GenericSQLDialect{}, ParseComment())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			f, err := parser.ParseFile()
+			if err != nil {
+				t.Fatalf("%+v", err)
+			}
+
+			if diff := cmp.Diff(c.out, f.Comments); diff != "" {
+				t.Errorf("diff %s", diff)
+			}
+
+		})
+	}
+
+}

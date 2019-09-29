@@ -87,6 +87,8 @@ func ComparePos(x, y Pos) int {
 
 	if x.Line > y.Line {
 		return 1
+	} else if x.Line < y.Line {
+		return -1
 	}
 
 	if x.Col > y.Col {
