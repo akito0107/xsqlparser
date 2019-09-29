@@ -10,9 +10,8 @@ import (
 	"log"
 	"strings"
 
-	errors "golang.org/x/xerrors"
-
 	"github.com/akito0107/xsqlparser/sqltoken"
+	errors "golang.org/x/xerrors"
 )
 
 // AST Node interface. All node types implements this interface.
@@ -22,14 +21,15 @@ type Node interface {
 	End() sqltoken.Pos   // position of last character belonging to the node
 }
 
+type File struct {
+	Stmts    []Stmt
+	Comments []*CommentGroup
+}
+
 // Identifier
 type Ident struct {
 	Value    string
 	From, To sqltoken.Pos
-}
-
-func NewIdentFromWord(s *sqltoken.SQLWord) *Ident {
-	return NewIdent(s.String())
 }
 
 func NewIdent(str string) *Ident {

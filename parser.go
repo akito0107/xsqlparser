@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -15,18 +16,55 @@ import (
 )
 
 type Parser struct {
-	tokens []*sqltoken.Token
-	index  uint
+	tokens       []*sqltoken.Token
+	index        uint
+	comments     map[sqltoken.Pos]*sqlast.CommentGroup
+	parseComment bool
 }
 
-func NewParser(src io.Reader, dialect dialect.Dialect) (*Parser, error) {
+type ParserOption func(*Parser)
+
+func ParseComment(p *Parser) {
+	p.parseComment = true
+	p.comments = make(map[sqltoken.Pos]*sqlast.CommentGroup)
+}
+
+func NewParser(src io.Reader, dialect dialect.Dialect, opts ...ParserOption) (*Parser, error) {
 	tokenizer := sqltoken.NewTokenizer(src, dialect)
 	set, err := tokenizer.Tokenize()
 	if err != nil {
 		return nil, errors.Errorf("tokenize err failed: %w", err)
 	}
 
-	return &Parser{tokens: set, index: 0}, nil
+	parser := &Parser{tokens: set, index: 0}
+
+	for _, o := range opts {
+		o(parser)
+	}
+
+	return parser, nil
+}
+
+func (p *Parser) ParseFile() (*sqlast.File, error) {
+	stmts, err := p.ParseSQL()
+	if err != nil {
+		return nil, err
+	}
+
+	var comments []*sqlast.CommentGroup
+
+	for _, c := range p.comments {
+		comments = append(comments, c)
+	}
+
+	sort.Slice(comments, func(i, j int) bool {
+		return sqltoken.ComparePos(comments[i].Pos(), comments[j].Pos()) > 0
+	})
+
+	return &sqlast.File{
+		Stmts:    stmts,
+		Comments: comments,
+	}, nil
 }
 
 func (p *Parser) ParseSQL() ([]sqlast.Stmt, error) {
@@ -2715,6 +2753,10 @@ func (p *Parser) mustNextToken() *sqltoken.Token {
 }
 
 func (p *Parser) nextToken() (*sqltoken.Token, error) {
+	if p.parseComment {
+		return p.nextTokenWithParseComment()
+	}
+
 	for {
 		tok, err := p.nextTokenNoSkip()
 		if err != nil {
@@ -2725,6 +2767,50 @@ func (p *Parser) nextToken() (*sqltoken.Token, error) {
 		}
 		return tok, nil
 	}
+}
+
+func (p *Parser) nextTokenWithParseComment() (*sqltoken.Token, error) {
+	var m *sqlast.CommentGroup
+	var t *sqltoken.Token
+	var skipComment bool // skip comments when already parsed
+
+	for {
+		tok, err := p.nextTokenNoSkip()
+
+		if err != nil {
+			return nil, err
+		}
+
+		if tok.Kind == sqltoken.Whitespace {
+			continue
+		}
+
+		if tok.Kind == sqltoken.Comment {
+			if skipComment {
+				continue
+			}
+
+			_, ok := p.comments[tok.From]
+			if ok {
+				skipComment = true
+				continue
+			}
+
+			text := tok.Value.(string)
+			m.List = append(m.List, &sqlast.Comment{
+				From: tok.From,
+				To:   tok.To,
+				Text: text,
+			})
+			continue
+		}
+
+		t = tok
+		break
+	}
+
+	p.comments[m.List[0].From] = m
+	return t, nil
 }
 
 var TokenAlreadyConsumed = errors.New("tokens are already consumed")

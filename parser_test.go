@@ -1949,3 +1949,5 @@ create table item (
 		t.Fatal("must be 3 stmts")
 	}
 }
+
+func TestParser_ParseFile(t *testing.T) {}
