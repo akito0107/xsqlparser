@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/akito0107/xsqlparser"
-	"github.com/akito0107/xsqlparser/astutil"
+	"github.com/akito0107/xsqlparser/sqlastutil"
 	"github.com/akito0107/xsqlparser/dialect"
 	"github.com/akito0107/xsqlparser/sqlast"
 )
@@ -147,7 +147,7 @@ func TestApply(t *testing.T) {
 					if err != nil {
 						t.Fatalf("%+v", err)
 					}
-					astutil.Apply(stmt, func(c *astutil.Cursor) bool {
+					sqlastutil.Apply(stmt, func(c *sqlastutil.Cursor) bool {
 						// fmt.Printf("%T\n", node)
 						return true
 					}, nil)
