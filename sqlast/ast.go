@@ -26,6 +26,24 @@ type File struct {
 	Comments []*CommentGroup
 }
 
+func (f *File) End() sqltoken.Pos {
+	return f.Stmts[len(f.Stmts)-1].End()
+}
+
+func (f *File) Pos() sqltoken.Pos {
+	return f.Stmts[0].Pos()
+}
+
+func (f *File) ToSQLString() string {
+	sqls := make([]string, len(f.Stmts))
+
+	for i, stmt := range f.Stmts {
+		sqls[i] += stmt.ToSQLString()
+	}
+
+	return strings.Join(sqls, "\n")
+}
+
 // Identifier
 type Ident struct {
 	Value    string

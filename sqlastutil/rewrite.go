@@ -126,6 +126,8 @@ func (a *application) apply(parent sqlast.Node, name string, iter *iterator, n s
 	}
 
 	switch n := n.(type) {
+	case *sqlast.File:
+		a.applyList(n, "Stmts")
 	case *sqlast.Ident:
 		// nothing to do
 	case *sqlast.Wildcard:

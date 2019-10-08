@@ -26,6 +26,10 @@ func Walk(v Visitor, node Node) {
 	}
 
 	switch n := node.(type) {
+	case *File:
+		for _, stmt := range n.Stmts {
+			Walk(v, stmt)
+		}
 	case *Ident:
 		// nothing to do
 	case *Wildcard:
