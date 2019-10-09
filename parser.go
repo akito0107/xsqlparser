@@ -24,11 +24,9 @@ type Parser struct {
 
 type ParserOption func(*Parser)
 
-func ParseComment() ParserOption {
-	return func(p *Parser) {
-		p.parseComment = true
-		p.comments = make(map[sqltoken.Pos]*sqlast.CommentGroup)
-	}
+func ParseComment(p *Parser) {
+	p.parseComment = true
+	p.comments = make(map[sqltoken.Pos]*sqlast.CommentGroup)
 }
 
 func NewParser(src io.Reader, dialect dialect.Dialect, opts ...ParserOption) (*Parser, error) {

@@ -19,7 +19,7 @@ func TestNewCommentMap(t *testing.T) {
 SELECT * from test;
 `
 
-		parser, err := xsqlparser.NewParser(strings.NewReader(src), &dialect.GenericSQLDialect{}, xsqlparser.ParseComment())
+		parser, err := xsqlparser.NewParser(strings.NewReader(src), &dialect.GenericSQLDialect{}, xsqlparser.ParseComment)
 		if err != nil {
 			t.Fatal(err)
 		}
