@@ -26,12 +26,45 @@ func parseFile(t *testing.T, src string) *sqlast.File {
 	return f
 }
 
+func compareMap(t *testing.T, expect, actual []*sqlast.CommentGroup) {
+	t.Helper()
+	if diff := cmp.Diff(expect, actual); diff != "" {
+		t.Error(diff)
+	}
+}
+
 func TestNewCommentMap(t *testing.T) {
 
-	t.Run("associate with single statements", func(t *testing.T) {
+	t.Run("associate with single statement", func(t *testing.T) {
 		f := parseFile(t, `
 --test
 SELECT * from test;
+`)
+
+		m := sqlast.NewCommentMap(f)
+		compareMap(t, m[f.Stmts[0]], []*sqlast.CommentGroup{
+			{
+				List: []*sqlast.Comment{
+					{
+						Text: "test",
+						From: sqltoken.NewPos(2, 0),
+						To:   sqltoken.NewPos(2, 6),
+					},
+				},
+			},
+		})
+	})
+
+	t.Run("associate with multi statements", func(t *testing.T) {
+
+		f := parseFile(t, `
+--select
+SELECT * from test;
+
+/*
+insert
+*/
+INSERT INTO tbl_name (col1,col2) VALUES(15,col1*2);
 `)
 
 		m := sqlast.NewCommentMap(f)
@@ -40,9 +73,23 @@ SELECT * from test;
 			{
 				List: []*sqlast.Comment{
 					{
-						Text: "test",
+						Text: "select",
 						From: sqltoken.NewPos(2, 0),
-						To:   sqltoken.NewPos(2, 6),
+						To:   sqltoken.NewPos(2, 8),
+					},
+				},
+			},
+		}); diff != "" {
+			t.Error(diff)
+		}
+
+		if diff := cmp.Diff(m[f.Stmts[1]], []*sqlast.CommentGroup{
+			{
+				List: []*sqlast.Comment{
+					{
+						Text: "\ninsert\n",
+						From: sqltoken.NewPos(5, 0),
+						To:   sqltoken.NewPos(7, 2),
 					},
 				},
 			},
