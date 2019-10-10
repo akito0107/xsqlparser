@@ -27,10 +27,23 @@ type File struct {
 }
 
 func (f *File) End() sqltoken.Pos {
+
+	if len(f.Comments) != 0 {
+		if sqltoken.ComparePos(f.Comments[len(f.Comments)-1].End(), f.Stmts[len(f.Stmts)-1].End()) == 1 {
+			return f.Comments[len(f.Comments)-1].End()
+		}
+	}
+
 	return f.Stmts[len(f.Stmts)-1].End()
 }
 
 func (f *File) Pos() sqltoken.Pos {
+	if len(f.Comments) != 0 {
+		if sqltoken.ComparePos(f.Stmts[0].Pos(), f.Comments[0].Pos()) == 1 {
+			return f.Comments[0].Pos()
+		}
+	}
+
 	return f.Stmts[0].Pos()
 }
 
