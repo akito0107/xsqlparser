@@ -104,7 +104,7 @@ func Walk(v Visitor, node Node) {
 		// nothing to do
 	case *Following:
 		// nothing to do
-	case *Query:
+	case *QueryStmt:
 		for _, c := range n.CTEs {
 			Walk(v, c)
 		}

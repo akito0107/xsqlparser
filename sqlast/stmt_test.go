@@ -77,7 +77,7 @@ func TestSQLInsert_ToSQLString(t *testing.T) {
 					NewIdent("contract_name"),
 				},
 				Source: &SubQuerySource{
-					SubQuery: &Query{
+					SubQuery: &QueryStmt{
 						Body: &SelectExpr{
 							Select: &SQLSelect{
 								Projection: []SQLSelectItem{
@@ -187,7 +187,7 @@ func TestSQLCreateView_ToSQLString(t *testing.T) {
 			name: "simple case",
 			in: &CreateViewStmt{
 				Name: NewObjectName("customers_view"),
-				Query: &Query{
+				Query: &QueryStmt{
 					Body: &SelectExpr{
 						Select: &SQLSelect{
 							Projection: []SQLSelectItem{

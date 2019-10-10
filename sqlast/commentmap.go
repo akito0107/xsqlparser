@@ -136,7 +136,7 @@ func NewCommentMap(file *File) CommentMap {
 		pend = p.End()
 
 		switch q.(type) {
-		case *Query:
+		case Stmt, *QueryStmt, *InsertStmt:
 			stack.push(q)
 		}
 	}

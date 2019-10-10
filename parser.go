@@ -265,7 +265,7 @@ func (p *Parser) ParseExpr() (sqlast.Node, error) {
 	return p.parseSubexpr(0)
 }
 
-func (p *Parser) parseQuery() (*sqlast.Query, error) {
+func (p *Parser) parseQuery() (*sqlast.QueryStmt, error) {
 	hasCTE, _, _ := p.parseKeyword("WITH")
 	var ctes []*sqlast.CTE
 	if hasCTE {
@@ -299,7 +299,7 @@ func (p *Parser) parseQuery() (*sqlast.Query, error) {
 		limit = l
 	}
 
-	return &sqlast.Query{
+	return &sqlast.QueryStmt{
 		CTEs:    ctes,
 		Body:    body,
 		Limit:   limit,

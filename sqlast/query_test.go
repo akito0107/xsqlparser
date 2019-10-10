@@ -201,17 +201,17 @@ func TestSQLSelect_ToSQLString(t *testing.T) {
 func TestSQLQuery_ToSQLString(t *testing.T) {
 	cases := []struct {
 		name string
-		in   *Query
+		in   *QueryStmt
 		out  string
 	}{
 		{
 			// from https://www.postgresql.jp/document/9.3/html/queries-with.html
 			name: "with cte",
-			in: &Query{
+			in: &QueryStmt{
 				CTEs: []*CTE{
 					{
 						Alias: NewIdent("regional_sales"),
-						Query: &Query{
+						Query: &QueryStmt{
 							Body: &SQLSelect{
 								Projection: []SQLSelectItem{
 									&UnnamedSelectItem{Node: NewIdent("region")},
@@ -251,7 +251,7 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 					},
 					WhereClause: &InSubQuery{
 						Expr: NewIdent("region"),
-						SubQuery: &Query{
+						SubQuery: &QueryStmt{
 							Body: &SQLSelect{
 								Projection: []SQLSelectItem{
 									&UnnamedSelectItem{Node: NewIdent("region")},
@@ -277,7 +277,7 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 		},
 		{
 			name: "order by and limit",
-			in: &Query{
+			in: &QueryStmt{
 				Body: &SQLSelect{
 					Projection: []SQLSelectItem{
 						&UnnamedSelectItem{Node: NewIdent("product")},
@@ -296,7 +296,7 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 					},
 					WhereClause: &InSubQuery{
 						Expr: NewIdent("region"),
-						SubQuery: &Query{
+						SubQuery: &QueryStmt{
 							Body: &SQLSelect{
 								Projection: []SQLSelectItem{
 									&UnnamedSelectItem{Node: NewIdent("region")},
@@ -322,7 +322,7 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 		},
 		{
 			name: "exists",
-			in: &Query{
+			in: &QueryStmt{
 				Body: &SQLSelect{
 					Projection: []SQLSelectItem{
 						&UnnamedSelectItem{
@@ -336,7 +336,7 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 					},
 					WhereClause: &Exists{
 						Negated: true,
-						Query: &Query{
+						Query: &QueryStmt{
 							Body: &SQLSelect{
 								Projection: []SQLSelectItem{
 									&UnnamedSelectItem{
@@ -387,7 +387,7 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 		},
 		{
 			name: "between / case",
-			in: &Query{
+			in: &QueryStmt{
 				Body: &SQLSelect{
 					Projection: []SQLSelectItem{
 						&AliasSelectItem{

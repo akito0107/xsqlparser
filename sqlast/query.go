@@ -8,8 +8,8 @@ import (
 	"github.com/akito0107/xsqlparser/sqltoken"
 )
 
-// Query stmt
-type Query struct {
+// QueryStmt stmt
+type QueryStmt struct {
 	stmt
 	With    sqltoken.Pos // first char position of WITH if CTEs is not blank
 	CTEs    []*CTE
@@ -18,7 +18,7 @@ type Query struct {
 	Limit   *LimitExpr
 }
 
-func (q *Query) Pos() sqltoken.Pos {
+func (q *QueryStmt) Pos() sqltoken.Pos {
 	if len(q.CTEs) != 0 {
 		return q.With
 	}
@@ -26,7 +26,7 @@ func (q *Query) Pos() sqltoken.Pos {
 	return q.Body.Pos()
 }
 
-func (q *Query) End() sqltoken.Pos {
+func (q *QueryStmt) End() sqltoken.Pos {
 	if q.Limit != nil {
 		return q.Limit.End()
 	}
@@ -38,7 +38,7 @@ func (q *Query) End() sqltoken.Pos {
 	return q.Body.End()
 }
 
-func (q *Query) ToSQLString() string {
+func (q *QueryStmt) ToSQLString() string {
 	var query string
 
 	if len(q.CTEs) != 0 {
@@ -66,7 +66,7 @@ func (q *Query) ToSQLString() string {
 // CTE
 type CTE struct {
 	Alias  *Ident
-	Query  *Query
+	Query  *QueryStmt
 	RParen sqltoken.Pos
 }
 
@@ -102,11 +102,11 @@ func (s *SelectExpr) ToSQLString() string {
 	return s.Select.ToSQLString()
 }
 
-// (Query)
+// (QueryStmt)
 type QueryExpr struct {
 	sqlSetExpr
 	LParen, RParen sqltoken.Pos
-	Query          *Query
+	Query          *QueryStmt
 }
 
 func (q *QueryExpr) Pos() sqltoken.Pos {
@@ -316,7 +316,7 @@ type Derived struct {
 	LateralPos sqltoken.Pos // last position of LATERAL keyword if Lateral is true
 	LParen     sqltoken.Pos
 	RParen     sqltoken.Pos
-	SubQuery   *Query
+	SubQuery   *QueryStmt
 	Alias      *Ident
 }
 

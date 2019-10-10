@@ -12,7 +12,7 @@ import (
 
 func TestNewCommentMap(t *testing.T) {
 
-	t.Run("simple case", func(t *testing.T) {
+	t.Run("associate with single statements", func(t *testing.T) {
 
 		src := `
 --test

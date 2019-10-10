@@ -199,7 +199,7 @@ func (s *InList) ToSQLString() string {
 // `Expr [ NOT ] IN SubQuery`
 type InSubQuery struct {
 	Expr     Node
-	SubQuery *Query
+	SubQuery *QueryStmt
 	Negated  bool
 	RParen   sqltoken.Pos
 }
@@ -378,10 +378,10 @@ func (s *CaseExpr) ToSQLString() string {
 	return str
 }
 
-// [ NOT ] EXISTS (Query)
+// [ NOT ] EXISTS (QueryStmt)
 type Exists struct {
 	Negated bool
-	Query   *Query
+	Query   *QueryStmt
 	Not     sqltoken.Pos // first position of NOT keyword when Negated is true
 	Exists  sqltoken.Pos // first position of EXISTS keyword
 	RParen  sqltoken.Pos
@@ -402,10 +402,10 @@ func (s *Exists) ToSQLString() string {
 	return fmt.Sprintf("%sEXISTS (%s)", negatedString(s.Negated), s.Query.ToSQLString())
 }
 
-// (Query)
+// (QueryStmt)
 type SubQuery struct {
 	RParen, LParen sqltoken.Pos
-	Query          *Query
+	Query          *QueryStmt
 }
 
 func (s *SubQuery) Pos() sqltoken.Pos {

@@ -32,7 +32,7 @@ func TestParser_ParseStatement(t *testing.T) {
 			{
 				name: "simple select",
 				in:   "SELECT test FROM test_table",
-				out: &sqlast.Query{
+				out: &sqlast.QueryStmt{
 					Body: &sqlast.SQLSelect{
 						Select: sqltoken.NewPos(1, 0),
 						Projection: []sqlast.SQLSelectItem{
@@ -63,7 +63,7 @@ func TestParser_ParseStatement(t *testing.T) {
 			{
 				name: "where",
 				in:   "SELECT test FROM test_table WHERE test_table.column1 = 'test'",
-				out: &sqlast.Query{
+				out: &sqlast.QueryStmt{
 					Body: &sqlast.SQLSelect{
 						Select: sqltoken.NewPos(1, 0),
 						Projection: []sqlast.SQLSelectItem{
@@ -120,7 +120,7 @@ func TestParser_ParseStatement(t *testing.T) {
 			{
 				name: "count and join",
 				in:   "SELECT COUNT(t1.id) AS c FROM test_table AS t1 LEFT JOIN test_table2 AS t2 ON t1.id = t2.test_table_id",
-				out: &sqlast.Query{
+				out: &sqlast.QueryStmt{
 					Body: &sqlast.SQLSelect{
 						Select: sqltoken.NewPos(1, 0),
 						Projection: []sqlast.SQLSelectItem{
@@ -247,7 +247,7 @@ func TestParser_ParseStatement(t *testing.T) {
 			{
 				name: "group by",
 				in:   "SELECT COUNT(customer_id), country.* FROM customers GROUP BY country",
-				out: &sqlast.Query{
+				out: &sqlast.QueryStmt{
 					Body: &sqlast.SQLSelect{
 						Select: sqltoken.NewPos(1, 0),
 						Projection: []sqlast.SQLSelectItem{
@@ -313,7 +313,7 @@ func TestParser_ParseStatement(t *testing.T) {
 FROM customers 
 GROUP BY country 
 HAVING COUNT(customer_id) > 3`,
-				out: &sqlast.Query{
+				out: &sqlast.QueryStmt{
 					Body: &sqlast.SQLSelect{
 						Select: sqltoken.NewPos(1, 0),
 						Projection: []sqlast.SQLSelectItem{
@@ -406,7 +406,7 @@ HAVING COUNT(customer_id) > 3`,
 FROM orders 
 WHERE region IN (SELECT region FROM top_regions) 
 ORDER BY product_units LIMIT 100`,
-				out: &sqlast.Query{
+				out: &sqlast.QueryStmt{
 					Body: &sqlast.SQLSelect{
 						Select: sqltoken.NewPos(1, 0),
 						Projection: []sqlast.SQLSelectItem{
@@ -464,7 +464,7 @@ ORDER BY product_units LIMIT 100`,
 								To:    sqltoken.NewPos(3, 12),
 							},
 							RParen: sqltoken.NewPos(3, 48),
-							SubQuery: &sqlast.Query{
+							SubQuery: &sqlast.QueryStmt{
 								Body: &sqlast.SQLSelect{
 									Select: sqltoken.NewPos(3, 17),
 									Projection: []sqlast.SQLSelectItem{
@@ -519,7 +519,7 @@ SELECT product, SUM(quantity) AS product_units
 FROM orders
 WHERE region IN (SELECT region FROM top_regions)
 GROUP BY region, product`,
-				out: &sqlast.Query{
+				out: &sqlast.QueryStmt{
 					CTEs: []*sqlast.CTE{
 						{
 							Alias: &sqlast.Ident{
@@ -527,7 +527,7 @@ GROUP BY region, product`,
 								From:  sqltoken.NewPos(1, 5),
 								To:    sqltoken.NewPos(1, 19),
 							},
-							Query: &sqlast.Query{
+							Query: &sqlast.QueryStmt{
 								Body: &sqlast.SQLSelect{
 									Select: sqltoken.NewPos(1, 24),
 									Projection: []sqlast.SQLSelectItem{
@@ -644,7 +644,7 @@ GROUP BY region, product`,
 								From:  sqltoken.NewPos(4, 6),
 								To:    sqltoken.NewPos(4, 12),
 							},
-							SubQuery: &sqlast.Query{
+							SubQuery: &sqlast.QueryStmt{
 								Body: &sqlast.SQLSelect{
 									Select: sqltoken.NewPos(4, 17),
 									Projection: []sqlast.SQLSelectItem{
@@ -693,7 +693,7 @@ GROUP BY region, product`,
 (SELECT * 
 FROM user_sub 
 WHERE user.id = user_sub.id AND user_sub.job = 'job');`,
-				out: &sqlast.Query{
+				out: &sqlast.QueryStmt{
 					Body: &sqlast.SQLSelect{
 						Select: sqltoken.NewPos(1, 0),
 						Projection: []sqlast.SQLSelectItem{
@@ -721,7 +721,7 @@ WHERE user.id = user_sub.id AND user_sub.job = 'job');`,
 							Exists:  sqltoken.NewPos(1, 29),
 							Not:     sqltoken.NewPos(1, 25),
 							RParen:  sqltoken.NewPos(4, 53),
-							Query: &sqlast.Query{
+							Query: &sqlast.QueryStmt{
 								Body: &sqlast.SQLSelect{
 									Select: sqltoken.NewPos(2, 1),
 									Projection: []sqlast.SQLSelectItem{
@@ -815,7 +815,7 @@ CASE
  ELSE 'other' 
 END AS alias
 FROM user WHERE id BETWEEN 1 AND 2`,
-				out: &sqlast.Query{
+				out: &sqlast.QueryStmt{
 					Body: &sqlast.SQLSelect{
 						Select: sqltoken.NewPos(1, 0),
 						Projection: []sqlast.SQLSelectItem{
@@ -1420,7 +1420,7 @@ FOREIGN KEY(test_id) REFERENCES other_table(col1, col2)
 							},
 						},
 					},
-					Query: &sqlast.Query{
+					Query: &sqlast.QueryStmt{
 						Body: &sqlast.SQLSelect{
 							Select: sqltoken.NewPos(1, 24),
 							Projection: []sqlast.SQLSelectItem{
@@ -2044,7 +2044,7 @@ select 1 from test;
 			if c.skip {
 				t.Skip()
 			}
-			parser, err := NewParser(bytes.NewBufferString(c.in), &dialect.GenericSQLDialect{}, ParseComment())
+			parser, err := NewParser(bytes.NewBufferString(c.in), &dialect.GenericSQLDialect{}, ParseComment)
 			if err != nil {
 				t.Fatal(err)
 			}

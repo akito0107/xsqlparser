@@ -171,9 +171,9 @@ func (a *application) apply(parent sqlast.Node, name string, iter *iterator, n s
 	case *sqlast.CaseExpr:
 		a.apply(n, "Operand", nil, n.Operand)
 	case *sqlast.Exists:
-		a.apply(n, "Query", nil, n.Query)
+		a.apply(n, "QueryStmt", nil, n.Query)
 	case *sqlast.SubQuery:
-		a.apply(n, "Query", nil, n.Query)
+		a.apply(n, "QueryStmt", nil, n.Query)
 	case *sqlast.ObjectName:
 		a.applyList(n, "Idents")
 	case *sqlast.WindowSpec:
@@ -195,7 +195,7 @@ func (a *application) apply(parent sqlast.Node, name string, iter *iterator, n s
 		*sqlast.Preceding,
 		*sqlast.Following:
 		// nothing to do
-	case *sqlast.Query:
+	case *sqlast.QueryStmt:
 		a.applyList(n, "CTEs")
 		a.apply(n, "Body", nil, n.Body)
 		a.applyList(n, "OrderBy")
@@ -203,12 +203,12 @@ func (a *application) apply(parent sqlast.Node, name string, iter *iterator, n s
 			a.apply(n, "Limit", nil, n.Limit)
 		}
 	case *sqlast.CTE:
-		a.apply(n, "Query", nil, n.Query)
+		a.apply(n, "QueryStmt", nil, n.Query)
 		a.apply(n, "Alias", nil, n.Alias)
 	case *sqlast.SelectExpr:
 		a.apply(n, "Select", nil, n.Select)
 	case *sqlast.QueryExpr:
-		a.apply(n, "Query", nil, n.Query)
+		a.apply(n, "QueryStmt", nil, n.Query)
 	case *sqlast.SetOperationExpr:
 		a.apply(n, "Op", nil, n.Op)
 		a.apply(n, "Left", nil, n.Left)
@@ -348,7 +348,7 @@ func (a *application) apply(parent sqlast.Node, name string, iter *iterator, n s
 		}
 	case *sqlast.CreateViewStmt:
 		a.apply(n, "Name", nil, n.Name)
-		a.apply(n, "Query", nil, n.Query)
+		a.apply(n, "QueryStmt", nil, n.Query)
 	case *sqlast.CreateTableStmt:
 		a.apply(n, "Name", nil, n.Name)
 		a.applyList(n, "Elements")
