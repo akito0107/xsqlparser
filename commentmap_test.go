@@ -26,7 +26,7 @@ func parseFile(t *testing.T, src string) *sqlast.File {
 	return f
 }
 
-func compareMap(t *testing.T, expect, actual []*sqlast.CommentGroup) {
+func compareComment(t *testing.T, expect, actual []*sqlast.CommentGroup) {
 	t.Helper()
 	if diff := cmp.Diff(expect, actual); diff != "" {
 		t.Error(diff)
@@ -42,7 +42,7 @@ SELECT * from test;
 `)
 
 		m := sqlast.NewCommentMap(f)
-		compareMap(t, m[f.Stmts[0]], []*sqlast.CommentGroup{
+		compareComment(t, m[f.Stmts[0]], []*sqlast.CommentGroup{
 			{
 				List: []*sqlast.Comment{
 					{
@@ -66,10 +66,9 @@ insert
 */
 INSERT INTO tbl_name (col1,col2) VALUES(15,col1*2);
 `)
-
 		m := sqlast.NewCommentMap(f)
 
-		if diff := cmp.Diff(m[f.Stmts[0]], []*sqlast.CommentGroup{
+		compareComment(t, m[f.Stmts[0]], []*sqlast.CommentGroup{
 			{
 				List: []*sqlast.Comment{
 					{
@@ -79,11 +78,9 @@ INSERT INTO tbl_name (col1,col2) VALUES(15,col1*2);
 					},
 				},
 			},
-		}); diff != "" {
-			t.Error(diff)
-		}
+		})
 
-		if diff := cmp.Diff(m[f.Stmts[1]], []*sqlast.CommentGroup{
+		compareComment(t, m[f.Stmts[1]], []*sqlast.CommentGroup{
 			{
 				List: []*sqlast.Comment{
 					{
@@ -93,8 +90,69 @@ INSERT INTO tbl_name (col1,col2) VALUES(15,col1*2);
 					},
 				},
 			},
-		}); diff != "" {
-			t.Error(diff)
-		}
+		})
+	})
+
+	t.Run("create table", func(t *testing.T) {
+
+		f := parseFile(t, `
+/*associate with stmts*/
+CREATE TABLE test (
+	/*associate with columndef*/
+    col0 int primary key, --columndef
+	/*with constraints*/
+    col1 integer constraint test_constraint check (10 < col1 and col1 < 100),
+    foreign key (col0, col1) references test2(col1, col2), --tableconstraints
+	--table constrants
+    CONSTRAINT test_constraint check(col1 > 10)
+);
+`)
+
+		m := sqlast.NewCommentMap(f)
+		ct := f.Stmts[0].(*sqlast.CreateTableStmt)
+		compareComment(t, m[ct], []*sqlast.CommentGroup{
+			{
+				List: []*sqlast.Comment{
+					{
+						Text: "associate with stmts",
+						From: sqltoken.NewPos(2, 0),
+						To:   sqltoken.NewPos(2, 24),
+					},
+				},
+			},
+		})
+
+		compareComment(t, m[ct.Elements[0]], []*sqlast.CommentGroup{
+			{
+				List: []*sqlast.Comment{
+					{
+						Text: "associate with columndef",
+						From: sqltoken.NewPos(4, 4),
+						To:   sqltoken.NewPos(4, 32),
+					},
+				},
+			},
+			{
+				List: []*sqlast.Comment{
+					{
+						Text: "columndef",
+						From: sqltoken.NewPos(5, 26),
+						To:   sqltoken.NewPos(5, 37),
+					},
+				},
+			},
+		})
+
+		compareComment(t, m[ct.Elements[1]], []*sqlast.CommentGroup{
+			{
+				List: []*sqlast.Comment{
+					{
+						Text: "associate with columndef",
+						From: sqltoken.NewPos(4, 4),
+						To:   sqltoken.NewPos(4, 32),
+					},
+				},
+			},
+		})
 	})
 }

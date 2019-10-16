@@ -430,7 +430,7 @@ type ColumnConstraint struct {
 }
 
 func (c *ColumnConstraint) Pos() sqltoken.Pos {
-	if c.Name != nil {
+	if c.Name == nil {
 		return c.Constraint
 	}
 	return c.Name.Pos()

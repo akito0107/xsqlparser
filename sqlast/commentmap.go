@@ -137,7 +137,10 @@ func NewCommentMap(file *File) CommentMap {
 
 		switch q.(type) {
 		// Stmts
-		case *QueryStmt:
+		case *QueryStmt, *InsertStmt, *UpdateStmt, *DeleteStmt, *CreateViewStmt, *CreateTableStmt, *AlterTableStmt, *DropTableStmt, *CreateIndexStmt, *DropIndexStmt, *ExplainStmt:
+			stack.push(q)
+		// table element
+		case *ColumnDef, *TableConstraint:
 			stack.push(q)
 		}
 	}
