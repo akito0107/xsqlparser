@@ -611,7 +611,7 @@ func (p *Parser) parseElements() ([]sqlast.TableElement, error) {
 	for {
 		tok, _ := p.nextToken()
 		if tok == nil || tok.Kind != sqltoken.SQLKeyword {
-			return nil, errors.Errorf("parse error after column def")
+			return nil, errors.Errorf("parse error after column def %+v", tok)
 		}
 
 		word := tok.Value.(*sqltoken.SQLWord)
@@ -2785,28 +2785,29 @@ func (p *Parser) nextTokenWithParseComment() (*sqltoken.Token, error) {
 		}
 
 		if tok.Kind == sqltoken.Whitespace {
-			if tok.Value.(string) == "\n" && len(m.List) > 0 {
-				var splitgroup bool
+			if tok.Value.(string) != "\n" || len(m.List) == 0 {
+				continue
+			}
 
-				for i := p.index; i >= 0; i-- {
-					prev := p.tokens[i]
-					if prev.To.Line < tok.From.Line {
-						break
-					}
+			var splitgroup bool
 
-					if prev.Kind == sqltoken.Whitespace || prev.Kind == sqltoken.Comment {
-						continue
-					}
-
-					splitgroup = true
+			for i := p.index; i >= 0; i-- {
+				prev := p.tokens[i]
+				if prev.To.Line < tok.From.Line {
 					break
 				}
 
-				if splitgroup {
-					groups = append(groups, m)
-					m = &sqlast.CommentGroup{}
+				if prev.Kind != sqltoken.Whitespace && prev.Kind != sqltoken.Comment {
+					splitgroup = true
+					break
 				}
 			}
+
+			if splitgroup {
+				groups = append(groups, m)
+				m = &sqlast.CommentGroup{}
+			}
+
 			continue
 		}
 
