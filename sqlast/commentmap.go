@@ -112,11 +112,15 @@ func NewCommentMap(file *File) CommentMap {
 			}
 
 			var assoc Node
-
 			switch {
-			case pg != nil && (pgend.Line == r.pos.Line || pgend.Line+1 == r.pos.Line && r.end.Line+1 < qpos.Line):
+			case pg != nil &&
+				(pgend.Line == r.pos.Line ||
+					pgend.Line+1 == r.pos.Line && r.end.Line+1 < qpos.Line):
 				assoc = pg
-			case p != nil && (pend.Line == r.pos.Line || pend.Line+1 == r.pos.Line && r.end.Line+1 < qpos.Line || q == nil):
+			case p != nil &&
+				(pend.Line == r.pos.Line ||
+					pend.Line+1 == r.pos.Line && r.end.Line+1 < qpos.Line ||
+					q == nil):
 				assoc = p
 			default:
 				if q == nil {

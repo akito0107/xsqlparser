@@ -102,8 +102,8 @@ CREATE TABLE test (
     col0 int primary key, --columndef
 	/*with constraints*/
     col1 integer constraint test_constraint check (10 < col1 and col1 < 100),
-    foreign key (col0, col1) references test2(col1, col2), --tableconstraints
-	--table constrants
+    foreign key (col0, col1) references test2(col1, col2), --table constraints1
+	--table constraints2
     CONSTRAINT test_constraint check(col1 > 10)
 );
 `)
@@ -147,9 +147,33 @@ CREATE TABLE test (
 			{
 				List: []*sqlast.Comment{
 					{
-						Text: "associate with columndef",
-						From: sqltoken.NewPos(4, 4),
-						To:   sqltoken.NewPos(4, 32),
+						Text: "with constraints",
+						From: sqltoken.NewPos(6, 4),
+						To:   sqltoken.NewPos(6, 24),
+					},
+				},
+			},
+		})
+
+		compareComment(t, m[ct.Elements[2]], []*sqlast.CommentGroup{
+			{
+				List: []*sqlast.Comment{
+					{
+						Text: "table constraints1",
+						From: sqltoken.NewPos(8, 4),
+						To:   sqltoken.NewPos(8, 24),
+					},
+				},
+			},
+		})
+
+		compareComment(t, m[ct.Elements[3]], []*sqlast.CommentGroup{
+			{
+				List: []*sqlast.Comment{
+					{
+						Text: "table constraints2",
+						From: sqltoken.NewPos(9, 4),
+						To:   sqltoken.NewPos(9, 24),
 					},
 				},
 			},
