@@ -2068,31 +2068,29 @@ select 1 from test; /*lll*/ --mmm
 						},
 					},
 				},
-				/*
-					{
-						List: []*sqlast.Comment{
-							{
-								Text: "lll",
-								From: sqltoken.NewPos(10, 0),
-								To:   sqltoken.NewPos(10, 5),
-							},
-							{
-								Text: "mmm",
-								From: sqltoken.NewPos(12, 0),
-								To:   sqltoken.NewPos(14, 2),
-							},
+				{
+					List: []*sqlast.Comment{
+						{
+							Text: "lll",
+							From: sqltoken.NewPos(16, 20),
+							To:   sqltoken.NewPos(16, 27),
+						},
+						{
+							Text: "mmm",
+							From: sqltoken.NewPos(16, 28),
+							To:   sqltoken.NewPos(16, 33),
 						},
 					},
-					{
-						List: []*sqlast.Comment{
-							{
-								Text: "nnn",
-								From: sqltoken.NewPos(6, 10),
-								To:   sqltoken.NewPos(6, 17),
-							},
+				},
+				{
+					List: []*sqlast.Comment{
+						{
+							Text: "nnn",
+							From: sqltoken.NewPos(17, 0),
+							To:   sqltoken.NewPos(17, 5),
 						},
 					},
-				*/
+				},
 			},
 		},
 	}

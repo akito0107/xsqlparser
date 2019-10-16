@@ -72,20 +72,30 @@ func (p *Parser) ParseSQL() ([]sqlast.Stmt, error) {
 	var expectingDelimiter bool
 
 	for {
-		for {
-			ok, _ := p.consumeToken(sqltoken.Semicolon)
-			expectingDelimiter = false
-			if !ok {
-				break
-			}
+		ok, _ := p.consumeToken(sqltoken.Semicolon)
+		if !ok && expectingDelimiter {
+			tok, _ := p.peekToken()
+			return nil, errors.Errorf("expect semicolon but %+v", tok)
 		}
 
-		t, _ := p.peekToken()
-		if t == nil {
-			break
-		}
-		if expectingDelimiter {
-			return nil, errors.Errorf("unexpected sqltoken %+v", t)
+		if p.parseComment {
+			_, err := p.nextTokenWithParseComment()
+
+			if err == EOF {
+				break
+			} else if err != nil {
+				return nil, err
+			}
+
+			p.prevToken()
+		} else {
+			_, err := p.peekToken()
+
+			if err == EOF {
+				break
+			} else if err != nil {
+				return nil, err
+			}
 		}
 
 		stmt, err := p.ParseStatement()
@@ -2780,7 +2790,19 @@ func (p *Parser) nextTokenWithParseComment() (*sqltoken.Token, error) {
 	for {
 		tok, err := p.nextTokenNoSkip()
 
-		if err != nil {
+		if err == EOF {
+			if len(m.List) > 0 {
+				groups = append(groups, m)
+			}
+
+			for _, g := range groups {
+				if len(g.List) > 0 {
+					p.comments[g.Pos()] = g
+				}
+			}
+
+			return nil, err
+		} else if err != nil {
 			return nil, err
 		}
 
@@ -2791,8 +2813,8 @@ func (p *Parser) nextTokenWithParseComment() (*sqltoken.Token, error) {
 
 			var splitgroup bool
 
-			for i := p.index; i >= 0; i-- {
-				prev := p.tokens[i]
+			for i := p.index; i > 0; i-- {
+				prev := p.tokens[i-1]
 				if prev.To.Line < tok.From.Line {
 					break
 				}
@@ -2848,14 +2870,14 @@ func (p *Parser) nextTokenWithParseComment() (*sqltoken.Token, error) {
 	return t, nil
 }
 
-var TokenAlreadyConsumed = errors.New("tokens are already consumed")
+var EOF = errors.New("tokens are already consumed")
 
 func (p *Parser) nextTokenNoSkip() (*sqltoken.Token, error) {
 	if p.index < uint(len(p.tokens)) {
 		p.index += 1
 		return p.tokens[p.index-1], nil
 	}
-	return nil, TokenAlreadyConsumed
+	return nil, EOF
 }
 
 func (p *Parser) prevToken() *sqltoken.Token {
@@ -2888,7 +2910,7 @@ func (p *Parser) tilNonWhitespace() (uint, error) {
 	idx := p.index
 	for {
 		if idx >= uint(len(p.tokens)) {
-			return 0, TokenAlreadyConsumed
+			return 0, EOF
 		}
 		tok := p.tokens[idx]
 		if tok.Kind == sqltoken.Whitespace || tok.Kind == sqltoken.Comment {
