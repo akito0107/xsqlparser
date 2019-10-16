@@ -2785,11 +2785,28 @@ func (p *Parser) nextTokenWithParseComment() (*sqltoken.Token, error) {
 		}
 
 		if tok.Kind == sqltoken.Whitespace {
-			// TODO: improve CommentGroup granularity
-			// if tok.Value.(string) == "\n" && len(m.List) > 0 {
-			// 	groups = append(groups, m)
-			// 	m = &sqlast.CommentGroup{}
-			// }
+			if tok.Value.(string) == "\n" && len(m.List) > 0 {
+				var splitgroup bool
+
+				for i := p.index; i >= 0; i-- {
+					prev := p.tokens[i]
+					if prev.To.Line < tok.From.Line {
+						break
+					}
+
+					if prev.Kind == sqltoken.Whitespace || prev.Kind == sqltoken.Comment {
+						continue
+					}
+
+					splitgroup = true
+					break
+				}
+
+				if splitgroup {
+					groups = append(groups, m)
+					m = &sqlast.CommentGroup{}
+				}
+			}
 			continue
 		}
 

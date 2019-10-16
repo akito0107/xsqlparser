@@ -1981,16 +1981,18 @@ create table account (
     account_id serial primary key,  --aaa
 	/*bbb*/
     name varchar(255) not null,
-    email /*ccc*/ varchar(255) unique not null
+    email /*ccc*/ varchar(255) unique not null --ddd
 );
 
---ddd
 --eee
 
 /*fff
 ggg
 */
-select 1 from test;
+select 1 from test; --hhh
+/*jjj*/ --kkk
+select 1 from test; /*lll*/ --mmm
+--nnn
 `,
 			out: []*sqlast.CommentGroup{
 				{
@@ -2000,6 +2002,10 @@ select 1 from test;
 							From: sqltoken.NewPos(3, 36),
 							To:   sqltoken.NewPos(3, 41),
 						},
+					},
+				},
+				{
+					List: []*sqlast.Comment{
 						{
 							Text: "bbb",
 							From: sqltoken.NewPos(4, 4),
@@ -2020,18 +2026,68 @@ select 1 from test;
 					List: []*sqlast.Comment{
 						{
 							Text: "ddd",
+							From: sqltoken.NewPos(6, 47),
+							To:   sqltoken.NewPos(6, 52),
+						},
+					},
+				},
+				{
+					List: []*sqlast.Comment{
+						{
+							Text: "eee",
 							From: sqltoken.NewPos(9, 0),
 							To:   sqltoken.NewPos(9, 5),
 						},
 						{
-							Text: "eee",
+							Text: "fff\nggg\n",
+							From: sqltoken.NewPos(11, 0),
+							To:   sqltoken.NewPos(13, 2),
+						},
+					},
+				},
+				{
+					List: []*sqlast.Comment{
+						{
+							Text: "hhh",
+							From: sqltoken.NewPos(14, 20),
+							To:   sqltoken.NewPos(14, 25),
+						},
+					},
+				},
+				{
+					List: []*sqlast.Comment{
+						{
+							Text: "jjj",
+							From: sqltoken.NewPos(15, 0),
+							To:   sqltoken.NewPos(15, 7),
+						},
+						{
+							Text: "kkk",
+							From: sqltoken.NewPos(15, 8),
+							To:   sqltoken.NewPos(15, 13),
+						},
+					},
+				},
+				{
+					List: []*sqlast.Comment{
+						{
+							Text: "lll",
 							From: sqltoken.NewPos(10, 0),
 							To:   sqltoken.NewPos(10, 5),
 						},
 						{
-							Text: "fff\nggg\n",
+							Text: "mmm",
 							From: sqltoken.NewPos(12, 0),
 							To:   sqltoken.NewPos(14, 2),
+						},
+					},
+				},
+				{
+					List: []*sqlast.Comment{
+						{
+							Text: "nnn",
+							From: sqltoken.NewPos(6, 10),
+							To:   sqltoken.NewPos(6, 17),
 						},
 					},
 				},
