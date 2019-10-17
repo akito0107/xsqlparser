@@ -10,9 +10,8 @@ import (
 	"log"
 	"strings"
 
-	errors "golang.org/x/xerrors"
-
 	"github.com/akito0107/xsqlparser/sqltoken"
+	errors "golang.org/x/xerrors"
 )
 
 // AST Node interface. All node types implements this interface.
@@ -22,14 +21,46 @@ type Node interface {
 	End() sqltoken.Pos   // position of last character belonging to the node
 }
 
+type File struct {
+	Stmts    []Stmt
+	Comments []*CommentGroup
+}
+
+func (f *File) End() sqltoken.Pos {
+
+	if len(f.Comments) != 0 {
+		if sqltoken.ComparePos(f.Comments[len(f.Comments)-1].End(), f.Stmts[len(f.Stmts)-1].End()) == 1 {
+			return f.Comments[len(f.Comments)-1].End()
+		}
+	}
+
+	return f.Stmts[len(f.Stmts)-1].End()
+}
+
+func (f *File) Pos() sqltoken.Pos {
+	if len(f.Comments) != 0 {
+		if sqltoken.ComparePos(f.Stmts[0].Pos(), f.Comments[0].Pos()) == 1 {
+			return f.Comments[0].Pos()
+		}
+	}
+
+	return f.Stmts[0].Pos()
+}
+
+func (f *File) ToSQLString() string {
+	sqls := make([]string, len(f.Stmts))
+
+	for i, stmt := range f.Stmts {
+		sqls[i] += stmt.ToSQLString()
+	}
+
+	return strings.Join(sqls, "\n")
+}
+
 // Identifier
 type Ident struct {
 	Value    string
 	From, To sqltoken.Pos
-}
-
-func NewIdentFromWord(s *sqltoken.SQLWord) *Ident {
-	return NewIdent(s.String())
 }
 
 func NewIdent(str string) *Ident {
@@ -181,7 +212,7 @@ func (s *InList) ToSQLString() string {
 // `Expr [ NOT ] IN SubQuery`
 type InSubQuery struct {
 	Expr     Node
-	SubQuery *Query
+	SubQuery *QueryStmt
 	Negated  bool
 	RParen   sqltoken.Pos
 }
@@ -360,10 +391,10 @@ func (s *CaseExpr) ToSQLString() string {
 	return str
 }
 
-// [ NOT ] EXISTS (Query)
+// [ NOT ] EXISTS (QueryStmt)
 type Exists struct {
 	Negated bool
-	Query   *Query
+	Query   *QueryStmt
 	Not     sqltoken.Pos // first position of NOT keyword when Negated is true
 	Exists  sqltoken.Pos // first position of EXISTS keyword
 	RParen  sqltoken.Pos
@@ -384,10 +415,10 @@ func (s *Exists) ToSQLString() string {
 	return fmt.Sprintf("%sEXISTS (%s)", negatedString(s.Negated), s.Query.ToSQLString())
 }
 
-// (Query)
+// (QueryStmt)
 type SubQuery struct {
 	RParen, LParen sqltoken.Pos
-	Query          *Query
+	Query          *QueryStmt
 }
 
 func (s *SubQuery) Pos() sqltoken.Pos {

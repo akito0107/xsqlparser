@@ -76,8 +76,26 @@ type Pos struct {
 	Col  int
 }
 
-func (t *Pos) String() string {
-	return fmt.Sprintf("{Line: %d Col: %d}", t.Line, t.Col)
+func (p *Pos) String() string {
+	return fmt.Sprintf("{Line: %d Col: %d}", p.Line, p.Col)
+}
+
+func ComparePos(x, y Pos) int {
+	if x.Line == y.Line && x.Col == y.Col {
+		return 0
+	}
+
+	if x.Line > y.Line {
+		return 1
+	} else if x.Line < y.Line {
+		return -1
+	}
+
+	if x.Col > y.Col {
+		return 1
+	}
+
+	return -1
 }
 
 type Tokenizer struct {

@@ -52,7 +52,7 @@ func (i *InsertStmt) ToSQLString() string {
 // SubQuery Source
 type SubQuerySource struct {
 	insertSource
-	SubQuery *Query
+	SubQuery *QueryStmt
 }
 
 func (s *SubQuerySource) Pos() sqltoken.Pos {
@@ -217,7 +217,7 @@ type CreateViewStmt struct {
 	stmt
 	Create       sqltoken.Pos
 	Name         *ObjectName
-	Query        *Query
+	Query        *QueryStmt
 	Materialized bool
 }
 
@@ -430,7 +430,7 @@ type ColumnConstraint struct {
 }
 
 func (c *ColumnConstraint) Pos() sqltoken.Pos {
-	if c.Name != nil {
+	if c.Name == nil {
 		return c.Constraint
 	}
 	return c.Name.Pos()
