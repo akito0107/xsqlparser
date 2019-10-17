@@ -96,7 +96,7 @@ INSERT INTO tbl_name (col1,col2) VALUES(15,col1*2);
 	t.Run("create table", func(t *testing.T) {
 
 		f := parseFile(t, `
-/*associate with stmts*/
+/*associate with stmts1*/
 CREATE TABLE test (
 	/*associate with columndef*/
     col0 int primary key, --columndef
@@ -105,7 +105,7 @@ CREATE TABLE test (
     foreign key (col0, col1) references test2(col1, col2), --table constraints1
 	--table constraints2
     CONSTRAINT test_constraint check(col1 > 10)
-);
+); --associate with stmts2
 `)
 
 		m := sqlast.NewCommentMap(f)
@@ -114,9 +114,18 @@ CREATE TABLE test (
 			{
 				List: []*sqlast.Comment{
 					{
-						Text: "associate with stmts",
+						Text: "associate with stmts1",
 						From: sqltoken.NewPos(2, 0),
-						To:   sqltoken.NewPos(2, 24),
+						To:   sqltoken.NewPos(2, 25),
+					},
+				},
+			},
+			{
+				List: []*sqlast.Comment{
+					{
+						Text: "associate with stmts2",
+						From: sqltoken.NewPos(11, 3),
+						To:   sqltoken.NewPos(11, 26),
 					},
 				},
 			},
@@ -160,8 +169,8 @@ CREATE TABLE test (
 				List: []*sqlast.Comment{
 					{
 						Text: "table constraints1",
-						From: sqltoken.NewPos(8, 4),
-						To:   sqltoken.NewPos(8, 24),
+						From: sqltoken.NewPos(8, 59),
+						To:   sqltoken.NewPos(8, 79),
 					},
 				},
 			},

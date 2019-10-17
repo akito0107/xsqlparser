@@ -69,6 +69,7 @@ func (s *nodeStack) pop(pos sqltoken.Pos) (top Node) {
 		top = (*s)[i-1]
 		i--
 	}
+	*s = (*s)[0:i]
 
 	return top
 }
