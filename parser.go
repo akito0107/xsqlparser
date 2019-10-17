@@ -769,7 +769,7 @@ func (p *Parser) parseTableConstraints() (*sqlast.TableConstraint, error) {
 				Value: w.String(),
 			},
 			Columns: refcolumns,
-			RParen:  r.From,
+			RParen:  r.To,
 		}
 
 		spec = &sqlast.ReferentialTableConstraint{
