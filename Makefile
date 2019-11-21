@@ -15,11 +15,8 @@ tools/bin/genmark:
 generate: tools/bin/genmark
 	go generate ./...
 
-vendor: Gopkg.toml Gopkg.lock
-	dep ensure
-
 .PHONY: test
-test: vendor
+test:
 	go test ./... -cover -count=1 -v
 
 .PHONY: install
