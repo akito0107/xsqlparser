@@ -50,7 +50,7 @@ steps:
   displayName: 'Get dependencies, and the test'
 
 - script: |
-    go test -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./...
+    go test -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=.,./sqlast/...,./sqlastutil/...,./sqltoken/...,./dialect/... ./...
   workingDirectory: '$(modulePath)'
   displayName: 'Run test'
 
