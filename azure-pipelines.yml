@@ -8,8 +8,8 @@ trigger:
 
 strategy:
   matrix:
-    go_11:
-      go_version: 1.11
+    go_13:
+      go_version: 1.13
     go_12:
       go_version: 1.12
 
@@ -20,6 +20,7 @@ variables:
   GOBIN:  '$(GOPATH)/bin' # Go binaries path
   GOROOT: '/usr/local/go/$(go_version)' # Go installation path
   GOPATH: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
+  GO111MODULE: 'on'
   modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
 
 steps:
