@@ -47,8 +47,8 @@ SELECT * from test;
 				List: []*sqlast.Comment{
 					{
 						Text: "test",
-						From: sqltoken.NewPos(2, 0),
-						To:   sqltoken.NewPos(2, 6),
+						From: sqltoken.NewPos(2, 1),
+						To:   sqltoken.NewPos(2, 7),
 					},
 				},
 			},
@@ -73,8 +73,8 @@ INSERT INTO tbl_name (col1,col2) VALUES(15,col1*2);
 				List: []*sqlast.Comment{
 					{
 						Text: "select",
-						From: sqltoken.NewPos(2, 0),
-						To:   sqltoken.NewPos(2, 8),
+						From: sqltoken.NewPos(2, 1),
+						To:   sqltoken.NewPos(2, 9),
 					},
 				},
 			},
@@ -85,8 +85,8 @@ INSERT INTO tbl_name (col1,col2) VALUES(15,col1*2);
 				List: []*sqlast.Comment{
 					{
 						Text: "\ninsert\n",
-						From: sqltoken.NewPos(5, 0),
-						To:   sqltoken.NewPos(7, 2),
+						From: sqltoken.NewPos(5, 1),
+						To:   sqltoken.NewPos(7, 3),
 					},
 				},
 			},
@@ -115,8 +115,8 @@ CREATE TABLE test (
 				List: []*sqlast.Comment{
 					{
 						Text: "associate with stmts1",
-						From: sqltoken.NewPos(2, 0),
-						To:   sqltoken.NewPos(2, 25),
+						From: sqltoken.NewPos(2, 1),
+						To:   sqltoken.NewPos(2, 26),
 					},
 				},
 			},
@@ -124,8 +124,8 @@ CREATE TABLE test (
 				List: []*sqlast.Comment{
 					{
 						Text: "associate with stmts2",
-						From: sqltoken.NewPos(11, 3),
-						To:   sqltoken.NewPos(11, 26),
+						From: sqltoken.NewPos(11, 4),
+						To:   sqltoken.NewPos(11, 27),
 					},
 				},
 			},
@@ -136,8 +136,8 @@ CREATE TABLE test (
 				List: []*sqlast.Comment{
 					{
 						Text: "associate with columndef",
-						From: sqltoken.NewPos(4, 4),
-						To:   sqltoken.NewPos(4, 32),
+						From: sqltoken.NewPos(4, 5),
+						To:   sqltoken.NewPos(4, 33),
 					},
 				},
 			},
@@ -145,8 +145,8 @@ CREATE TABLE test (
 				List: []*sqlast.Comment{
 					{
 						Text: "columndef",
-						From: sqltoken.NewPos(5, 26),
-						To:   sqltoken.NewPos(5, 37),
+						From: sqltoken.NewPos(5, 27),
+						To:   sqltoken.NewPos(5, 38),
 					},
 				},
 			},
@@ -157,8 +157,8 @@ CREATE TABLE test (
 				List: []*sqlast.Comment{
 					{
 						Text: "with constraints",
-						From: sqltoken.NewPos(6, 4),
-						To:   sqltoken.NewPos(6, 24),
+						From: sqltoken.NewPos(6, 5),
+						To:   sqltoken.NewPos(6, 25),
 					},
 				},
 			},
@@ -169,8 +169,8 @@ CREATE TABLE test (
 				List: []*sqlast.Comment{
 					{
 						Text: "table constraints1",
-						From: sqltoken.NewPos(8, 59),
-						To:   sqltoken.NewPos(8, 79),
+						From: sqltoken.NewPos(8, 60),
+						To:   sqltoken.NewPos(8, 80),
 					},
 				},
 			},
@@ -181,8 +181,8 @@ CREATE TABLE test (
 				List: []*sqlast.Comment{
 					{
 						Text: "table constraints2",
-						From: sqltoken.NewPos(9, 4),
-						To:   sqltoken.NewPos(9, 24),
+						From: sqltoken.NewPos(9, 5),
+						To:   sqltoken.NewPos(9, 25),
 					},
 				},
 			},
