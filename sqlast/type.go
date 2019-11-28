@@ -134,10 +134,14 @@ func (b *Blob) ToSQLString() string {
 	return fmt.Sprintf("blob(%d)", b.Size)
 }
 
+// All unsigned props are only available on MySQL
+
 type Decimal struct {
 	Precision       *uint
 	Scale           *uint
 	Numeric, RParen sqltoken.Pos
+	IsUnsigned      bool
+	Unsigned        sqltoken.Pos
 }
 
 func (d *Decimal) Pos() sqltoken.Pos {
@@ -145,6 +149,9 @@ func (d *Decimal) Pos() sqltoken.Pos {
 }
 
 func (d *Decimal) End() sqltoken.Pos {
+	if d.IsUnsigned {
+		return d.Unsigned
+	}
 	return d.RParen
 }
 
@@ -152,12 +159,20 @@ func (d *Decimal) ToSQLString() string {
 	if d.Scale != nil {
 		return fmt.Sprintf("numeric(%d,%d)", *d.Precision, *d.Scale)
 	}
-	return formatTypeWithOptionalLength("numeric", d.Precision)
+	s := formatTypeWithOptionalLength("numeric", d.Precision)
+
+	if d.IsUnsigned {
+		s += " unsigned"
+	}
+
+	return s
 }
 
 type Float struct {
 	Size             *uint
 	From, To, RParen sqltoken.Pos
+	IsUnsigned       bool
+	Unsigned         sqltoken.Pos
 }
 
 func (f *Float) Pos() sqltoken.Pos {
@@ -165,6 +180,9 @@ func (f *Float) Pos() sqltoken.Pos {
 }
 
 func (f *Float) End() sqltoken.Pos {
+	if f.IsUnsigned {
+		return f.Unsigned
+	}
 	if f.Size != nil {
 		return f.RParen
 	}
@@ -172,11 +190,19 @@ func (f *Float) End() sqltoken.Pos {
 }
 
 func (f *Float) ToSQLString() string {
-	return formatTypeWithOptionalLength("float", f.Size)
+	s := formatTypeWithOptionalLength("float", f.Size)
+
+	if f.IsUnsigned {
+		s += " unsigned"
+	}
+
+	return s
 }
 
 type SmallInt struct {
-	From, To sqltoken.Pos
+	From, To   sqltoken.Pos
+	IsUnsigned bool
+	Unsigned   sqltoken.Pos
 }
 
 func (s *SmallInt) Pos() sqltoken.Pos {
@@ -184,15 +210,26 @@ func (s *SmallInt) Pos() sqltoken.Pos {
 }
 
 func (s *SmallInt) End() sqltoken.Pos {
+	if s.IsUnsigned {
+		return s.Unsigned
+	}
 	return s.To
 }
 
 func (s *SmallInt) ToSQLString() string {
-	return "smallint"
+	str := "smallint"
+
+	if s.IsUnsigned {
+		str += " unsigned"
+	}
+
+	return str
 }
 
 type Int struct {
-	From, To sqltoken.Pos
+	From, To   sqltoken.Pos
+	IsUnsigned bool
+	Unsigned   sqltoken.Pos
 }
 
 func (i *Int) Pos() sqltoken.Pos {
@@ -200,15 +237,25 @@ func (i *Int) Pos() sqltoken.Pos {
 }
 
 func (i *Int) End() sqltoken.Pos {
+	if i.IsUnsigned {
+		return i.Unsigned
+	}
 	return i.To
 }
 
 func (i *Int) ToSQLString() string {
-	return "int"
+	s := "int"
+	if i.IsUnsigned {
+		s += " unsigned"
+	}
+
+	return s
 }
 
 type BigInt struct {
-	From, To sqltoken.Pos
+	From, To   sqltoken.Pos
+	IsUnsigned bool
+	Unsigned   sqltoken.Pos
 }
 
 func (b *BigInt) Pos() sqltoken.Pos {
@@ -216,15 +263,26 @@ func (b *BigInt) Pos() sqltoken.Pos {
 }
 
 func (b *BigInt) End() sqltoken.Pos {
+	if b.IsUnsigned {
+		return b.Unsigned
+	}
 	return b.To
 }
 
 func (b *BigInt) ToSQLString() string {
-	return "bigint"
+	s := "bigint"
+
+	if b.IsUnsigned {
+		s += " unsigned"
+	}
+
+	return s
 }
 
 type Real struct {
-	From, To sqltoken.Pos
+	From, To   sqltoken.Pos
+	IsUnsigned bool
+	Unsigned   sqltoken.Pos
 }
 
 func (r *Real) Pos() sqltoken.Pos {
@@ -232,15 +290,24 @@ func (r *Real) Pos() sqltoken.Pos {
 }
 
 func (r *Real) End() sqltoken.Pos {
+	if r.IsUnsigned {
+		return r.Unsigned
+	}
 	return r.To
 }
 
-func (*Real) ToSQLString() string {
-	return "real"
+func (r *Real) ToSQLString() string {
+	s := "real"
+
+	if r.IsUnsigned {
+		s +=  " unsigned"
+	}
+
+	return s
 }
 
 type Double struct {
-	From, To sqltoken.Pos
+	From, To   sqltoken.Pos
 }
 
 func (d *Double) Pos() sqltoken.Pos {

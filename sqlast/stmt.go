@@ -404,10 +404,11 @@ func (c *CheckTableConstraint) ToSQLString() string {
 
 type ColumnDef struct {
 	tableElement
-	Name        *Ident
-	DataType    Type
-	Default     Node
-	Constraints []*ColumnConstraint
+	Name                 *Ident
+	DataType             Type
+	Default              Node
+	MyDataTypeDecoration []MyDataTypeDecoration // DataType Decoration for MySQL eg. AUTO_INCREMENT currently, only supports AUTO_INCREMENT
+	Constraints          []*ColumnConstraint
 }
 
 func (c *ColumnDef) Pos() sqltoken.Pos {
@@ -424,10 +425,34 @@ func (c *ColumnDef) ToSQLString() string {
 		str += fmt.Sprintf(" DEFAULT %s", c.Default.ToSQLString())
 	}
 
+	for _, m := range c.MyDataTypeDecoration {
+		str += " " + m.ToSQLString()
+	}
+
 	for _, cons := range c.Constraints {
 		str += cons.ToSQLString()
 	}
 	return str
+}
+
+//go:generate genmark -t MyDataTypeDecoration -e Node
+
+type AutoIncrement struct {
+	myDataTypeDecoration
+	Auto      sqltoken.Pos
+	Increment sqltoken.Pos
+}
+
+func (a *AutoIncrement) ToSQLString() string {
+	return "AUTO_INCREMENT"
+}
+
+func (a *AutoIncrement) Pos() sqltoken.Pos {
+	return a.Auto
+}
+
+func (a *AutoIncrement) End() sqltoken.Pos {
+	return a.Increment
 }
 
 type ColumnConstraint struct {
