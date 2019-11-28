@@ -10,8 +10,9 @@ import (
 	"log"
 	"strings"
 
-	"github.com/akito0107/xsqlparser/sqltoken"
 	errors "golang.org/x/xerrors"
+
+	"github.com/akito0107/xsqlparser/sqltoken"
 )
 
 // AST Node interface. All node types implements this interface.
@@ -724,6 +725,10 @@ func commaSeparatedString(list interface{}) string {
 			strs = append(strs, l.ToSQLString())
 		}
 	case []TableReference:
+		for _, l := range s {
+			strs = append(strs, l.ToSQLString())
+		}
+	case []TableOption:
 		for _, l := range s {
 			strs = append(strs, l.ToSQLString())
 		}

@@ -244,6 +244,7 @@ type CreateTableStmt struct {
 	Elements  []TableElement
 	Location  *string
 	NotExists bool
+	Options   []TableOption
 }
 
 func (c *CreateTableStmt) Pos() sqltoken.Pos {
@@ -259,7 +260,13 @@ func (c *CreateTableStmt) ToSQLString() string {
 	if c.NotExists {
 		ifNotExists = "IF NOT EXISTS "
 	}
-	return fmt.Sprintf("CREATE TABLE %s%s (%s)", ifNotExists, c.Name.ToSQLString(), commaSeparatedString(c.Elements))
+	sql := fmt.Sprintf("CREATE TABLE %s%s (%s)", ifNotExists, c.Name.ToSQLString(), commaSeparatedString(c.Elements))
+
+	if len(c.Options) != 0 {
+		sql += commaSeparatedString(c.Options)
+	}
+
+	return sql
 }
 
 type Assignment struct {

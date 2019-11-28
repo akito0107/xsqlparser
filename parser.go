@@ -529,10 +529,16 @@ func (p *Parser) parseCreateTable(create *sqltoken.Token) (sqlast.Stmt, error) {
 		return nil, errors.Errorf("parseElements failed: %w", err)
 	}
 
+	options, err := p.parseTableOptions()
+	if err != nil {
+		return nil, errors.Errorf("parseTableOptions failed: %w", err)
+	}
+
 	return &sqlast.CreateTableStmt{
 		Create:   create.From,
 		Name:     name,
 		Elements: elements,
+		Options:  options,
 	}, nil
 }
 
@@ -943,6 +949,107 @@ CONSTRAINT_LOOP:
 
 	}
 	return constraints, nil
+}
+
+func (p *Parser) parseTableOptions() ([]sqlast.TableOption, error) {
+	var opts []sqlast.TableOption
+
+	for {
+		tok, err := p.peekToken()
+		if err == EOF {
+			return opts, nil
+		} else if err != nil  {
+			return nil, err
+		}
+
+		if tok.Kind == sqltoken.Comma {
+			tok = p.mustNextToken()
+		}
+		if tok.Kind != sqltoken.SQLKeyword {
+			break
+		}
+		opt, err := p.parseTableOption()
+		if err != nil {
+			return nil, errors.Errorf("parseTableOption failed: %w", err)
+		}
+		opts = append(opts, opt)
+	}
+
+	return opts, nil
+}
+
+func (p *Parser) parseTableOption() (sqlast.TableOption, error) {
+	tok, _ := p.peekToken()
+	if tok.Kind != sqltoken.SQLKeyword {
+		return nil, errors.Errorf("must be SQLKeyword but: %v", tok)
+	}
+	word, _ := tok.Value.(*sqltoken.SQLWord)
+
+	p.mustNextToken()
+	switch word.Keyword {
+	case "ENGINE":
+		opt := &sqlast.MyEngine{
+			Engine: tok.From,
+		}
+		t, _ := p.peekToken()
+		if t.Kind == sqltoken.Eq {
+			opt.Equal = true
+			t = p.mustNextToken()
+		}
+
+		if t.Kind != sqltoken.SQLKeyword {
+			return nil, errors.Errorf("expected '=' or 'engine_name' but: %v", t)
+		}
+		name, _ := p.parseIdentifier()
+		opt.Name = name
+		return opt, nil
+	case "DEFAULT":
+		opt := &sqlast.MyCharset{
+			IsDefault: true,
+			Default:   tok.From,
+		}
+		ok, t, err := p.parseKeyword("CHARSET")
+		if !ok || err != nil {
+			return nil, errors.Errorf("expected CHARSET but: %v", t)
+		}
+		opt.Charset = t.From
+
+		t, _ = p.peekToken()
+		if t.Kind == sqltoken.Eq {
+			opt.Equal = true
+			t = p.mustNextToken()
+		}
+
+		if t.Kind != sqltoken.SQLKeyword {
+			return nil, errors.Errorf("expected '=' or 'charset_name' but: %v", t)
+		}
+
+		name, _ := p.parseIdentifier()
+
+		opt.Name = name
+
+		return opt, nil
+	case "CHARSET":
+		opt := &sqlast.MyCharset{
+			Charset:   tok.From,
+		}
+		t, _ := p.peekToken()
+		if t.Kind == sqltoken.Eq {
+			opt.Equal = true
+			t = p.mustNextToken()
+		}
+
+		if t.Kind != sqltoken.SQLKeyword {
+			return nil, errors.Errorf("expected '=' or 'charset_name' but: %v", t)
+		}
+
+		name, _ := p.parseIdentifier()
+		opt.Name = name
+
+		return opt, nil
+	default:
+		return nil, errors.Errorf("unsupported Table Options: %v", word)
+	}
 }
 
 func (p *Parser) parseDelete() (sqlast.Stmt, error) {
