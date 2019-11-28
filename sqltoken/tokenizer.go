@@ -111,7 +111,7 @@ func NewTokenizer(src io.Reader, dialect dialect.Dialect) *Tokenizer {
 		Dialect: dialect,
 		Scanner: scan.Init(src),
 		Line:    1,
-		Col:     0,
+		Col:     1,
 	}
 }
 
@@ -168,7 +168,7 @@ func (t *Tokenizer) next() (Kind, interface{}, error) {
 	case '\n' == r:
 		t.Scanner.Next()
 		t.Line += 1
-		t.Col = 0
+		t.Col = 1
 		return Whitespace, "\n", nil
 
 	case '\r' == r:
@@ -178,7 +178,7 @@ func (t *Tokenizer) next() (Kind, interface{}, error) {
 			t.Scanner.Next()
 		}
 		t.Line += 1
-		t.Col = 0
+		t.Col = 1
 		return Whitespace, "\n", nil
 
 	case 'N' == r:
@@ -435,10 +435,10 @@ func (t *Tokenizer) tokenizeMultilineComment() string {
 			if t.Scanner.Peek() == '\n' {
 				t.Scanner.Next()
 			}
-			t.Col = 0
+			t.Col = 1
 			t.Line += 1
 		} else if n == '\n' {
-			t.Col = 0
+			t.Col = 1
 			t.Line += 1
 		} else {
 			t.Col += 1

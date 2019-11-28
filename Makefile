@@ -4,7 +4,7 @@ SHELL := PATH="$(PWD)/tools/bin:$(PATH)" $(SHELL)
 build: bin/astprinter
 
 .PHONY: bin/astprinter
-bin/astprinter: vendor generate
+bin/astprinter: generate
 	go build -o bin/astprinter cmd/astprinter/main.go
 
 .PHONY: tools/bin/genmark
