@@ -1,4 +1,4 @@
-package xsqlparser_test
+package e2e_test
 
 // All queries are from https://www.w3schools.com/sql/sql_examples.asp
 
@@ -9,8 +9,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-
-	"github.com/google/go-cmp/cmp"
 
 	"github.com/akito0107/xsqlparser"
 	"github.com/akito0107/xsqlparser/dialect"
@@ -105,7 +103,7 @@ func TestParseQuery(t *testing.T) {
 						t.Fatalf("%+v", err)
 					}
 
-					if astdiff := cmp.Diff(stmt2, stmt3, xsqlparser.IgnoreMarker); astdiff != "" {
+					if astdiff := xsqlparser.CompareWithoutMarker(stmt2, stmt3); astdiff != "" {
 						t.Logf(recovered)
 						t.Errorf("should be same ast but diff:\n %s", astdiff)
 					}

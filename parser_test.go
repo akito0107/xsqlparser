@@ -2,9 +2,7 @@ package xsqlparser
 
 import (
 	"bytes"
-	"reflect"
 	"testing"
-	"unicode"
 
 	"github.com/google/go-cmp/cmp"
 
@@ -12,13 +10,6 @@ import (
 	"github.com/akito0107/xsqlparser/sqlast"
 	"github.com/akito0107/xsqlparser/sqltoken"
 )
-
-var IgnoreMarker = cmp.FilterPath(func(paths cmp.Path) bool {
-	s := paths.Last().Type()
-	name := s.Name()
-	r := []rune(name)
-	return s.Kind() == reflect.Struct && len(r) > 0 && unicode.IsLower(r[0])
-}, cmp.Ignore())
 
 func TestParser_ParseStatement(t *testing.T) {
 	t.Run("select", func(t *testing.T) {
@@ -934,7 +925,7 @@ FROM user WHERE id BETWEEN 1 AND 2`,
 					t.Fatal(err)
 				}
 
-				if diff := cmp.Diff(c.out, ast, IgnoreMarker); diff != "" {
+				if diff := CompareWithoutMarker(c.out, ast); diff != "" {
 					t.Errorf("diff %s", diff)
 				}
 			})
@@ -1474,7 +1465,7 @@ FOREIGN KEY(test_id) REFERENCES other_table(col1, col2)
 					t.Fatalf("%+v", err)
 				}
 
-				if diff := cmp.Diff(c.out, ast, IgnoreMarker); diff != "" {
+				if diff := CompareWithoutMarker(c.out, ast); diff != "" {
 					t.Errorf("diff %s", diff)
 				}
 			})
@@ -1534,7 +1525,7 @@ FOREIGN KEY(test_id) REFERENCES other_table(col1, col2)
 					t.Fatal(err)
 				}
 
-				if diff := cmp.Diff(c.out, ast, IgnoreMarker); diff != "" {
+				if diff := CompareWithoutMarker(c.out, ast); diff != "" {
 					t.Errorf("diff %s", diff)
 				}
 			})
@@ -1659,7 +1650,7 @@ FOREIGN KEY(test_id) REFERENCES other_table(col1, col2)
 					t.Fatal(err)
 				}
 
-				if diff := cmp.Diff(c.out, ast, IgnoreMarker); diff != "" {
+				if diff := CompareWithoutMarker(c.out, ast); diff != "" {
 					t.Errorf("diff %s", diff)
 				}
 			})
@@ -1834,7 +1825,7 @@ ALTER COLUMN number TYPE numeric(255,10)`,
 					t.Fatalf("%+v", err)
 				}
 
-				if diff := cmp.Diff(c.out, ast, IgnoreMarker); diff != "" {
+				if diff := CompareWithoutMarker(c.out, ast); diff != "" {
 					t.Errorf("diff %s", diff)
 				}
 			})
@@ -1904,7 +1895,7 @@ ALTER COLUMN number TYPE numeric(255,10)`,
 					t.Fatal(err)
 				}
 
-				if diff := cmp.Diff(c.out, ast, IgnoreMarker); diff != "" {
+				if diff := CompareWithoutMarker(c.out, ast); diff != "" {
 					t.Errorf("diff %s", diff)
 				}
 			})

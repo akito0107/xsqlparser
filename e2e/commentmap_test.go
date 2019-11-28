@@ -1,4 +1,4 @@
-package xsqlparser_test
+package e2e_test
 
 import (
 	"strings"
