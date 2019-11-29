@@ -614,4 +614,35 @@ test comment
 		}
 	})
 
+	t.Run("illegal cases", func(t *testing.T) {
+		cases := []struct {
+			name   string
+			src    string
+		} {
+			{
+				name: "incomplete quoted string",
+				src: "'test",
+			},
+			{
+				name: "unclosed multiline comment",
+				src: `
+/* test
+test
+`,
+			},
+		}
+
+		for _, c := range cases {
+			t.Run(c.name, func(t *testing.T) {
+				tokenizer := NewTokenizer(bytes.NewBufferString(c.src), &dialect.GenericSQLDialect{})
+
+				_, err := tokenizer.Tokenize()
+				if err == nil {
+					t.Errorf("must be error but blank")
+				}
+				t.Logf("%+v", err)
+
+			})
+		}
+	})
 }

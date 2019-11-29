@@ -139,7 +139,7 @@ func (t *Tokenizer) NextToken() (*Token, error) {
 		return nil, io.EOF
 	}
 	if err != nil {
-		return &Token{Kind: ILLEGAL, Value: "", From: pos, To: t.Pos()}, errors.Errorf("tokenize failed %w", err)
+		return &Token{Kind: ILLEGAL, Value: "", From: pos, To: t.Pos()}, errors.Errorf("tokenize failed: %w", err)
 	}
 
 	return &Token{Kind: tok, Value: str, From: pos, To: t.Pos()}, nil
@@ -186,7 +186,10 @@ func (t *Tokenizer) next() (Kind, interface{}, error) {
 		n := t.Scanner.Peek()
 		if n == '\'' {
 			t.Col += 1
-			str := t.tokenizeSingleQuotedString()
+			str, err := t.tokenizeSingleQuotedString()
+			if err != nil {
+				return ILLEGAL, "", err
+			}
 			return NationalStringLiteral, str, nil
 		}
 		s := t.tokenizeWord('N')
@@ -199,7 +202,10 @@ func (t *Tokenizer) next() (Kind, interface{}, error) {
 		return SQLKeyword, MakeKeyword(s, 0), nil
 
 	case '\'' == r:
-		s := t.tokenizeSingleQuotedString()
+		s, err := t.tokenizeSingleQuotedString()
+		if err != nil {
+			return ILLEGAL, "", err
+		}
 		return SingleQuotedString, s, nil
 
 	case t.Dialect.IsDelimitedIdentifierStart(r):
@@ -273,7 +279,11 @@ func (t *Tokenizer) next() (Kind, interface{}, error) {
 
 		if '*' == t.Scanner.Peek() {
 			t.Scanner.Next()
-			return Comment, t.tokenizeMultilineComment(), nil
+			str, err := t.tokenizeMultilineComment()
+			if err != nil {
+				return ILLEGAL, str, err
+			}
+			return Comment, str, nil
 		}
 		t.Col += 1
 		return Div, "/", nil
@@ -399,7 +409,7 @@ func (t *Tokenizer) tokenizeWord(f rune) string {
 	return string(str)
 }
 
-func (t *Tokenizer) tokenizeSingleQuotedString() string {
+func (t *Tokenizer) tokenizeSingleQuotedString() (string, error) {
 	var str []rune
 	t.Scanner.Next()
 
@@ -415,16 +425,19 @@ func (t *Tokenizer) tokenizeSingleQuotedString() string {
 			}
 			continue
 		}
+		if n == scanner.EOF {
+			return "", errors.Errorf("unclosed single quoted string: %s at %+v", string(str), t.Pos())
+		}
 
 		t.Scanner.Next()
 		str = append(str, n)
 	}
 	t.Col += 2 + len(str)
 
-	return string(str)
+	return string(str), nil
 }
 
-func (t *Tokenizer) tokenizeMultilineComment() string {
+func (t *Tokenizer) tokenizeMultilineComment() (string, error) {
 	var str []rune
 	var mayBeClosingComment bool
 	t.Col += 2
@@ -440,6 +453,8 @@ func (t *Tokenizer) tokenizeMultilineComment() string {
 		} else if n == '\n' {
 			t.Col = 1
 			t.Line += 1
+		} else if n == scanner.EOF {
+			return "", errors.Errorf("unclosed multiline comment: %s at %+v", string(str), t.Pos())
 		} else {
 			t.Col += 1
 		}
@@ -457,5 +472,5 @@ func (t *Tokenizer) tokenizeMultilineComment() string {
 		}
 	}
 
-	return string(str)
+	return string(str), nil
 }
