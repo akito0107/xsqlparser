@@ -1,5 +1,6 @@
 # xsqlparser
 
+[![GoDoc](https://godoc.org/github.com/akito0107/xsqlparser?status.svg)](https://godoc.org/github.com/akito0107/xsqlparser)
 [![Build Status](https://dev.azure.com/akito01070362/xsqlparser/_apis/build/status/akito0107.xsqlparser?branchName=master)](https://dev.azure.com/akito01070362/xsqlparser/_build/latest?definitionId=2&branchName=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/akito0107/xsqlparser)](https://goreportcard.com/report/github.com/akito0107/xsqlparser)
 [![codecov](https://codecov.io/gh/akito0107/xsqlparser/branch/master/graph/badge.svg)](https://codecov.io/gh/akito0107/xsqlparser)
