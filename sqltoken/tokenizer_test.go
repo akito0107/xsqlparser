@@ -51,7 +51,7 @@ func TestTokenizer_Tokenize(t *testing.T) {
 		},
 		{
 			name: "whitespace and tab",
-			in: "\r\n	",
+			in:   "\r\n	",
 			out: []*Token{
 				{
 					Kind:  Whitespace,
@@ -616,12 +616,12 @@ test comment
 
 	t.Run("illegal cases", func(t *testing.T) {
 		cases := []struct {
-			name   string
-			src    string
-		} {
+			name string
+			src  string
+		}{
 			{
 				name: "incomplete quoted string",
-				src: "'test",
+				src:  "'test",
 			},
 			{
 				name: "unclosed multiline comment",
@@ -645,4 +645,55 @@ test
 			})
 		}
 	})
+}
+
+func BenchmarkTokenizer_Tokenize(b *testing.B) {
+	cases := []struct {
+		name string
+		src  string
+	}{
+		{
+			name: "select",
+			src: `SELECT COUNT(customer_id), country 
+FROM customers 
+GROUP BY country 
+HAVING COUNT(customer_id) > 3`,
+		},
+		{
+			name: "multi line comment",
+			src: `
+create table account (
+    account_id serial primary key,  --aaa
+	/*bbb*/
+    name varchar(255) not null,
+    email /*ccc*/ varchar(255) unique not null --ddd
+);
+
+--eee
+
+/*fff
+ggg
+*/
+select 1 from test; --hhh
+/*jjj*/ --kkk
+select 1 from test; /*lll*/ --mmm
+--nnn
+`,
+		},
+	}
+
+	for _, c := range cases {
+		b.Run(c.name, func(b *testing.B) {
+			b.ResetTimer()
+
+			for i := 0; i < b.N; i++ {
+				in := bytes.NewBufferString(c.src)
+				tokenizer := NewTokenizer(in, &dialect.GenericSQLDialect{})
+
+				if _, err := tokenizer.Tokenize(); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
 }
