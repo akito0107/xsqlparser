@@ -393,20 +393,21 @@ func (t *Tokenizer) next() (Kind, interface{}, error) {
 }
 
 func (t *Tokenizer) tokenizeWord(f rune) string {
-	var str []rune
-	str = append(str, f)
+	var builder strings.Builder
+	builder.WriteRune(f)
 
 	for {
 		r := t.Scanner.Peek()
 		if t.Dialect.IsIdentifierPart(r) {
 			t.Scanner.Next()
-			str = append(str, r)
+			builder.WriteRune(r)
 		} else {
 			break
 		}
 	}
+	str := builder.String()
 	t.Col += len(str)
-	return string(str)
+	return str
 }
 
 func (t *Tokenizer) tokenizeSingleQuotedString() (string, error) {
