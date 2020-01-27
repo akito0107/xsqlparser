@@ -126,7 +126,7 @@ CREATE TABLE test (
 ); --associate with stmts2
 `
 
-	parser, err := xsqlparser.NewParser(bytes.NewBufferString(src), &dialect.GenericSQLDialect{}, xsqlparser.ParseComment)
+	parser, err := xsqlparser.NewParser(bytes.NewBufferString(src), &dialect.GenericSQLDialect{}, xsqlparser.ParseComment())
 	if err != nil {
 		log.Fatal(err)
 	}

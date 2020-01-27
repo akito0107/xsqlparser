@@ -99,20 +99,44 @@ func ComparePos(x, y Pos) int {
 }
 
 type Tokenizer struct {
-	Dialect dialect.Dialect
-	Scanner *scanner.Scanner
-	Line    int
-	Col     int
+	Dialect      dialect.Dialect
+	Scanner      *scanner.Scanner
+	Line         int
+	Col          int
+	parseComment bool
 }
 
 func NewTokenizer(src io.Reader, dialect dialect.Dialect) *Tokenizer {
 	var scan scanner.Scanner
 	return &Tokenizer{
-		Dialect: dialect,
-		Scanner: scan.Init(src),
-		Line:    1,
-		Col:     1,
+		Dialect:      dialect,
+		Scanner:      scan.Init(src),
+		Line:         1,
+		Col:          1,
+		parseComment: true,
 	}
+}
+
+type TokenizerOption func(*Tokenizer)
+
+func Dialect(dialect dialect.Dialect) TokenizerOption {
+	return func(tokenizer *Tokenizer) {
+		tokenizer.Dialect = dialect
+	}
+}
+
+func DisableParseComment() TokenizerOption {
+	return func(tokenizer *Tokenizer) {
+		tokenizer.parseComment = false
+	}
+}
+
+func NewTokenizerWithOptions(src io.Reader, options ...TokenizerOption) *Tokenizer {
+	tokenizer := NewTokenizer(src, &dialect.GenericSQLDialect{})
+	for _, o := range options {
+		o(tokenizer)
+	}
+	return tokenizer
 }
 
 func (t *Tokenizer) Tokenize() ([]*Token, error) {
@@ -125,6 +149,10 @@ func (t *Tokenizer) Tokenize() ([]*Token, error) {
 		}
 		if err != nil {
 			return nil, err
+		}
+
+		if t == nil {
+			continue
 		}
 		tokenset = append(tokenset, t)
 	}
@@ -140,6 +168,10 @@ func (t *Tokenizer) NextToken() (*Token, error) {
 	}
 	if err != nil {
 		return &Token{Kind: ILLEGAL, Value: "", From: pos, To: t.Pos()}, errors.Errorf("tokenize failed: %w", err)
+	}
+
+	if !t.parseComment && (tok == Whitespace || tok == Comment) {
+		return nil, nil
 	}
 
 	return &Token{Kind: tok, Value: str, From: pos, To: t.Pos()}, nil
@@ -393,24 +425,27 @@ func (t *Tokenizer) next() (Kind, interface{}, error) {
 }
 
 func (t *Tokenizer) tokenizeWord(f rune) string {
-	var str []rune
-	str = append(str, f)
+	var builder strings.Builder
+	builder.WriteRune(f)
 
 	for {
 		r := t.Scanner.Peek()
 		if t.Dialect.IsIdentifierPart(r) {
 			t.Scanner.Next()
-			str = append(str, r)
+			builder.WriteRune(r)
 		} else {
 			break
 		}
 	}
+
+	str := builder.String()
 	t.Col += len(str)
-	return string(str)
+	return str
 }
 
 func (t *Tokenizer) tokenizeSingleQuotedString() (string, error) {
-	var str []rune
+	// var str []rune
+	var builder strings.Builder
 	t.Scanner.Next()
 
 	for {
@@ -418,7 +453,8 @@ func (t *Tokenizer) tokenizeSingleQuotedString() (string, error) {
 		if n == '\'' {
 			t.Scanner.Next()
 			if t.Scanner.Peek() == '\'' {
-				str = append(str, '\'')
+				// str = append(str, '\'')
+				builder.WriteRune('\'')
 				t.Scanner.Next()
 			} else {
 				break
@@ -426,15 +462,17 @@ func (t *Tokenizer) tokenizeSingleQuotedString() (string, error) {
 			continue
 		}
 		if n == scanner.EOF {
-			return "", errors.Errorf("unclosed single quoted string: %s at %+v", string(str), t.Pos())
+			return "", errors.Errorf("unclosed single quoted string: %s at %+v", builder.String(), t.Pos())
 		}
 
 		t.Scanner.Next()
-		str = append(str, n)
+		builder.WriteRune(n)
+		// str = append(str, n)
 	}
+	str := builder.String()
 	t.Col += 2 + len(str)
 
-	return string(str), nil
+	return str, nil
 }
 
 func (t *Tokenizer) tokenizeMultilineComment() (string, error) {

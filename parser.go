@@ -24,9 +24,11 @@ type Parser struct {
 
 type ParserOption func(*Parser)
 
-func ParseComment(p *Parser) {
-	p.parseComment = true
-	p.comments = make(map[sqltoken.Pos]*sqlast.CommentGroup)
+func ParseComment() ParserOption {
+	return func(p *Parser) {
+		p.parseComment = true
+		p.comments = make(map[sqltoken.Pos]*sqlast.CommentGroup)
+	}
 }
 
 func NewParser(src io.Reader, dialect dialect.Dialect, opts ...ParserOption) (*Parser, error) {
@@ -43,6 +45,20 @@ func NewParser(src io.Reader, dialect dialect.Dialect, opts ...ParserOption) (*P
 	}
 
 	return parser, nil
+}
+
+func NewParserWithOptions(opts ...ParserOption) *Parser {
+	parser := &Parser{index: 0}
+	for _, o := range opts {
+		o(parser)
+	}
+	return parser
+}
+
+// workaround
+// FIXME: create appropriate parse function
+func (p *Parser) SetTokens(tokens []*sqltoken.Token) {
+	p.tokens = tokens
 }
 
 func (p *Parser) ParseFile() (*sqlast.File, error) {

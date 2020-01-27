@@ -14,7 +14,7 @@ import (
 
 func parseFile(t *testing.T, src string) *sqlast.File {
 	t.Helper()
-	parser, err := xsqlparser.NewParser(strings.NewReader(src), &dialect.GenericSQLDialect{}, xsqlparser.ParseComment)
+	parser, err := xsqlparser.NewParser(strings.NewReader(src), &dialect.GenericSQLDialect{}, xsqlparser.ParseComment())
 	if err != nil {
 		t.Fatal(err)
 	}

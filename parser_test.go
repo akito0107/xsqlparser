@@ -2091,7 +2091,7 @@ select 1 from test; /*lll*/ --mmm
 			if c.skip {
 				t.Skip()
 			}
-			parser, err := NewParser(bytes.NewBufferString(c.in), &dialect.GenericSQLDialect{}, ParseComment)
+			parser, err := NewParser(bytes.NewBufferString(c.in), &dialect.GenericSQLDialect{}, ParseComment())
 			if err != nil {
 				t.Fatal(err)
 			}
