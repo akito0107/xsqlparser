@@ -660,6 +660,22 @@ GROUP BY country
 HAVING COUNT(customer_id) > 3`,
 		},
 		{
+			name: "complex select",
+			src: `SELECT start_terminal,
+       start_time,
+       duration_seconds,
+       ROW_NUMBER() OVER (ORDER BY start_time)
+                    AS row_number
+  FROM tutorial.dc_bikeshare_q1_2012
+ WHERE start_time < '2012-01-08'`,
+		},
+		{
+			name: "insert",
+			src:  `INSERT INTO tbl_name (a,b,c) VALUES(1,2,3),(4,5,6),(7,8,9);`,
+		},
+
+		{
+
 			name: "multi line comment",
 			src: `
 create table account (
