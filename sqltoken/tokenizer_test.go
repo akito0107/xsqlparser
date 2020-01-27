@@ -713,3 +713,47 @@ select 1 from test; /*lll*/ --mmm
 		})
 	}
 }
+
+func BenchmarkTokenizer_Tokenize_WithoutComment(b *testing.B) {
+	cases := []struct {
+		name string
+		src  string
+	}{
+		{
+			name: "select",
+			src: `SELECT COUNT(customer_id), country 
+FROM customers 
+GROUP BY country 
+HAVING COUNT(customer_id) > 3`,
+		},
+		{
+			name: "complex select",
+			src: `SELECT start_terminal,
+       start_time,
+       duration_seconds,
+       ROW_NUMBER() OVER (ORDER BY start_time)
+                    AS row_number
+  FROM tutorial.dc_bikeshare_q1_2012
+ WHERE start_time < '2012-01-08'`,
+		},
+		{
+			name: "insert",
+			src:  `INSERT INTO tbl_name (a,b,c) VALUES(1,2,3),(4,5,6),(7,8,9);`,
+		},
+	}
+
+	for _, c := range cases {
+		b.Run(c.name, func(b *testing.B) {
+			b.ResetTimer()
+
+			for i := 0; i < b.N; i++ {
+				in := bytes.NewBufferString(c.src)
+				tokenizer := NewTokenizerWithOptions(in, Dialect(&dialect.GenericSQLDialect{}), DisableParseComment())
+
+				if _, err := tokenizer.Tokenize(); err != nil {
+					b.Fatal(err)
+				}
+			}
+		})
+	}
+}
