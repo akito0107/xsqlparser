@@ -361,7 +361,7 @@ func (p *Parser) parseQueryBody(precedence uint8) (sqlast.SQLSetExpr, error) {
 			Query: subquery,
 		}
 	} else {
-		log.Fatal("expect SELECT or subquery in the query body")
+		log.Panicln("expect SELECT or subquery in the query body")
 	}
 BODY_LOOP:
 	for {
@@ -538,7 +538,7 @@ func (p *Parser) parseCreate() (sqlast.Stmt, error) {
 		return p.parseCreateIndex(uiok)
 	}
 
-	log.Fatal("TABLE or VIEW or UNIQUE INDEX or INDEX after create")
+	log.Panicln("TABLE or VIEW or UNIQUE INDEX or INDEX after create")
 
 	return nil, nil
 }
@@ -679,7 +679,7 @@ func (p *Parser) parseElements() ([]sqlast.TableElement, error) {
 
 		t, _ := p.nextToken()
 		if t == nil || (t.Kind != sqltoken.Comma && t.Kind != sqltoken.RParen) {
-			log.Fatalf("Expected ',' or ')' after column definition but %v", t)
+			log.Panicf("Expected ',' or ')' after column definition but %v", t)
 		} else if t.Kind == sqltoken.RParen {
 			break
 		}
@@ -1541,7 +1541,7 @@ func (p *Parser) parseOptionalAlias(reservedKeywords map[string]struct{}) *sqlas
 		}
 	}
 	if afterAs {
-		log.Fatalf("expected an identifier after AS")
+		log.Panicf("expected an identifier after AS")
 	}
 	p.prevToken()
 	return nil
@@ -2054,7 +2054,7 @@ func (p *Parser) parseInfix(expr sqlast.Node, precedence uint) (sqlast.Node, err
 		return p.parsePGCast(expr)
 	}
 
-	log.Fatalf("no infix parser for sqltoken %+v", tok)
+	log.Panicf("no infix parser for sqltoken %+v", tok)
 	return nil, nil
 }
 
@@ -2367,7 +2367,7 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 		}
 		return ast, nil
 	}
-	log.Fatal("prefix parser expected a keyword but hit EOF")
+	log.Panicf("prefix parser expected a keyword but hit EOF")
 	return nil, nil
 }
 
@@ -2560,7 +2560,7 @@ func (p *Parser) parseWindowFrameBound() (sqlast.SQLWindowFrameBound, error) {
 	if ok, _, _ := p.parseKeyword("FOLLOWING"); ok {
 		return &sqlast.Following{Bound: rows}, nil
 	}
-	log.Fatal("expected PRECEDING or FOLLOWING")
+	log.Panicln("expected PRECEDING or FOLLOWING")
 	return nil, nil
 }
 
@@ -2873,7 +2873,7 @@ func (p *Parser) expectKeyword(expected string) *sqltoken.Token {
 			fmt.Printf("%v", p.tokens[i].Value)
 		}
 		fmt.Println()
-		log.Fatalf("should be expected keyword: %s err: %v", expected, err)
+		log.Panicf("should be expected keyword: %s err: %v", expected, err)
 	}
 
 	return tok
@@ -2888,7 +2888,7 @@ func (p *Parser) expectToken(expected sqltoken.Kind) {
 			fmt.Printf("%v", p.tokens[i].Value)
 		}
 		fmt.Println()
-		log.Fatalf("should be %s sqltoken, but %+v,  err: %+v", expected, tok, err)
+		log.Panicf("should be %s sqltoken, but %+v,  err: %+v", expected, tok, err)
 	}
 }
 
@@ -2911,7 +2911,7 @@ func (p *Parser) consumeToken(expected sqltoken.Kind) (bool, error) {
 func (p *Parser) mustNextToken() *sqltoken.Token {
 	tok, err := p.nextToken()
 	if err != nil {
-		log.Fatalf("%+v", err)
+		log.Panicf("%+v", err)
 	}
 
 	return tok

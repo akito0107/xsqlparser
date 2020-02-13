@@ -125,7 +125,7 @@ func NewCommentMap(file *File) CommentMap {
 				assoc = p
 			default:
 				if q == nil {
-					log.Fatal("internal error")
+					log.Panic("internal error")
 				}
 				assoc = q
 			}

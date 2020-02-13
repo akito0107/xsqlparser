@@ -382,7 +382,7 @@ func Walk(v Visitor, node Node) {
 		*TimestampValue:
 		// nothing to do
 	default:
-		log.Fatalf("not implemented type %T: %+v", node, node)
+		log.Panicf("not implemented type %T: %+v", node, node)
 	}
 
 	v.Visit(nil)

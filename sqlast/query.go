@@ -604,7 +604,7 @@ func (j *JoinType) ToSQLString() string {
 	case IMPLICIT:
 		return ""
 	default:
-		log.Fatalf("unknown join type %d", j)
+		log.Panicf("unknown join type %d", j)
 	}
 	return ""
 }

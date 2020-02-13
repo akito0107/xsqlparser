@@ -619,7 +619,7 @@ func (FileFormat) FromStr(str string) FileFormat {
 	case "JSONFILE":
 		return JSONFILE
 	}
-	log.Fatalf("unexpected file format %s", str)
+	log.Panicf("unexpected file format %s", str)
 	return 0
 }
 
@@ -946,8 +946,8 @@ func (d *DropIndexStmt) End() sqltoken.Pos {
 	return d.IndexNames[len(d.IndexNames)-1].End()
 }
 
-func (s *DropIndexStmt) ToSQLString() string {
-	return fmt.Sprintf("DROP INDEX %s", commaSeparatedString(s.IndexNames))
+func (d *DropIndexStmt) ToSQLString() string {
+	return fmt.Sprintf("DROP INDEX %s", commaSeparatedString(d.IndexNames))
 }
 
 type ExplainStmt struct {

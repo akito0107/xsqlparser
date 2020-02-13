@@ -733,7 +733,7 @@ func commaSeparatedString(list interface{}) string {
 			strs = append(strs, l.ToSQLString())
 		}
 	default:
-		log.Fatalf("unexpected type array %+v", list)
+		log.Panicf("unexpected type array %+v", list)
 	}
 	return strings.Join(strs, ", ")
 

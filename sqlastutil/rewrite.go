@@ -62,7 +62,7 @@ func (c *Cursor) Replace(n sqlast.Node) {
 func (c *Cursor) Delete() {
 	i := c.Index()
 	if i < 0 {
-		log.Fatal("delete node not contained in slice")
+		log.Panicln("delete node not contained in slice")
 	}
 	v := c.field()
 	l := v.Len()
@@ -76,7 +76,7 @@ func (c *Cursor) Delete() {
 func (c *Cursor) InsertAfter(n sqlast.Node) {
 	i := c.Index()
 	if i < 0 {
-		log.Fatal("InsertAfter node not contained in slice")
+		log.Panicln("InsertAfter node not contained in slice")
 	}
 	v := c.field()
 	v.Set(reflect.Append(v, reflect.Zero(v.Type().Elem())))
@@ -89,7 +89,7 @@ func (c *Cursor) InsertAfter(n sqlast.Node) {
 func (c *Cursor) InsertBefore(n sqlast.Node) {
 	i := c.Index()
 	if i < 0 {
-		log.Fatal("InsertBefore node not contained in slice")
+		log.Panicln("InsertBefore node not contained in slice")
 	}
 	v := c.field()
 	v.Set(reflect.Append(v, reflect.Zero(v.Type().Elem())))
@@ -447,7 +447,7 @@ func (a *application) apply(parent sqlast.Node, name string, iter *iterator, n s
 		*sqlast.TimestampValue:
 		// nothing to do
 	default:
-		log.Fatalf("not implemented type %T: %+v", n, n)
+		log.Panicf("not implemented type %T: %+v", n, n)
 	}
 
 	if a.post != nil && !a.post(&a.cursor) {
