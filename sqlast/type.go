@@ -1,7 +1,7 @@
 package sqlast
 
 import (
-	"fmt"
+	"io"
 
 	"github.com/akito0107/xsqlparser/sqltoken"
 )
@@ -27,7 +27,11 @@ func (c *CharType) End() sqltoken.Pos {
 }
 
 func (c *CharType) ToSQLString() string {
-	return formatTypeWithOptionalLength("char", c.Size)
+	return toSQLString(c)
+}
+
+func (c *CharType) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).TypeWithOptionalLength([]byte("char"), c.Size).End()
 }
 
 type VarcharType struct {
@@ -47,7 +51,11 @@ func (v *VarcharType) End() sqltoken.Pos {
 }
 
 func (v *VarcharType) ToSQLString() string {
-	return formatTypeWithOptionalLength("character varying", v.Size)
+	return toSQLString(v)
+}
+
+func (v *VarcharType) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).TypeWithOptionalLength([]byte("character varying"), v.Size).End()
 }
 
 type UUID struct {
@@ -66,6 +74,10 @@ func (*UUID) ToSQLString() string {
 	return "uuid"
 }
 
+func (u *UUID) WriteTo(w io.Writer) (int64, error) {
+	return writeSingleBytes(w, []byte("uuid"))
+}
+
 type Clob struct {
 	Size         uint
 	Clob, RParen sqltoken.Pos
@@ -80,7 +92,11 @@ func (c *Clob) End() sqltoken.Pos {
 }
 
 func (c *Clob) ToSQLString() string {
-	return fmt.Sprintf("clob(%d)", c.Size)
+	return toSQLString(c)
+}
+
+func (c *Clob) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).TypeWithOptionalLength([]byte("clob"), &c.Size).End()
 }
 
 type Binary struct {
@@ -97,7 +113,11 @@ func (b *Binary) End() sqltoken.Pos {
 }
 
 func (b *Binary) ToSQLString() string {
-	return fmt.Sprintf("birany(%d)", b.Size)
+	return toSQLString(b)
+}
+
+func (b *Binary) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).TypeWithOptionalLength([]byte("binary"), &b.Size).End()
 }
 
 type Varbinary struct {
@@ -114,7 +134,11 @@ func (v *Varbinary) End() sqltoken.Pos {
 }
 
 func (v *Varbinary) ToSQLString() string {
-	return fmt.Sprintf("varbinary(%d)", v.Size)
+	return toSQLString(v)
+}
+
+func (v *Varbinary) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).TypeWithOptionalLength([]byte("varbinary"), &v.Size).End()
 }
 
 type Blob struct {
@@ -131,7 +155,11 @@ func (b *Blob) End() sqltoken.Pos {
 }
 
 func (b *Blob) ToSQLString() string {
-	return fmt.Sprintf("blob(%d)", b.Size)
+	return toSQLString(b)
+}
+
+func (b *Blob) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).TypeWithOptionalLength([]byte("blob"), &b.Size).End()
 }
 
 // All unsigned props are only available on MySQL
@@ -156,16 +184,23 @@ func (d *Decimal) End() sqltoken.Pos {
 }
 
 func (d *Decimal) ToSQLString() string {
-	if d.Scale != nil {
-		return fmt.Sprintf("numeric(%d,%d)", *d.Precision, *d.Scale)
-	}
-	s := formatTypeWithOptionalLength("numeric", d.Precision)
+	return toSQLString(d)
+}
 
-	if d.IsUnsigned {
-		s += " unsigned"
+func (d *Decimal) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("numeric"))
+	if d.Precision != nil {
+		sw.LParen()
+		sw.Int(int(*d.Precision))
+		if d.Scale != nil {
+			sw.Bytes([]byte(","))
+			sw.Int(int(*d.Scale))
+		}
+		sw.RParen()
 	}
-
-	return s
+	sw.If(d.IsUnsigned, []byte(" unsigned"))
+	return sw.End()
 }
 
 type Float struct {
@@ -190,13 +225,13 @@ func (f *Float) End() sqltoken.Pos {
 }
 
 func (f *Float) ToSQLString() string {
-	s := formatTypeWithOptionalLength("float", f.Size)
+	return toSQLString(f)
+}
 
-	if f.IsUnsigned {
-		s += " unsigned"
-	}
-
-	return s
+func (f *Float) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.TypeWithOptionalLength([]byte("float"), f.Size).If(f.IsUnsigned, []byte(" unsigned"))
+	return sw.End()
 }
 
 type SmallInt struct {
@@ -217,13 +252,13 @@ func (s *SmallInt) End() sqltoken.Pos {
 }
 
 func (s *SmallInt) ToSQLString() string {
-	str := "smallint"
+	return toSQLString(s)
+}
 
-	if s.IsUnsigned {
-		str += " unsigned"
-	}
-
-	return str
+func (s *SmallInt) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("smallint")).If(s.IsUnsigned, []byte(" unsigned"))
+	return sw.End()
 }
 
 type Int struct {
@@ -244,12 +279,13 @@ func (i *Int) End() sqltoken.Pos {
 }
 
 func (i *Int) ToSQLString() string {
-	s := "int"
-	if i.IsUnsigned {
-		s += " unsigned"
-	}
+	return toSQLString(i)
+}
 
-	return s
+func (i *Int) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("int")).If(i.IsUnsigned, []byte(" unsigned"))
+	return sw.End()
 }
 
 type BigInt struct {
@@ -270,13 +306,13 @@ func (b *BigInt) End() sqltoken.Pos {
 }
 
 func (b *BigInt) ToSQLString() string {
-	s := "bigint"
+	return toSQLString(b)
+}
 
-	if b.IsUnsigned {
-		s += " unsigned"
-	}
-
-	return s
+func (b *BigInt) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("bigint")).If(b.IsUnsigned, []byte(" unsigned"))
+	return sw.End()
 }
 
 type Real struct {
@@ -297,17 +333,17 @@ func (r *Real) End() sqltoken.Pos {
 }
 
 func (r *Real) ToSQLString() string {
-	s := "real"
+	return toSQLString(r)
+}
 
-	if r.IsUnsigned {
-		s +=  " unsigned"
-	}
-
-	return s
+func (r *Real) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("real")).If(r.IsUnsigned, []byte(" unsigned"))
+	return sw.End()
 }
 
 type Double struct {
-	From, To   sqltoken.Pos
+	From, To sqltoken.Pos
 }
 
 func (d *Double) Pos() sqltoken.Pos {
@@ -320,6 +356,10 @@ func (d *Double) End() sqltoken.Pos {
 
 func (*Double) ToSQLString() string {
 	return "double precision"
+}
+
+func (*Double) WriteTo(w io.Writer) (int64, error) {
+	return writeSingleBytes(w, []byte("double precision"))
 }
 
 type Boolean struct {
@@ -338,6 +378,10 @@ func (*Boolean) ToSQLString() string {
 	return "boolean"
 }
 
+func (*Boolean) WriteTo(w io.Writer) (int64, error) {
+	return writeSingleBytes(w, []byte("boolean"))
+}
+
 type Date struct {
 	From, To sqltoken.Pos
 }
@@ -354,6 +398,10 @@ func (*Date) ToSQLString() string {
 	return "date"
 }
 
+func (*Date) WriteTo(w io.Writer) (int64, error) {
+	return writeSingleBytes(w, []byte("date"))
+}
+
 type Time struct {
 	From, To sqltoken.Pos
 }
@@ -368,6 +416,10 @@ func (t *Time) End() sqltoken.Pos {
 
 func (*Time) ToSQLString() string {
 	return "time"
+}
+
+func (*Time) WriteTo(w io.Writer) (int64, error) {
+	return writeSingleBytes(w, []byte("time"))
 }
 
 type Timestamp struct {
@@ -392,11 +444,13 @@ func (t *Timestamp) End() sqltoken.Pos {
 }
 
 func (t *Timestamp) ToSQLString() string {
-	var timezone string
-	if t.WithTimeZone {
-		timezone = " with time zone"
-	}
-	return "timestamp" + timezone
+	return toSQLString(t)
+}
+
+func (t *Timestamp) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("timestamp")).If(t.WithTimeZone, []byte(" with time zone"))
+	return sw.End()
 }
 
 type Regclass struct {
@@ -415,6 +469,10 @@ func (*Regclass) ToSQLString() string {
 	return "regclass"
 }
 
+func (*Regclass) WriteTo(w io.Writer) (int64, error) {
+	return writeSingleBytes(w, []byte("regclass"))
+}
+
 type Text struct {
 	From, To sqltoken.Pos
 }
@@ -429,6 +487,10 @@ func (t *Text) End() sqltoken.Pos {
 
 func (*Text) ToSQLString() string {
 	return "text"
+}
+
+func (*Text) WriteTo(w io.Writer) (int64, error) {
+	return writeSingleBytes(w, []byte("text"))
 }
 
 type Bytea struct {
@@ -447,6 +509,10 @@ func (*Bytea) ToSQLString() string {
 	return "bytea"
 }
 
+func (*Bytea) WriteTo(w io.Writer) (int64, error) {
+	return writeSingleBytes(w, []byte("bytea"))
+}
+
 type Array struct {
 	Ty     Type
 	RParen sqltoken.Pos
@@ -461,7 +527,11 @@ func (a *Array) End() sqltoken.Pos {
 }
 
 func (a *Array) ToSQLString() string {
-	return fmt.Sprintf("%s[]", a.Ty.ToSQLString())
+	return toSQLString(a)
+}
+
+func (a *Array) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).Node(a.Ty).Bytes([]byte("[]")).End()
 }
 
 type Custom struct {
@@ -480,13 +550,8 @@ func (c *Custom) ToSQLString() string {
 	return c.Ty.ToSQLString()
 }
 
-func formatTypeWithOptionalLength(sqltype string, len *uint) string {
-	s := sqltype
-	if len != nil {
-		s += fmt.Sprintf("(%d)", *len)
-	}
-
-	return s
+func (c *Custom) WriteTo(w io.Writer) (int64, error) {
+	return c.Ty.WriteTo(w)
 }
 
 func NewSize(s uint) *uint {

@@ -6,9 +6,7 @@ However, in some cases, the syntax is extended to support RDBMS specific syntax 
 package sqlast
 
 import (
-	"fmt"
-	"log"
-	"strings"
+	"io"
 
 	errors "golang.org/x/xerrors"
 
@@ -20,6 +18,8 @@ type Node interface {
 	ToSQLString() string // convert Node as as sql valid string
 	Pos() sqltoken.Pos   // position of first character belonging to the node
 	End() sqltoken.Pos   // position of last character belonging to the node
+
+	WriteTo(w io.Writer) (n int64, err error)
 }
 
 type File struct {
@@ -49,13 +49,15 @@ func (f *File) Pos() sqltoken.Pos {
 }
 
 func (f *File) ToSQLString() string {
-	sqls := make([]string, len(f.Stmts))
+	return toSQLString(f)
+}
 
+func (f *File) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
 	for i, stmt := range f.Stmts {
-		sqls[i] += stmt.ToSQLString()
+		sw.JoinNewLine(i, stmt)
 	}
-
-	return strings.Join(sqls, "\n")
+	return sw.End()
 }
 
 // Identifier
@@ -88,6 +90,15 @@ func (s *Ident) End() sqltoken.Pos {
 	return s.To
 }
 
+func (s *Ident) WriteTo(w io.Writer) (int64, error) {
+	return writeSingleString(w, s.Value)
+}
+
+func (s *Ident) WriteStringTo(w io.StringWriter) (int64, error) {
+	n, err := w.WriteString(s.Value)
+	return int64(n), err
+}
+
 // `*` Node.
 type Wildcard struct {
 	Wildcard sqltoken.Pos
@@ -108,6 +119,10 @@ func (s Wildcard) ToSQLString() string {
 	return "*"
 }
 
+func (s *Wildcard) WriteTo(w io.Writer) (int64, error) {
+	return writeSingleBytes(w, wildcardBytes)
+}
+
 // `table.*`, schema.table.*
 type QualifiedWildcard struct {
 	Idents []*Ident
@@ -122,11 +137,11 @@ func (s *QualifiedWildcard) End() sqltoken.Pos {
 }
 
 func (s *QualifiedWildcard) ToSQLString() string {
-	strs := make([]string, 0, len(s.Idents))
-	for _, ident := range s.Idents {
-		strs = append(strs, ident.ToSQLString())
-	}
-	return fmt.Sprintf("%s.*", strings.Join(strs, "."))
+	return toSQLString(s)
+}
+
+func (s *QualifiedWildcard) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).Idents(s.Idents, []byte(".")).Bytes([]byte(".*")).End()
 }
 
 // table.column / schema.table.column
@@ -143,11 +158,11 @@ func (s *CompoundIdent) End() sqltoken.Pos {
 }
 
 func (s *CompoundIdent) ToSQLString() string {
-	strs := make([]string, 0, len(s.Idents))
-	for _, ident := range s.Idents {
-		strs = append(strs, ident.ToSQLString())
-	}
-	return strings.Join(strs, ".")
+	return toSQLString(s)
+}
+
+func (s *CompoundIdent) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).Idents(s.Idents, []byte(".")).End()
 }
 
 // ` X IS NULL`
@@ -167,7 +182,11 @@ func (s *IsNull) End() sqltoken.Pos {
 }
 
 func (s *IsNull) ToSQLString() string {
-	return fmt.Sprintf("%s IS NULl", s.X.ToSQLString())
+	return toSQLString(s)
+}
+
+func (s *IsNull) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).Node(s.X).Bytes([]byte(" IS NULL")).End()
 }
 
 // `X IS NOT NULL`
@@ -187,7 +206,11 @@ func (s *IsNotNull) End() sqltoken.Pos {
 }
 
 func (s *IsNotNull) ToSQLString() string {
-	return fmt.Sprintf("%s IS NOT NULL", s.X.ToSQLString())
+	return toSQLString(s)
+}
+
+func (s *IsNotNull) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).Node(s.X).Bytes([]byte(" IS NOT NULL")).End()
 }
 
 // `Expr IN (List...)`
@@ -207,7 +230,14 @@ func (s *InList) End() sqltoken.Pos {
 }
 
 func (s *InList) ToSQLString() string {
-	return fmt.Sprintf("%s %sIN (%s)", s.Expr.ToSQLString(), negatedString(s.Negated), commaSeparatedString(s.List))
+	return toSQLString(s)
+}
+
+func (s *InList) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).Node(s.Expr).Space().
+		Negated(s.Negated).
+		Bytes([]byte("IN ")).LParen().Nodes(s.List).RParen().
+		End()
 }
 
 // `Expr [ NOT ] IN SubQuery`
@@ -227,7 +257,14 @@ func (s *InSubQuery) End() sqltoken.Pos {
 }
 
 func (s *InSubQuery) ToSQLString() string {
-	return fmt.Sprintf("%s %sIN (%s)", s.Expr.ToSQLString(), negatedString(s.Negated), s.SubQuery.ToSQLString())
+	return toSQLString(s)
+}
+
+func (s *InSubQuery) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).Node(s.Expr).Space().
+		Negated(s.Negated).
+		Bytes([]byte("IN ")).LParen().Node(s.SubQuery).RParen().
+		End()
 }
 
 // `Expr [ NOT ] BETWEEN [ LOW expr ] AND [ HIGH expr]`
@@ -247,7 +284,14 @@ func (s *Between) End() sqltoken.Pos {
 }
 
 func (s *Between) ToSQLString() string {
-	return fmt.Sprintf("%s %sBETWEEN %s AND %s", s.Expr.ToSQLString(), negatedString(s.Negated), s.Low.ToSQLString(), s.High.ToSQLString())
+	return toSQLString(s)
+}
+
+func (s *Between) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).Node(s.Expr).Space().
+		Negated(s.Negated).
+		Bytes([]byte("BETWEEN ")).Node(s.Low).Bytes([]byte(" AND ")).Node(s.High).
+		End()
 }
 
 // `Left Op Right`
@@ -266,13 +310,27 @@ func (s *BinaryExpr) End() sqltoken.Pos {
 }
 
 func (s *BinaryExpr) ToSQLString() string {
-	return fmt.Sprintf("%s %s %s", s.Left.ToSQLString(), s.Op.ToSQLString(), s.Right.ToSQLString())
+	return toSQLString(s)
+}
+
+func (s *BinaryExpr) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Direct(s.Left.WriteTo(w))
+	sw.Space()
+	if sw.Err() == nil {
+		sw.Direct(s.Op.WriteTo(w))
+	}
+	sw.Space()
+	if sw.Err() == nil {
+		sw.Direct(s.Right.WriteTo(w))
+	}
+	return sw.End()
 }
 
 // `CAST(Expr AS DataType)`
 type Cast struct {
 	Expr     Node
-	DateType Type
+	DataType Type
 	Cast     sqltoken.Pos // first position of CAST token
 	RParen   sqltoken.Pos
 }
@@ -286,7 +344,16 @@ func (s *Cast) End() sqltoken.Pos {
 }
 
 func (s *Cast) ToSQLString() string {
-	return fmt.Sprintf("CAST(%s AS %s)", s.Expr.ToSQLString(), s.DateType.ToSQLString())
+	return toSQLString(s)
+}
+
+func (s *Cast) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).
+		Bytes([]byte("CAST")).
+		LParen().
+		Node(s.Expr).As().Node(s.DataType).
+		RParen().
+		End()
 }
 
 // (AST)
@@ -304,7 +371,11 @@ func (s *Nested) End() sqltoken.Pos {
 }
 
 func (s *Nested) ToSQLString() string {
-	return fmt.Sprintf("(%s)", s.AST.ToSQLString())
+	return toSQLString(s)
+}
+
+func (s *Nested) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).LParen().Node(s.AST).RParen().End()
 }
 
 // Op Expr
@@ -323,7 +394,11 @@ func (s *UnaryExpr) End() sqltoken.Pos {
 }
 
 func (s *UnaryExpr) ToSQLString() string {
-	return fmt.Sprintf("%s %s", s.Op.ToSQLString(), s.Expr.ToSQLString())
+	return toSQLString(s)
+}
+
+func (s *UnaryExpr) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).Node(s.Op).Space().Node(s.Expr).End()
 }
 
 // Name(Args...) [OVER (Over)]
@@ -347,13 +422,16 @@ func (s *Function) End() sqltoken.Pos {
 }
 
 func (s *Function) ToSQLString() string {
-	str := fmt.Sprintf("%s(%s)", s.Name.ToSQLString(), commaSeparatedString(s.Args))
+	return toSQLString(s)
+}
 
+func (s *Function) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Node(s.Name).LParen().Nodes(s.Args).RParen()
 	if s.Over != nil {
-		str += fmt.Sprintf(" OVER (%s)", s.Over.ToSQLString())
+		sw.Bytes([]byte(" OVER ")).LParen().Node(s.Over).RParen()
 	}
-
-	return str
+	return sw.End()
 }
 
 // CASE [Operand] WHEN Conditions... THEN Results... [ELSE ElseResult] END
@@ -375,21 +453,24 @@ func (s *CaseExpr) End() sqltoken.Pos {
 }
 
 func (s *CaseExpr) ToSQLString() string {
-	str := "CASE"
-	if s.Operand != nil {
-		str += fmt.Sprintf(" %s", s.Operand.ToSQLString())
-	}
-	var conditionsStr []string
-	for i := 0; i < len(s.Conditions); i++ {
-		conditionsStr = append(conditionsStr, fmt.Sprintf(" WHEN %s THEN %s", s.Conditions[i].ToSQLString(), s.Results[i].ToSQLString()))
-	}
-	str += strings.Join(conditionsStr, "")
-	if s.ElseResult != nil {
-		str += fmt.Sprintf(" ELSE %s", s.ElseResult.ToSQLString())
-	}
-	str += " END"
+	return toSQLString(s)
+}
 
-	return str
+func (s *CaseExpr) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("CASE"))
+	if s.Operand != nil {
+		sw.Space().Node(s.Operand)
+	}
+	for i := 0; i < len(s.Conditions); i++ {
+		sw.Bytes([]byte(" WHEN ")).Node(s.Conditions[i])
+		sw.Bytes([]byte(" THEN ")).Node(s.Results[i])
+	}
+	if s.ElseResult != nil {
+		sw.Bytes([]byte(" ELSE ")).Node(s.ElseResult)
+	}
+	sw.Bytes([]byte(" END"))
+	return sw.End()
 }
 
 // [ NOT ] EXISTS (QueryStmt)
@@ -413,7 +494,13 @@ func (s *Exists) End() sqltoken.Pos {
 }
 
 func (s *Exists) ToSQLString() string {
-	return fmt.Sprintf("%sEXISTS (%s)", negatedString(s.Negated), s.Query.ToSQLString())
+	return toSQLString(s)
+}
+
+func (s *Exists) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).
+		Negated(s.Negated).Bytes([]byte("EXISTS ")).LParen().Node(s.Query).RParen().
+		End()
 }
 
 // (QueryStmt)
@@ -431,7 +518,11 @@ func (s *SubQuery) End() sqltoken.Pos {
 }
 
 func (s *SubQuery) ToSQLString() string {
-	return fmt.Sprintf("(%s)", s.Query.ToSQLString())
+	return toSQLString(s)
+}
+
+func (s *SubQuery) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).LParen().Node(s.Query).RParen().End()
 }
 
 // Table Names (ex public.table_name)
@@ -460,11 +551,11 @@ func (s *ObjectName) End() sqltoken.Pos {
 }
 
 func (s *ObjectName) ToSQLString() string {
-	var strs []string
-	for _, l := range s.Idents {
-		strs = append(strs, l.ToSQLString())
-	}
-	return strings.Join(strs, ".")
+	return toSQLString(s)
+}
+
+func (s *ObjectName) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).Idents(s.Idents, dotBytes).End()
 }
 
 type WindowSpec struct {
@@ -498,19 +589,34 @@ func (s *WindowSpec) End() sqltoken.Pos {
 }
 
 func (s *WindowSpec) ToSQLString() string {
-	var clauses []string
+	return toSQLString(s)
+}
+
+func (s *WindowSpec) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	space := false
 	if len(s.PartitionBy) != 0 {
-		clauses = append(clauses, fmt.Sprintf("PARTITION BY %s", commaSeparatedString(s.PartitionBy)))
+		space = true
+		sw.Bytes([]byte("PARTITION BY ")).Nodes(s.PartitionBy)
 	}
 	if len(s.OrderBy) != 0 {
-		clauses = append(clauses, fmt.Sprintf("ORDER BY %s", commaSeparatedString(s.OrderBy)))
+		if space {
+			sw.Space()
+		} else {
+			space = true
+		}
+		sw.Bytes([]byte("ORDER BY "))
+		for i, order := range s.OrderBy {
+			sw.JoinComma(i, order)
+		}
 	}
-
 	if s.WindowsFrame != nil {
-		clauses = append(clauses, s.WindowsFrame.ToSQLString())
+		if space {
+			sw.Space()
+		}
+		sw.Node(s.WindowsFrame)
 	}
-
-	return strings.Join(clauses, " ")
+	return sw.End()
 }
 
 type WindowFrame struct {
@@ -532,10 +638,17 @@ func (s *WindowFrame) End() sqltoken.Pos {
 }
 
 func (s *WindowFrame) ToSQLString() string {
+	return toSQLString(s)
+}
+
+func (s *WindowFrame) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
 	if s.EndBound != nil {
-		return fmt.Sprintf("%s BETWEEN %s AND %s", s.Units.ToSQLString(), s.StartBound.ToSQLString(), s.EndBound.ToSQLString())
+		return sw.Node(s.Units).Bytes([]byte(" BETWEEN ")).
+			Node(s.StartBound).Bytes([]byte(" AND ")).Node(s.EndBound).
+			End()
 	} else {
-		return fmt.Sprintf("%s %s", s.Units.ToSQLString(), s.StartBound.ToSQLString())
+		return sw.Node(s.Units).Space().Node(s.StartBound).End()
 	}
 }
 
@@ -570,6 +683,18 @@ func (s *WindowFrameUnit) ToSQLString() string {
 		return "GROUPS"
 	}
 	return ""
+}
+
+func (s *WindowFrameUnit) WriteTo(w io.Writer) (int64, error) {
+	switch s.Type {
+	case RowsUnit:
+		return writeSingleBytes(w, []byte("ROWS"))
+	case RangeUnit:
+		return writeSingleBytes(w, []byte("RANGE"))
+	case GroupsUnit:
+		return writeSingleBytes(w, []byte("GROUPS"))
+	}
+	return 0, nil
 }
 
 func (WindowFrameUnit) FromStr(str string) (*WindowFrameUnit, error) {
@@ -609,6 +734,10 @@ func (*CurrentRow) ToSQLString() string {
 	return "CURRENT ROW"
 }
 
+func (c *CurrentRow) WriteTo(w io.Writer) (int64, error) {
+	return writeSingleBytes(w, []byte("CURRENT ROW"))
+}
+
 type UnboundedPreceding struct {
 	sqlWindowFrameBound
 	Unbounded sqltoken.Pos // first char position of UNBOUND
@@ -625,6 +754,10 @@ func (u *UnboundedPreceding) End() sqltoken.Pos {
 
 func (*UnboundedPreceding) ToSQLString() string {
 	return "UNBOUNDED PRECEDING"
+}
+
+func (u *UnboundedPreceding) WriteTo(w io.Writer) (int64, error) {
+	return writeSingleBytes(w, []byte("UNBOUNDED PRECEDING"))
 }
 
 type UnboundedFollowing struct {
@@ -645,6 +778,10 @@ func (*UnboundedFollowing) ToSQLString() string {
 	return "UNBOUNDED FOLLOWING"
 }
 
+func (u *UnboundedFollowing) WriteTo(w io.Writer) (int64, error) {
+	return writeSingleBytes(w, []byte("UNBOUNDED FOLLOWING"))
+}
+
 // `Bound PRECEDING`
 type Preceding struct {
 	sqlWindowFrameBound
@@ -662,7 +799,11 @@ func (p *Preceding) End() sqltoken.Pos {
 }
 
 func (p *Preceding) ToSQLString() string {
-	return fmt.Sprintf("%d PRECEDING", *p.Bound)
+	return toSQLString(p)
+}
+
+func (p *Preceding) WriteTo(w io.Writer) (n int64, err error) {
+	return newSQLWriter(w).Int(int(*p.Bound)).Bytes([]byte(" PRECEDING")).End()
 }
 
 // `Bound FOLLOWING`
@@ -682,68 +823,9 @@ func (f *Following) End() sqltoken.Pos {
 }
 
 func (f *Following) ToSQLString() string {
-	return fmt.Sprintf("%d FOLLOWING", *f.Bound)
+	return toSQLString(f)
 }
 
-func commaSeparatedString(list interface{}) string {
-	var strs []string
-	switch s := list.(type) {
-	case []Node:
-		for _, l := range s {
-			strs = append(strs, l.ToSQLString())
-		}
-	case []*ObjectName:
-		for _, l := range s {
-			strs = append(strs, l.ToSQLString())
-		}
-	case []TableElement:
-		for _, l := range s {
-			strs = append(strs, l.ToSQLString())
-		}
-	case []SQLSelectItem:
-		for _, l := range s {
-			strs = append(strs, l.ToSQLString())
-		}
-	case []*Assignment:
-		for _, l := range s {
-			strs = append(strs, l.ToSQLString())
-		}
-	case []*Ident:
-		for _, l := range s {
-			strs = append(strs, l.ToSQLString())
-		}
-	case []*OrderByExpr:
-		for _, l := range s {
-			strs = append(strs, l.ToSQLString())
-		}
-	case []*ColumnDef:
-		for _, l := range s {
-			strs = append(strs, l.ToSQLString())
-		}
-	case []*TableConstraint:
-		for _, l := range s {
-			strs = append(strs, l.ToSQLString())
-		}
-	case []TableReference:
-		for _, l := range s {
-			strs = append(strs, l.ToSQLString())
-		}
-	case []TableOption:
-		for _, l := range s {
-			strs = append(strs, l.ToSQLString())
-		}
-	default:
-		log.Panicf("unexpected type array %+v", list)
-	}
-	return strings.Join(strs, ", ")
-
-}
-
-func negatedString(negated bool) string {
-	var n string
-	if negated {
-		n = "NOT "
-	}
-
-	return n
+func (f *Following) WriteTo(w io.Writer) (n int64, err error) {
+	return newSQLWriter(w).Int(int(*f.Bound)).Bytes([]byte(" FOLLOWING")).End()
 }

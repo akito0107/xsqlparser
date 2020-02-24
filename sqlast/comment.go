@@ -1,7 +1,7 @@
 package sqlast
 
 import (
-	"strings"
+	"io"
 
 	"github.com/akito0107/xsqlparser/sqltoken"
 )
@@ -11,13 +11,15 @@ type CommentGroup struct {
 }
 
 func (c *CommentGroup) ToSQLString() string {
-	var comments []string
+	return toSQLString(c)
+}
 
-	for _, l := range c.List {
-		comments = append(comments, l.Text)
+func (c *CommentGroup) WriteTo(w io.Writer) (n int64, err error) {
+	sw := newSQLWriter(w)
+	for i, comment := range c.List {
+		sw.JoinNewLine(i, comment)
 	}
-
-	return strings.Join(comments, "\n")
+	return sw.End()
 }
 
 func (c *CommentGroup) Pos() sqltoken.Pos {
@@ -35,6 +37,10 @@ type Comment struct {
 
 func (c *Comment) ToSQLString() string {
 	return c.Text
+}
+
+func (c *Comment) WriteTo(w io.Writer) (int64, error) {
+	return writeSingleString(w, c.Text)
 }
 
 func (c *Comment) Pos() sqltoken.Pos {

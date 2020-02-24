@@ -1,6 +1,8 @@
 package sqlast
 
 import (
+	"io"
+
 	"github.com/akito0107/xsqlparser/sqltoken"
 )
 
@@ -15,12 +17,13 @@ type MyEngine struct {
 }
 
 func (m *MyEngine) ToSQLString() string {
-	str := "ENGINE "
-	if m.Equal {
-		str += "= "
-	}
-	str += m.Name.ToSQLString()
-	return str
+	return toSQLString(m)
+}
+
+func (m *MyEngine) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("ENGINE ")).If(m.Equal, []byte("= ")).Node(m.Name)
+	return sw.End()
 }
 
 func (m *MyEngine) Pos() sqltoken.Pos {
@@ -41,19 +44,14 @@ type MyCharset struct {
 }
 
 func (m *MyCharset) ToSQLString() string {
-	var s string
+	return toSQLString(m)
+}
 
-	if m.IsDefault {
-		s = "DEFAULT "
-	}
-	s += "CHARSET "
-
-	if m.Equal {
-		s +=  "= "
-	}
-	s += m.Name.ToSQLString()
-
-	return s
+func (m *MyCharset) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.If(m.IsDefault, []byte("DEFAULT ")).Bytes([]byte("CHARSET "))
+	sw.If(m.Equal, []byte("= ")).Node(m.Name)
+	return sw.End()
 }
 
 func (m *MyCharset) Pos() sqltoken.Pos {

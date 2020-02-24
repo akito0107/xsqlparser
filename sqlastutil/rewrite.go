@@ -156,7 +156,7 @@ func (a *application) apply(parent sqlast.Node, name string, iter *iterator, n s
 		a.apply(n, "Right", nil, n.Right)
 	case *sqlast.Cast:
 		a.apply(n, "Expr", nil, n.Expr)
-		a.apply(n, "DateType", nil, n.DateType)
+		a.apply(n, "DataType", nil, n.DataType)
 	case *sqlast.Nested:
 		a.apply(n, "AST", nil, n.AST)
 	case *sqlast.UnaryExpr:

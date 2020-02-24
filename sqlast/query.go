@@ -1,9 +1,8 @@
 package sqlast
 
 import (
-	"fmt"
+	"io"
 	"log"
-	"strings"
 
 	"github.com/akito0107/xsqlparser/sqltoken"
 )
@@ -39,28 +38,31 @@ func (q *QueryStmt) End() sqltoken.Pos {
 }
 
 func (q *QueryStmt) ToSQLString() string {
-	var query string
+	return toSQLString(q)
+}
 
+func (q *QueryStmt) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
 	if len(q.CTEs) != 0 {
-		query += "WITH "
-		ctestrs := make([]string, 0, len(q.CTEs))
-		for _, cte := range q.CTEs {
-			ctestrs = append(ctestrs, cte.ToSQLString())
+		sw.Bytes([]byte("WITH "))
+		for i, cte := range q.CTEs {
+			sw.JoinComma(i, cte)
 		}
-		query += strings.Join(ctestrs, ", ") + " "
+		sw.Space()
 	}
-
-	query += q.Body.ToSQLString()
-
+	if sw.Err() == nil {
+		sw.Direct(q.Body.WriteTo(w))
+	}
 	if len(q.OrderBy) != 0 {
-		query += fmt.Sprintf(" ORDER BY %s", commaSeparatedString(q.OrderBy))
+		sw.Bytes([]byte(" ORDER BY "))
+		for i, col := range q.OrderBy {
+			sw.JoinComma(i, col)
+		}
 	}
-
 	if q.Limit != nil {
-		query += " " + q.Limit.ToSQLString()
+		sw.Space().Node(q.Limit)
 	}
-
-	return query
+	return sw.End()
 }
 
 // CTE
@@ -79,7 +81,13 @@ func (c *CTE) End() sqltoken.Pos {
 }
 
 func (c *CTE) ToSQLString() string {
-	return fmt.Sprintf("%s AS (%s)", c.Alias.ToSQLString(), c.Query.ToSQLString())
+	return toSQLString(c)
+}
+
+func (c *CTE) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).
+		Node(c.Alias).As().LParen().Node(c.Query).RParen().
+		End()
 }
 
 //go:generate genmark -t SQLSetExpr -e Node
@@ -99,7 +107,11 @@ func (s *SelectExpr) End() sqltoken.Pos {
 }
 
 func (s *SelectExpr) ToSQLString() string {
-	return s.Select.ToSQLString()
+	return toSQLString(s)
+}
+
+func (s *SelectExpr) WriteTo(w io.Writer) (int64, error) {
+	return s.Select.WriteTo(w)
 }
 
 // (QueryStmt)
@@ -118,7 +130,11 @@ func (q *QueryExpr) End() sqltoken.Pos {
 }
 
 func (q *QueryExpr) ToSQLString() string {
-	return fmt.Sprintf("(%s)", q.Query.ToSQLString())
+	return toSQLString(q)
+}
+
+func (q *QueryExpr) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).LParen().Node(q.Query).RParen().End()
 }
 
 type SetOperationExpr struct {
@@ -138,11 +154,13 @@ func (s *SetOperationExpr) End() sqltoken.Pos {
 }
 
 func (s *SetOperationExpr) ToSQLString() string {
-	var allStr string
-	if s.All {
-		allStr = " ALL"
-	}
-	return fmt.Sprintf("%s %s%s %s", s.Left.ToSQLString(), s.Op.ToSQLString(), allStr, s.Right.ToSQLString())
+	return toSQLString(s)
+}
+
+func (s *SetOperationExpr) WriteTo(w io.Writer) (n int64, err error) {
+	return newSQLWriter(w).
+		Node(s.Left).Space().Node(s.Op).If(s.All, []byte(" ALL")).Space().Node(s.Right).
+		End()
 }
 
 //go:generate genmark -t SQLSetOperator -e Node
@@ -164,6 +182,10 @@ func (u *UnionOperator) ToSQLString() string {
 	return "UNION"
 }
 
+func (u *UnionOperator) WriteTo(w io.Writer) (int64, error) {
+	return writeSingleBytes(w, []byte("UNION"))
+}
+
 type ExceptOperator struct {
 	sqlSetOperator
 	From, To sqltoken.Pos
@@ -181,6 +203,10 @@ func (*ExceptOperator) ToSQLString() string {
 	return "EXCEPT"
 }
 
+func (e *ExceptOperator) WriteTo(w io.Writer) (n int64, err error) {
+	return writeSingleBytes(w, []byte("EXCEPT"))
+}
+
 type IntersectOperator struct {
 	sqlSetOperator
 	From, To sqltoken.Pos
@@ -196,6 +222,10 @@ func (i *IntersectOperator) End() sqltoken.Pos {
 
 func (IntersectOperator) ToSQLString() string {
 	return "INTERSECT"
+}
+
+func (i *IntersectOperator) WriteTo(w io.Writer) (n int64, err error) {
+	return writeSingleBytes(w, []byte("INTERSECT"))
 }
 
 type SQLSelect struct {
@@ -234,29 +264,37 @@ func (s *SQLSelect) End() sqltoken.Pos {
 }
 
 func (s *SQLSelect) ToSQLString() string {
-	q := "SELECT "
+	return toSQLString(s)
+}
+
+func (s *SQLSelect) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes(selectBytes)
 	if s.Distinct {
-		q += "DISTINCT "
+		sw.Bytes([]byte("DISTINCT "))
 	}
-	q += commaSeparatedString(s.Projection)
-
+	for i, projection := range s.Projection {
+		sw.JoinComma(i, projection)
+	}
 	if len(s.FromClause) != 0 {
-		q += fmt.Sprintf(" FROM %s", commaSeparatedString(s.FromClause))
+		sw.Bytes(fromBytes)
+		for i, from := range s.FromClause {
+			sw.JoinComma(i, from)
+		}
 	}
-
 	if s.WhereClause != nil {
-		q += fmt.Sprintf(" WHERE %s", s.WhereClause.ToSQLString())
+		sw.Bytes(whereBytes)
+		if sw.Err() == nil {
+			sw.Direct(s.WhereClause.WriteTo(w))
+		}
 	}
-
 	if len(s.GroupByClause) != 0 {
-		q += fmt.Sprintf(" GROUP BY %s", commaSeparatedString(s.GroupByClause))
+		sw.Bytes([]byte(" GROUP BY ")).Nodes(s.GroupByClause)
 	}
-
 	if s.HavingClause != nil {
-		q += fmt.Sprintf(" HAVING %s", s.HavingClause.ToSQLString())
+		sw.Bytes([]byte(" HAVING ")).Node(s.HavingClause)
 	}
-
-	return q
+	return sw.End()
 }
 
 //go:generate genmark -t TableReference -e Node
@@ -296,17 +334,22 @@ func (t *Table) End() sqltoken.Pos {
 }
 
 func (t *Table) ToSQLString() string {
-	s := t.Name.ToSQLString()
+	return toSQLString(t)
+}
+
+func (t *Table) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Node(t.Name)
 	if len(t.Args) != 0 {
-		s = fmt.Sprintf("%s(%s)", s, commaSeparatedString(t.Args))
+		sw.LParen().Nodes(t.Args).RParen()
 	}
 	if t.Alias != nil {
-		s = fmt.Sprintf("%s AS %s", s, t.Alias.ToSQLString())
+		sw.As().Node(t.Alias)
 	}
 	if len(t.WithHints) != 0 {
-		s = fmt.Sprintf("%s WITH (%s)", s, commaSeparatedString(t.WithHints))
+		sw.Bytes([]byte(" WITH ")).LParen().Nodes(t.WithHints).RParen()
 	}
-	return s
+	return sw.End()
 }
 
 type Derived struct {
@@ -336,17 +379,17 @@ func (d *Derived) End() sqltoken.Pos {
 }
 
 func (d *Derived) ToSQLString() string {
-	var lateralStr string
+	return toSQLString(d)
+}
 
-	if d.Lateral {
-		lateralStr = "LATERAL "
-	}
-
-	s := fmt.Sprintf("%s(%s)", lateralStr, d.SubQuery.ToSQLString())
+func (d *Derived) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.If(d.Lateral, []byte("LATERAL "))
+	sw.LParen().Node(d.SubQuery).RParen()
 	if d.Alias != nil {
-		s = fmt.Sprintf("%s AS %s", s, d.Alias.ToSQLString())
+		sw.As().Node(d.Alias)
 	}
-	return s
+	return sw.End()
 }
 
 //go:generate genmark -t SQLSelectItem -e Node
@@ -365,7 +408,11 @@ func (u *UnnamedSelectItem) End() sqltoken.Pos {
 }
 
 func (u *UnnamedSelectItem) ToSQLString() string {
-	return u.Node.ToSQLString()
+	return toSQLString(u)
+}
+
+func (u *UnnamedSelectItem) WriteTo(w io.Writer) (int64, error) {
+	return u.Node.WriteTo(w)
 }
 
 type AliasSelectItem struct {
@@ -383,7 +430,11 @@ func (a *AliasSelectItem) End() sqltoken.Pos {
 }
 
 func (a *AliasSelectItem) ToSQLString() string {
-	return fmt.Sprintf("%s AS %s", a.Expr.ToSQLString(), a.Alias.ToSQLString())
+	return toSQLString(a)
+}
+
+func (a *AliasSelectItem) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).Node(a.Expr).As().Node(a.Alias).End()
 }
 
 // schema.*
@@ -404,7 +455,11 @@ func (q *QualifiedWildcardSelectItem) End() sqltoken.Pos {
 }
 
 func (q *QualifiedWildcardSelectItem) ToSQLString() string {
-	return fmt.Sprintf("%s.*", q.Prefix.ToSQLString())
+	return toSQLString(q)
+}
+
+func (q *QualifiedWildcardSelectItem) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).Node(q.Prefix).Bytes([]byte(".*")).End()
 }
 
 type WildcardSelectItem struct {
@@ -424,6 +479,10 @@ func (w *WildcardSelectItem) ToSQLString() string {
 	return "*"
 }
 
+func (*WildcardSelectItem) WriteTo(w io.Writer) (int64, error) {
+	return writeSingleBytes(w, []byte("*"))
+}
+
 type CrossJoin struct {
 	tableReference
 	Reference TableReference
@@ -439,7 +498,13 @@ func (c *CrossJoin) End() sqltoken.Pos {
 }
 
 func (c *CrossJoin) ToSQLString() string {
-	return fmt.Sprintf("%s CROSS JOIN %s", c.Reference.ToSQLString(), c.Factor.ToSQLString())
+	return toSQLString(c)
+}
+
+func (c *CrossJoin) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).
+		Node(c.Reference).Bytes([]byte(" CROSS JOIN ")).Node(c.Factor).
+		End()
 }
 
 //go:generate genmark -t JoinElement -e Node
@@ -458,7 +523,11 @@ func (t *TableJoinElement) End() sqltoken.Pos {
 }
 
 func (t *TableJoinElement) ToSQLString() string {
-	return t.Ref.ToSQLString()
+	return toSQLString(t)
+}
+
+func (t *TableJoinElement) WriteTo(w io.Writer) (int64, error) {
+	return t.Ref.WriteTo(w)
 }
 
 type PartitionedJoinTable struct {
@@ -478,7 +547,14 @@ func (p *PartitionedJoinTable) End() sqltoken.Pos {
 }
 
 func (p *PartitionedJoinTable) ToSQLString() string {
-	return fmt.Sprintf("%s PARTITION BY (%s)", p.Factor.ToSQLString(), commaSeparatedString(p.ColumnList))
+	return toSQLString(p)
+}
+
+func (p *PartitionedJoinTable) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).
+		Node(p.Factor).Bytes([]byte(" PARTITION BY ")).
+		LParen().Idents(p.ColumnList, []byte(", ")).RParen().
+		End()
 }
 
 type QualifiedJoin struct {
@@ -498,7 +574,15 @@ func (q *QualifiedJoin) End() sqltoken.Pos {
 }
 
 func (q *QualifiedJoin) ToSQLString() string {
-	return fmt.Sprintf("%s %sJOIN %s %s", q.LeftElement.ToSQLString(), q.Type.ToSQLString(), q.RightElement.ToSQLString(), q.Spec.ToSQLString())
+	return toSQLString(q)
+}
+
+func (q *QualifiedJoin) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).
+		Node(q.LeftElement).Space().
+		Node(q.Type).Bytes([]byte("JOIN ")).
+		Node(q.RightElement).Space().Node(q.Spec).
+		End()
 }
 
 type NaturalJoin struct {
@@ -517,7 +601,15 @@ func (n *NaturalJoin) End() sqltoken.Pos {
 }
 
 func (n *NaturalJoin) ToSQLString() string {
-	return fmt.Sprintf("%s NATURAL %sJOIN %s", n.LeftElement.ToSQLString(), n.Type.ToSQLString(), n.RightElement.ToSQLString())
+	return toSQLString(n)
+}
+
+func (n *NaturalJoin) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).
+		Node(n.LeftElement).
+		Bytes([]byte(" NATURAL ")).Node(n.Type).Bytes([]byte("JOIN ")).
+		Node(n.RightElement).
+		End()
 }
 
 //go:generate genmark -t JoinSpec -e Node
@@ -538,7 +630,14 @@ func (n *NamedColumnsJoin) End() sqltoken.Pos {
 }
 
 func (n *NamedColumnsJoin) ToSQLString() string {
-	return fmt.Sprintf("USING (%s)", commaSeparatedString(n.ColumnList))
+	return toSQLString(n)
+}
+
+func (n *NamedColumnsJoin) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).
+		Bytes([]byte("USING ")).
+		LParen().Idents(n.ColumnList, []byte(", ")).RParen().
+		End()
 }
 
 type JoinCondition struct {
@@ -556,7 +655,11 @@ func (j *JoinCondition) End() sqltoken.Pos {
 }
 
 func (j *JoinCondition) ToSQLString() string {
-	return fmt.Sprintf("ON %s", j.SearchCondition.ToSQLString())
+	return toSQLString(j)
+}
+
+func (j *JoinCondition) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).Bytes([]byte("ON ")).Node(j.SearchCondition).End()
 }
 
 type JoinType struct {
@@ -609,6 +712,10 @@ func (j *JoinType) ToSQLString() string {
 	return ""
 }
 
+func (j *JoinType) WriteTo(w io.Writer) (int64, error) {
+	return writeSingleBytes(w, []byte(j.ToSQLString()))
+}
+
 // ORDER BY Expr [ASC | DESC]
 type OrderByExpr struct {
 	Expr        Node
@@ -629,13 +736,20 @@ func (o *OrderByExpr) End() sqltoken.Pos {
 }
 
 func (o *OrderByExpr) ToSQLString() string {
-	if o.ASC == nil {
-		return o.Expr.ToSQLString()
+	return toSQLString(o)
+}
+
+func (o *OrderByExpr) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Node(o.Expr)
+	if o.ASC != nil {
+		if *o.ASC {
+			sw.Bytes([]byte(" ASC"))
+		} else {
+			sw.Bytes([]byte(" DESC"))
+		}
 	}
-	if *o.ASC {
-		return fmt.Sprintf("%s ASC", o.Expr.ToSQLString())
-	}
-	return fmt.Sprintf("%s DESC", o.Expr.ToSQLString())
+	return sw.End()
 }
 
 // LIMIT [ALL | LimitValue ] [ OFFSET OffsetValue]
@@ -663,16 +777,19 @@ func (l *LimitExpr) End() sqltoken.Pos {
 }
 
 func (l *LimitExpr) ToSQLString() string {
-	str := "LIMIT"
+	return toSQLString(l)
+}
+
+func (l *LimitExpr) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("LIMIT "))
 	if l.All {
-		str += " ALL"
+		sw.Bytes([]byte("ALL"))
 	} else {
-		str += " " + l.LimitValue.ToSQLString()
+		sw.Node(l.LimitValue)
 	}
-
 	if l.OffsetValue != nil {
-		str += " OFFSET " + l.OffsetValue.ToSQLString()
+		sw.Bytes([]byte(" OFFSET ")).Node(l.OffsetValue)
 	}
-
-	return str
+	return sw.End()
 }

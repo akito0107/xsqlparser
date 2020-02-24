@@ -176,7 +176,7 @@ func (p *Parser) ParseDataType() (sqlast.Type, error) {
 	}
 	word, ok := tok.Value.(*sqltoken.SQLWord)
 	if !ok {
-		return nil, errors.Errorf("must be datetype name but %v", tok)
+		return nil, errors.Errorf("must be datatype name but %v", tok)
 	}
 
 	switch word.Keyword {
@@ -2066,7 +2066,7 @@ func (p *Parser) parsePGCast(expr sqlast.Node) (sqlast.Node, error) {
 	}
 	return &sqlast.Cast{
 		Expr:     expr,
-		DateType: tp,
+		DataType: tp,
 	}, nil
 }
 
@@ -2818,7 +2818,7 @@ func (p *Parser) parseCastExpression() (sqlast.Node, error) {
 
 	return &sqlast.Cast{
 		Expr:     expr,
-		DateType: dataType,
+		DataType: dataType,
 		Cast:     tok.From,
 		RParen:   r.To,
 	}, nil
