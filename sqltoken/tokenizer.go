@@ -38,9 +38,29 @@ func matchingEndQuote(quoteStyle rune) rune {
 	return 0
 }
 
-func MakeKeyword(word string, quoteStyle rune) *SQLWord {
-	w := strings.ToUpper(word)
+var keywordCache = map[string]*SQLWord{}
 
+func init() {
+	for keyword := range dialect.Keywords {
+		keywordCache[keyword] = &SQLWord{
+			Value:      keyword,
+			Keyword:    keyword,
+		}
+		lower := strings.ToLower(keyword)
+		keywordCache[lower] = &SQLWord{
+			Value:      lower,
+			Keyword:    keyword,
+		}
+	}
+}
+
+func MakeKeyword(word string, quoteStyle rune) *SQLWord {
+	if quoteStyle == 0 {
+		if w, ok := keywordCache[word]; ok {
+			return w
+		}
+	}
+	w := strings.ToUpper(word)
 	_, ok := dialect.Keywords[w]
 
 	if quoteStyle == 0 && ok {
