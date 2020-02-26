@@ -161,20 +161,33 @@ func (t *Tokenizer) Tokenize() ([]*Token, error) {
 }
 
 func (t *Tokenizer) NextToken() (*Token, error) {
+	var tok Token
+	return t.Scan(&tok)
+}
+
+func (t *Tokenizer) Scan(token *Token) (*Token, error) {
 	pos := t.Pos()
 	tok, str, err := t.next()
 	if err == io.EOF {
 		return nil, io.EOF
 	}
 	if err != nil {
-		return &Token{Kind: ILLEGAL, Value: "", From: pos, To: t.Pos()}, errors.Errorf("tokenize failed: %w", err)
+		token.Kind = ILLEGAL
+		token.Value = ""
+		token.From = pos
+		token.To = t.Pos()
+		return token, errors.Errorf("tokenize failed: %w", err)
 	}
 
 	if !t.parseComment && (tok == Whitespace || tok == Comment) {
 		return nil, nil
 	}
 
-	return &Token{Kind: tok, Value: str, From: pos, To: t.Pos()}, nil
+	token.Kind = tok
+	token.Value = str
+	token.From = pos
+	token.To = t.Pos()
+	return token, nil
 }
 
 func (t *Tokenizer) Pos() Pos {
@@ -427,7 +440,6 @@ func (t *Tokenizer) next() (Kind, interface{}, error) {
 func (t *Tokenizer) tokenizeWord(f rune) string {
 	var builder strings.Builder
 	builder.WriteRune(f)
-
 	for {
 		r := t.Scanner.Peek()
 		if t.Dialect.IsIdentifierPart(r) {
@@ -444,10 +456,8 @@ func (t *Tokenizer) tokenizeWord(f rune) string {
 }
 
 func (t *Tokenizer) tokenizeSingleQuotedString() (string, error) {
-	// var str []rune
 	var builder strings.Builder
 	t.Scanner.Next()
-
 	for {
 		n := t.Scanner.Peek()
 		if n == '\'' {
