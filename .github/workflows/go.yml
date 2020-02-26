@@ -1,0 +1,34 @@
+name: Go
+on: 
+  push:
+    branches: 
+      - master
+  pull_request:
+    
+jobs:
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go: [1.12, 1.13, 1.14]
+    steps:
+
+    - name: Set up Go 
+      uses: actions/setup-go@v1
+      with:
+        go-version: ${{ matrix.go }}
+      id: go
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+
+    - name: test
+      run: go test -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=.,./sqlast/...,./sqlastutil/...,./sqltoken/...,./dialect/... ./...
+
+    - name: Upload Coverage report to CodeCov
+      uses: codecov/codecov-action@v1.0.0
+      with:
+        token: ${{secrets.CODECOV_TOKEN}}
+        file: ./coverage.txt
