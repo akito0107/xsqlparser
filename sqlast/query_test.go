@@ -441,3 +441,229 @@ func TestSQLQuery_ToSQLString(t *testing.T) {
 	}
 
 }
+
+func BenchmarkSQLQuery_ToSQLString(b *testing.B) {
+	cases := []struct {
+		name string
+		in   *QueryStmt
+	}{
+		{
+			// from https://www.postgresql.jp/document/9.3/html/queries-with.html
+			name: "with cte",
+			in: &QueryStmt{
+				CTEs: []*CTE{
+					{
+						Alias: NewIdent("regional_sales"),
+						Query: &QueryStmt{
+							Body: &SQLSelect{
+								Projection: []SQLSelectItem{
+									&UnnamedSelectItem{Node: NewIdent("region")},
+									&AliasSelectItem{
+										Alias: NewIdent("total_sales"),
+										Expr: &Function{
+											Name: NewObjectName("SUM"),
+											Args: []Node{NewIdent("amount")},
+										},
+									},
+								},
+								FromClause: []TableReference{
+									&Table{
+										Name: NewObjectName("orders"),
+									},
+								},
+								GroupByClause: []Node{NewIdent("region")},
+							},
+						},
+					},
+				},
+				Body: &SQLSelect{
+					Projection: []SQLSelectItem{
+						&UnnamedSelectItem{Node: NewIdent("product")},
+						&AliasSelectItem{
+							Alias: NewIdent("product_units"),
+							Expr: &Function{
+								Name: NewObjectName("SUM"),
+								Args: []Node{NewIdent("quantity")},
+							},
+						},
+					},
+					FromClause: []TableReference{
+						&Table{
+							Name: NewObjectName("orders"),
+						},
+					},
+					WhereClause: &InSubQuery{
+						Expr: NewIdent("region"),
+						SubQuery: &QueryStmt{
+							Body: &SQLSelect{
+								Projection: []SQLSelectItem{
+									&UnnamedSelectItem{Node: NewIdent("region")},
+								},
+								FromClause: []TableReference{
+									&Table{
+										Name: NewObjectName("top_regions"),
+									},
+								},
+							},
+						},
+					},
+					GroupByClause: []Node{NewIdent("region"), NewIdent("product")},
+				},
+			},
+		},
+		{
+			name: "order by and limit",
+			in: &QueryStmt{
+				Body: &SQLSelect{
+					Projection: []SQLSelectItem{
+						&UnnamedSelectItem{Node: NewIdent("product")},
+						&AliasSelectItem{
+							Alias: NewIdent("product_units"),
+							Expr: &Function{
+								Name: NewObjectName("SUM"),
+								Args: []Node{NewIdent("quantity")},
+							},
+						},
+					},
+					FromClause: []TableReference{
+						&Table{
+							Name: NewObjectName("orders"),
+						},
+					},
+					WhereClause: &InSubQuery{
+						Expr: NewIdent("region"),
+						SubQuery: &QueryStmt{
+							Body: &SQLSelect{
+								Projection: []SQLSelectItem{
+									&UnnamedSelectItem{Node: NewIdent("region")},
+								},
+								FromClause: []TableReference{
+									&Table{
+										Name: NewObjectName("top_regions"),
+									},
+								},
+							},
+						},
+					},
+				},
+				OrderBy: []*OrderByExpr{
+					{Expr: NewIdent("product_units")},
+				},
+				Limit: &LimitExpr{LimitValue: NewLongValue(100)},
+			},
+		},
+		{
+			name: "exists",
+			in: &QueryStmt{
+				Body: &SQLSelect{
+					Projection: []SQLSelectItem{
+						&UnnamedSelectItem{
+							Node: &Wildcard{},
+						},
+					},
+					FromClause: []TableReference{
+						&Table{
+							Name: NewObjectName("user"),
+						},
+					},
+					WhereClause: &Exists{
+						Negated: true,
+						Query: &QueryStmt{
+							Body: &SQLSelect{
+								Projection: []SQLSelectItem{
+									&UnnamedSelectItem{
+										Node: &Wildcard{},
+									},
+								},
+								FromClause: []TableReference{
+									&Table{
+										Name: NewObjectName("user_sub"),
+									},
+								},
+								WhereClause: &BinaryExpr{
+									Op: &Operator{Type: And},
+									Left: &BinaryExpr{
+										Op: &Operator{Type: Eq},
+										Left: &CompoundIdent{
+											Idents: []*Ident{
+												NewIdent("user"),
+												NewIdent("id"),
+											},
+										},
+										Right: &CompoundIdent{
+											Idents: []*Ident{
+												NewIdent("user_sub"),
+												NewIdent("id"),
+											},
+										},
+									},
+									Right: &BinaryExpr{
+										Op: &Operator{Type: Eq},
+										Left: &CompoundIdent{
+											Idents: []*Ident{
+												NewIdent("user_sub"),
+												NewIdent("job"),
+											},
+										},
+										Right: NewSingleQuotedString("job"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "between / case",
+			in: &QueryStmt{
+				Body: &SQLSelect{
+					Projection: []SQLSelectItem{
+						&AliasSelectItem{
+							Expr: &CaseExpr{
+								Conditions: []Node{
+									&BinaryExpr{
+										Op:    &Operator{Type: Eq},
+										Left:  NewIdent("expr1"),
+										Right: NewSingleQuotedString("1"),
+									},
+									&BinaryExpr{
+										Op:    &Operator{Type: Eq},
+										Left:  NewIdent("expr2"),
+										Right: NewSingleQuotedString("2"),
+									},
+								},
+								Results: []Node{
+									NewSingleQuotedString("test1"),
+									NewSingleQuotedString("test2"),
+								},
+								ElseResult: NewSingleQuotedString("other"),
+							},
+							Alias: NewIdent("alias"),
+						},
+					},
+					FromClause: []TableReference{
+						&Table{
+							Name: NewObjectName("user"),
+						},
+					},
+					WhereClause: &Between{
+						Expr: NewIdent("id"),
+						High: NewLongValue(2),
+						Low:  NewLongValue(1),
+					},
+				},
+			},
+		},
+	}
+
+	for _, c := range cases {
+		b.Run(c.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for i := 0; i < b.N; i++ {
+				c.in.ToSQLString()
+			}
+		})
+	}
+
+}
