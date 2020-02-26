@@ -1,6 +1,8 @@
 package sqlast
 
 import (
+	"io"
+
 	"github.com/akito0107/xsqlparser/sqltoken"
 )
 
@@ -66,7 +68,7 @@ func (o *Operator) ToSQLString() string {
 	case And:
 		return "AND"
 	case Or:
-		return "Or"
+		return "OR"
 	case Not:
 		return "NOT"
 	case Like:
@@ -75,4 +77,42 @@ func (o *Operator) ToSQLString() string {
 		return "NOT LIKE"
 	}
 	return ""
+}
+
+func (o *Operator) WriteTo(w io.Writer) (int64, error) {
+	switch o.Type {
+	case Plus:
+		return writeSingleBytes(w, []byte("+"))
+	case Minus:
+		return writeSingleBytes(w, []byte("-"))
+	case Multiply:
+		return writeSingleBytes(w, []byte("*"))
+	case Divide:
+		return writeSingleBytes(w, []byte("/"))
+	case Modulus:
+		return writeSingleBytes(w, []byte("%"))
+	case Gt:
+		return writeSingleBytes(w, []byte(">"))
+	case Lt:
+		return writeSingleBytes(w, []byte("<"))
+	case GtEq:
+		return writeSingleBytes(w, []byte(">="))
+	case LtEq:
+		return writeSingleBytes(w, []byte("<="))
+	case Eq:
+		return writeSingleBytes(w, []byte("="))
+	case NotEq:
+		return writeSingleBytes(w, []byte("!="))
+	case And:
+		return writeSingleBytes(w, []byte("AND"))
+	case Or:
+		return writeSingleBytes(w, []byte("OR"))
+	case Not:
+		return writeSingleBytes(w, []byte("NOT"))
+	case Like:
+		return writeSingleBytes(w, []byte("LIKE"))
+	case NotLike:
+		return writeSingleBytes(w, []byte("NOT LIKE"))
+	}
+	return 0, nil
 }

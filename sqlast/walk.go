@@ -58,7 +58,7 @@ func Walk(v Visitor, node Node) {
 		Walk(v, n.Right)
 	case *Cast:
 		Walk(v, n.Expr)
-		Walk(v, n.DateType)
+		Walk(v, n.DataType)
 	case *Nested:
 		Walk(v, n.AST)
 	case *UnaryExpr:

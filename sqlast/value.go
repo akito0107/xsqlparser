@@ -2,6 +2,8 @@ package sqlast
 
 import (
 	"fmt"
+	"io"
+	"strconv"
 	"time"
 
 	"github.com/akito0107/xsqlparser/sqltoken"
@@ -36,7 +38,12 @@ func (l *LongValue) Value() interface{} {
 }
 
 func (l *LongValue) ToSQLString() string {
-	return fmt.Sprintf("%d", l.Long)
+	return toSQLString(l)
+}
+
+func (l *LongValue) WriteTo(w io.Writer) (int64, error) {
+	n, err := io.WriteString(w, strconv.FormatInt(l.Long, 10))
+	return int64(n), err
 }
 
 type DoubleValue struct {
@@ -63,7 +70,14 @@ func (d *DoubleValue) Value() interface{} {
 }
 
 func (d *DoubleValue) ToSQLString() string {
-	return fmt.Sprintf("%f", d.Double)
+	return toSQLString(d)
+}
+
+func (d *DoubleValue) WriteTo(w io.Writer) (int64, error) {
+	var b [32] byte
+	buf := strconv.AppendFloat(b[:0], d.Double, 'f', -1, 64)
+	n, err := w.Write(buf)
+	return int64(n), err
 }
 
 type SingleQuotedString struct {
@@ -90,7 +104,20 @@ func (s *SingleQuotedString) Value() interface{} {
 }
 
 func (s *SingleQuotedString) ToSQLString() string {
-	return fmt.Sprintf("'%s'", s.String)
+	return toSQLString(s)
+}
+
+func (s *SingleQuotedString) WriteTo(w io.Writer) (int64, error) {
+	n, err := w.Write([]byte("'"))
+	if err != nil {
+		return int64(n), err
+	}
+	n1, err := io.WriteString(w, s.String)
+	if err != nil {
+		return int64(n + n1), err
+	}
+	n2, err := w.Write([]byte("'"))
+	return int64(n + n1 + n2), err
 }
 
 type NationalStringLiteral struct {
@@ -120,6 +147,19 @@ func (n *NationalStringLiteral) ToSQLString() string {
 	return fmt.Sprintf("N'%s'", n.String)
 }
 
+func (n *NationalStringLiteral) WriteTo(w io.Writer) (int64, error) {
+	n0, err := w.Write([]byte("N'"))
+	if err != nil {
+		return int64(n0), err
+	}
+	n1, err := io.WriteString(w, n.String)
+	if err != nil {
+		return int64(n0 + n1), err
+	}
+	n2, err := w.Write([]byte("'"))
+	return int64(n0 + n1 + n2), err
+}
+
 type BooleanValue struct {
 	From, To sqltoken.Pos
 	Boolean  bool
@@ -144,7 +184,15 @@ func (b *BooleanValue) Value() interface{} {
 }
 
 func (b *BooleanValue) ToSQLString() string {
-	return fmt.Sprintf("%t", b.Boolean)
+	return toSQLString(b)
+}
+
+func (b *BooleanValue) WriteTo(w io.Writer) (int64, error) {
+	if b.Boolean {
+		return writeSingleBytes(w, []byte("true"))
+	} else {
+		return writeSingleBytes(w, []byte("false"))
+	}
 }
 
 type DateValue struct {
@@ -165,7 +213,14 @@ func (d *DateValue) Value() interface{} {
 }
 
 func (d *DateValue) ToSQLString() string {
-	return d.Date.Format("2006-01-02")
+	return toSQLString(d)
+}
+
+func (d *DateValue) WriteTo(w io.Writer) (int64, error) {
+	var b [16]byte
+	buf := d.Date.AppendFormat(b[:0], "2006-01-02")
+	n, err := w.Write(buf)
+	return int64(n), err
 }
 
 type TimeValue struct {
@@ -192,7 +247,14 @@ func (t *TimeValue) Value() interface{} {
 }
 
 func (t *TimeValue) ToSQLString() string {
-	return t.Time.Format("15:04:05")
+	return toSQLString(t)
+}
+
+func (t *TimeValue) WriteTo(w io.Writer) (int64, error) {
+	var b [16]byte
+	buf := t.Time.AppendFormat(b[:0], "15:04:05")
+	n, err := w.Write(buf)
+	return int64(n), err
 }
 
 type DateTimeValue struct {
@@ -222,6 +284,13 @@ func (d *DateTimeValue) ToSQLString() string {
 	return d.DateTime.Format("2006-01-02 15:04:05")
 }
 
+func (d *DateTimeValue) WriteTo(w io.Writer) (int64, error) {
+	var b [32]byte
+	buf := d.DateTime.AppendFormat(b[:0], "2006-01-02 15:04:05")
+	n, err := w.Write(buf)
+	return int64(n), err
+}
+
 type TimestampValue struct {
 	From, To  sqltoken.Pos
 	Timestamp time.Time
@@ -244,7 +313,14 @@ func (t *TimestampValue) Value() interface{} {
 }
 
 func (t *TimestampValue) ToSQLString() string {
-	return t.Timestamp.Format("2006-01-02 15:04:05")
+	return toSQLString(t)
+}
+
+func (t *TimestampValue) WriteTo(w io.Writer) (int64, error) {
+	var b [32]byte
+	buf := t.Timestamp.AppendFormat(b[:0], "2006-01-02 15:04:05")
+	n, err := w.Write(buf)
+	return int64(n), err
 }
 
 type NullValue struct {
@@ -269,4 +345,8 @@ func (n *NullValue) Value() interface{} {
 
 func (n *NullValue) ToSQLString() string {
 	return "NULL"
+}
+
+func (*NullValue) WriteTo(w io.Writer) (int64, error) {
+	return writeSingleBytes(w, []byte("NULL"))
 }

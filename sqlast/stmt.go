@@ -1,9 +1,8 @@
 package sqlast
 
 import (
-	"fmt"
+	"io"
 	"log"
-	"strings"
 
 	"github.com/akito0107/xsqlparser/sqltoken"
 )
@@ -33,18 +32,23 @@ func (i *InsertStmt) End() sqltoken.Pos {
 }
 
 func (i *InsertStmt) ToSQLString() string {
-	str := fmt.Sprintf("INSERT INTO %s ", i.TableName.ToSQLString())
+	return toSQLString(i)
+}
+
+func (i *InsertStmt) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("INSERT INTO ")).Node(i.TableName).Space()
 	if len(i.Columns) != 0 {
-		str += fmt.Sprintf("(%s) ", commaSeparatedString(i.Columns))
+		sw.LParen().Idents(i.Columns, []byte(", ")).RParen().Space()
 	}
-
-	str += i.Source.ToSQLString()
-
+	sw.Node(i.Source)
 	if len(i.UpdateAssignments) != 0 {
-		str += " ON DUPLICATE KEY UPDATE " + commaSeparatedString(i.UpdateAssignments)
+		sw.Bytes([]byte(" ON DUPLICATE KEY UPDATE "))
+		for i, assignment := range i.UpdateAssignments {
+			sw.JoinComma(i, assignment)
+		}
 	}
-
-	return str
+	return sw.End()
 }
 
 //go:generate genmark -t InsertSource -e Node
@@ -64,7 +68,11 @@ func (s *SubQuerySource) End() sqltoken.Pos {
 }
 
 func (s *SubQuerySource) ToSQLString() string {
-	return s.SubQuery.ToSQLString()
+	return toSQLString(s)
+}
+
+func (s *SubQuerySource) WriteTo(w io.Writer) (int64, error) {
+	return s.SubQuery.WriteTo(w)
 }
 
 type ConstructorSource struct {
@@ -82,16 +90,16 @@ func (c *ConstructorSource) End() sqltoken.Pos {
 }
 
 func (c *ConstructorSource) ToSQLString() string {
-	str := "VALUES "
+	return toSQLString(c)
+}
 
-	for idx, r := range c.Rows {
-		str += r.ToSQLString()
-		if idx != len(c.Rows)-1 {
-			str += ", "
-		}
+func (c *ConstructorSource) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("VALUES "))
+	for i, row := range c.Rows {
+		sw.JoinComma(i, row)
 	}
-
-	return str
+	return sw.End()
 }
 
 type RowValueExpr struct {
@@ -108,7 +116,17 @@ func (r *RowValueExpr) End() sqltoken.Pos {
 }
 
 func (r *RowValueExpr) ToSQLString() string {
-	return fmt.Sprintf("(%s)", commaSeparatedString(r.Values))
+	return toSQLString(r)
+}
+
+func (r *RowValueExpr) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.LParen()
+	for i, val := range r.Values {
+		sw.JoinComma(i, val)
+	}
+	sw.RParen()
+	return sw.End()
 }
 
 // TODO Remove CopyStmt
@@ -130,26 +148,31 @@ func (c *CopyStmt) End() sqltoken.Pos {
 }
 
 func (c *CopyStmt) ToSQLString() string {
-	str := fmt.Sprintf("COPY %s", c.TableName.ToSQLString())
-	if len(c.Columns) != 0 {
-		str += fmt.Sprintf(" (%s)", commaSeparatedString(c.Columns))
-	}
-	str += " FROM stdin; "
+	return toSQLString(c)
+}
 
+func (c *CopyStmt) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("COPY ")).Node(c.TableName)
+	if len(c.Columns) != 0 {
+		sw.Space().LParen().Idents(c.Columns, []byte(", ")).RParen()
+	}
+	sw.Bytes([]byte(" FROM stdin; "))
 	if len(c.Values) != 0 {
-		var valuestrs []string
-		for _, v := range c.Values {
-			if v == nil {
-				valuestrs = append(valuestrs, "\\N")
+		sw.Bytes([]byte("\n"))
+		for i, val := range c.Values {
+			if i > 0 {
+				sw.Bytes([]byte("\t"))
+			}
+			if val == nil {
+				sw.Bytes([]byte("\\N"))
 			} else {
-				valuestrs = append(valuestrs, *v)
+				sw.Bytes([]byte(*val))
 			}
 		}
-		str += fmt.Sprintf("\n%s", strings.Join(valuestrs, "\t"))
 	}
-	str += "\n\\."
-
-	return str
+	sw.Bytes([]byte("\n\\."))
+	return sw.End()
 }
 
 type UpdateStmt struct {
@@ -173,15 +196,21 @@ func (u *UpdateStmt) End() sqltoken.Pos {
 }
 
 func (u *UpdateStmt) ToSQLString() string {
-	str := fmt.Sprintf("UPDATE %s SET ", u.TableName.ToSQLString())
+	return toSQLString(u)
+}
+
+func (u *UpdateStmt) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("UPDATE ")).Node(u.TableName).Bytes([]byte(" SET "))
 	if u.Assignments != nil {
-		str += commaSeparatedString(u.Assignments)
+		for i, assignment := range u.Assignments {
+			sw.JoinComma(i, assignment)
+		}
 	}
 	if u.Selection != nil {
-		str += fmt.Sprintf(" WHERE %s", u.Selection.ToSQLString())
+		sw.Bytes([]byte(" WHERE ")).Node(u.Selection)
 	}
-
-	return str
+	return sw.End()
 }
 
 type DeleteStmt struct {
@@ -204,13 +233,16 @@ func (d *DeleteStmt) End() sqltoken.Pos {
 }
 
 func (d *DeleteStmt) ToSQLString() string {
-	str := fmt.Sprintf("DELETE FROM %s", d.TableName.ToSQLString())
+	return toSQLString(d)
+}
 
+func (d *DeleteStmt) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("DELETE FROM ")).Node(d.TableName)
 	if d.Selection != nil {
-		str += fmt.Sprintf(" WHERE %s", d.Selection.ToSQLString())
+		sw.Bytes([]byte(" WHERE ")).Node(d.Selection)
 	}
-
-	return str
+	return sw.End()
 }
 
 type CreateViewStmt struct {
@@ -230,11 +262,15 @@ func (c *CreateViewStmt) End() sqltoken.Pos {
 }
 
 func (c *CreateViewStmt) ToSQLString() string {
-	var modifier string
-	if c.Materialized {
-		modifier = " MATERIALIZED"
-	}
-	return fmt.Sprintf("CREATE%s VIEW %s AS %s", modifier, c.Name.ToSQLString(), c.Query.ToSQLString())
+	return toSQLString(c)
+}
+
+func (c *CreateViewStmt) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).
+		Bytes([]byte("CREATE")).
+		If(c.Materialized, []byte(" MATERIALIZED")).
+		Bytes([]byte(" VIEW ")).Node(c.Name).As().Node(c.Query).
+		End()
 }
 
 type CreateTableStmt struct {
@@ -256,17 +292,24 @@ func (c *CreateTableStmt) End() sqltoken.Pos {
 }
 
 func (c *CreateTableStmt) ToSQLString() string {
-	ifNotExists := ""
-	if c.NotExists {
-		ifNotExists = "IF NOT EXISTS "
-	}
-	sql := fmt.Sprintf("CREATE TABLE %s%s (%s)", ifNotExists, c.Name.ToSQLString(), commaSeparatedString(c.Elements))
+	return toSQLString(c)
+}
 
+func (c *CreateTableStmt) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("CREATE TABLE "))
+	sw.If(c.NotExists, []byte("IF NOT EXISTS "))
+	sw.Node(c.Name).Space().LParen()
+	for i, element := range c.Elements {
+		sw.JoinComma(i, element)
+	}
+	sw.RParen()
 	if len(c.Options) != 0 {
-		sql += commaSeparatedString(c.Options)
+		for i, option := range c.Options {
+			sw.JoinComma(i, option)
+		}
 	}
-
-	return sql
+	return sw.End()
 }
 
 type Assignment struct {
@@ -283,7 +326,11 @@ func (a *Assignment) End() sqltoken.Pos {
 }
 
 func (a *Assignment) ToSQLString() string {
-	return fmt.Sprintf("%s = %s", a.ID.ToSQLString(), a.Value.ToSQLString())
+	return toSQLString(a)
+}
+
+func (a *Assignment) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).Node(a.ID).Bytes([]byte(" = ")).Node(a.Value).End()
 }
 
 //go:generate genmark -t TableElement -e Node
@@ -307,15 +354,16 @@ func (t *TableConstraint) End() sqltoken.Pos {
 }
 
 func (t *TableConstraint) ToSQLString() string {
-	var str string
+	return toSQLString(t)
+}
 
+func (t *TableConstraint) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
 	if t.Name != nil {
-		str += fmt.Sprintf("CONSTRAINT %s ", t.Name.ToSQLString())
+		sw.Bytes([]byte("CONSTRAINT ")).Node(t.Name).Space()
 	}
-
-	str += t.Spec.ToSQLString()
-
-	return str
+	sw.Node(t.Spec)
+	return sw.End()
 }
 
 //go:generate genmark -t TableConstraintSpec -e Node
@@ -340,10 +388,18 @@ func (u *UniqueTableConstraint) End() sqltoken.Pos {
 }
 
 func (u *UniqueTableConstraint) ToSQLString() string {
+	return toSQLString(u)
+}
+
+func (u *UniqueTableConstraint) WriteTo(w io.Writer) (n int64, err error) {
+	sw := newSQLWriter(w)
 	if u.IsPrimary {
-		return fmt.Sprintf("PRIMARY KEY(%s)", commaSeparatedString(u.Columns))
+		sw.Bytes([]byte("PRIMARY KEY"))
+	} else {
+		sw.Bytes([]byte("UNIQUE"))
 	}
-	return fmt.Sprintf("UNIQUE(%s)", commaSeparatedString(u.Columns))
+	sw.LParen().Idents(u.Columns, []byte(", ")).RParen()
+	return sw.End()
 }
 
 type ReferentialTableConstraint struct {
@@ -362,7 +418,15 @@ func (r *ReferentialTableConstraint) End() sqltoken.Pos {
 }
 
 func (r *ReferentialTableConstraint) ToSQLString() string {
-	return fmt.Sprintf("FOREIGN KEY(%s) REFERENCES %s", commaSeparatedString(r.Columns), r.KeyExpr.ToSQLString())
+	return toSQLString(r)
+}
+
+func (r *ReferentialTableConstraint) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).
+		Bytes([]byte("FOREIGN KEY")).
+		LParen().Idents(r.Columns, []byte(", ")).RParen().
+		Bytes([]byte(" REFERENCES ")).Node(r.KeyExpr).
+		End()
 }
 
 type ReferenceKeyExpr struct {
@@ -380,7 +444,13 @@ func (r *ReferenceKeyExpr) End() sqltoken.Pos {
 }
 
 func (r *ReferenceKeyExpr) ToSQLString() string {
-	return fmt.Sprintf("%s(%s)", r.TableName.ToSQLString(), commaSeparatedString(r.Columns))
+	return toSQLString(r)
+}
+
+func (r *ReferenceKeyExpr) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).
+		Node(r.TableName).LParen().Idents(r.Columns, []byte(", ")).RParen().
+		End()
 }
 
 type CheckTableConstraint struct {
@@ -399,7 +469,13 @@ func (c *CheckTableConstraint) End() sqltoken.Pos {
 }
 
 func (c *CheckTableConstraint) ToSQLString() string {
-	return fmt.Sprintf("CHECK(%s)", c.Expr.ToSQLString())
+	return toSQLString(c)
+}
+
+func (c *CheckTableConstraint) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).
+		Bytes([]byte("CHECK")).LParen().Node(c.Expr).RParen().
+		End()
 }
 
 type ColumnDef struct {
@@ -420,19 +496,22 @@ func (c *ColumnDef) End() sqltoken.Pos {
 }
 
 func (c *ColumnDef) ToSQLString() string {
-	str := fmt.Sprintf("%s %s", c.Name.ToSQLString(), c.DataType.ToSQLString())
+	return toSQLString(c)
+}
+
+func (c *ColumnDef) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Node(c.Name).Space().Node(c.DataType)
 	if c.Default != nil {
-		str += fmt.Sprintf(" DEFAULT %s", c.Default.ToSQLString())
+		sw.Bytes([]byte(" DEFAULT ")).Node(c.Default)
 	}
-
 	for _, m := range c.MyDataTypeDecoration {
-		str += " " + m.ToSQLString()
+		sw.Space().Node(m)
 	}
-
 	for _, cons := range c.Constraints {
-		str += cons.ToSQLString()
+		sw.Node(cons)
 	}
-	return str
+	return sw.End()
 }
 
 //go:generate genmark -t MyDataTypeDecoration -e Node
@@ -445,6 +524,10 @@ type AutoIncrement struct {
 
 func (a *AutoIncrement) ToSQLString() string {
 	return "AUTO_INCREMENT"
+}
+
+func (a *AutoIncrement) WriteTo(w io.Writer) (int64, error) {
+	return writeSingleBytes(w, []byte("AUTO_INCREMENT"))
 }
 
 func (a *AutoIncrement) Pos() sqltoken.Pos {
@@ -473,11 +556,17 @@ func (c *ColumnConstraint) End() sqltoken.Pos {
 }
 
 func (c *ColumnConstraint) ToSQLString() string {
-	s := " "
+	return toSQLString(c)
+}
+
+func (c *ColumnConstraint) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Space()
 	if c.Name != nil {
-		s += fmt.Sprintf("CONSTRAINT %s ", c.Name.ToSQLString())
+		sw.Bytes([]byte("CONSTRAINT ")).Node(c.Name).Space()
 	}
-	return s + c.Spec.ToSQLString()
+	sw.Node(c.Spec)
+	return sw.End()
 }
 
 // https://jakewheat.github.io/sql-overview/sql-2008-foundation-grammar.html#column-constraint
@@ -498,7 +587,11 @@ func (n *NotNullColumnSpec) End() sqltoken.Pos {
 }
 
 func (*NotNullColumnSpec) ToSQLString() string {
-	return fmt.Sprintf("NOT NULL")
+	return "NOT NULL"
+}
+
+func (*NotNullColumnSpec) WriteTo(w io.Writer) (int64, error) {
+	return writeSingleBytes(w, []byte("NOT NULL"))
 }
 
 type UniqueColumnSpec struct {
@@ -526,9 +619,17 @@ func (u *UniqueColumnSpec) End() sqltoken.Pos {
 
 func (u *UniqueColumnSpec) ToSQLString() string {
 	if u.IsPrimaryKey {
-		return fmt.Sprintf("PRIMARY KEY")
+		return "PRIMARY KEY"
 	} else {
-		return fmt.Sprintf("UNIQUE")
+		return "UNIQUE"
+	}
+}
+
+func (u *UniqueColumnSpec) WriteTo(w io.Writer) (int64, error) {
+	if u.IsPrimaryKey {
+		return writeSingleBytes(w, []byte("PRIMARY KEY"))
+	} else {
+		return writeSingleBytes(w, []byte("UNIQUE"))
 	}
 }
 
@@ -548,7 +649,14 @@ func (r *ReferencesColumnSpec) End() sqltoken.Pos {
 }
 
 func (r *ReferencesColumnSpec) ToSQLString() string {
-	return fmt.Sprintf("REFERENCES %s(%s)", r.TableName.ToSQLString(), commaSeparatedString(r.Columns))
+	return toSQLString(r)
+}
+
+func (r *ReferencesColumnSpec) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("REFERENCES ")).Node(r.TableName)
+	sw.LParen().Idents(r.Columns, []byte(", ")).RParen()
+	return sw.End()
 }
 
 type CheckColumnSpec struct {
@@ -566,7 +674,13 @@ func (c *CheckColumnSpec) End() sqltoken.Pos {
 }
 
 func (c *CheckColumnSpec) ToSQLString() string {
-	return fmt.Sprintf("CHECK(%s)", c.Expr.ToSQLString())
+	return toSQLString(c)
+}
+
+func (c *CheckColumnSpec) WriteTo(w io.Writer) (n int64, err error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("CHECK")).LParen().Node(c.Expr).RParen()
+	return sw.End()
 }
 
 //TODO remove
@@ -639,7 +753,13 @@ func (a *AlterTableStmt) End() sqltoken.Pos {
 }
 
 func (a *AlterTableStmt) ToSQLString() string {
-	return fmt.Sprintf("ALTER TABLE %s %s", a.TableName.ToSQLString(), a.Action.ToSQLString())
+	return toSQLString(a)
+}
+
+func (a *AlterTableStmt) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("ALTER TABLE ")).Node(a.TableName).Space().Node(a.Action)
+	return sw.End()
 }
 
 //go:generate genmark -t AlterTableAction -e Node
@@ -659,7 +779,13 @@ func (a *AddColumnTableAction) End() sqltoken.Pos {
 }
 
 func (a *AddColumnTableAction) ToSQLString() string {
-	return fmt.Sprintf("ADD COLUMN %s", a.Column.ToSQLString())
+	return toSQLString(a)
+}
+
+func (a *AddColumnTableAction) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("ADD COLUMN ")).Node(a.Column)
+	return sw.End()
 }
 
 type AlterColumnTableAction struct {
@@ -678,7 +804,13 @@ func (a *AlterColumnTableAction) End() sqltoken.Pos {
 }
 
 func (a *AlterColumnTableAction) ToSQLString() string {
-	return fmt.Sprintf("ALTER COLUMN %s %s", a.ColumnName.ToSQLString(), a.Action.ToSQLString())
+	return toSQLString(a)
+}
+
+func (a *AlterColumnTableAction) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("ALTER COLUMN ")).Node(a.ColumnName).Space().Node(a.Action)
+	return sw.End()
 }
 
 //go:generate genmark -t AlterColumnAction -e Node
@@ -701,7 +833,11 @@ func (s *SetDefaultColumnAction) End() sqltoken.Pos {
 }
 
 func (s *SetDefaultColumnAction) ToSQLString() string {
-	return fmt.Sprintf("SET DEFAULT %s", s.Default.ToSQLString())
+	return toSQLString(s)
+}
+
+func (s *SetDefaultColumnAction) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).Bytes([]byte("SET DEFAULT ")).Node(s.Default).End()
 }
 
 type DropDefaultColumnAction struct {
@@ -721,6 +857,10 @@ func (*DropDefaultColumnAction) ToSQLString() string {
 	return "DROP DEFAULT"
 }
 
+func (d *DropDefaultColumnAction) WriteTo(w io.Writer) (int64, error) {
+	return writeSingleBytes(w, []byte("DROP DEFAULT"))
+}
+
 // postgres only
 type PGAlterDataTypeColumnAction struct {
 	alterColumnAction
@@ -737,7 +877,11 @@ func (p *PGAlterDataTypeColumnAction) End() sqltoken.Pos {
 }
 
 func (p *PGAlterDataTypeColumnAction) ToSQLString() string {
-	return fmt.Sprintf("TYPE %s", p.DataType.ToSQLString())
+	return toSQLString(p)
+}
+
+func (p *PGAlterDataTypeColumnAction) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).Bytes([]byte("TYPE ")).Node(p.DataType).End()
 }
 
 type PGSetNotNullColumnAction struct {
@@ -757,6 +901,10 @@ func (p *PGSetNotNullColumnAction) ToSQLString() string {
 	return "SET NOT NULL"
 }
 
+func (p *PGSetNotNullColumnAction) WriteTo(w io.Writer) (int64, error) {
+	return writeSingleBytes(w, []byte("SET NOT NULL"))
+}
+
 type PGDropNotNullColumnAction struct {
 	alterColumnAction
 	Drop, Null sqltoken.Pos
@@ -772,6 +920,10 @@ func (p *PGDropNotNullColumnAction) End() sqltoken.Pos {
 
 func (p *PGDropNotNullColumnAction) ToSQLString() string {
 	return "DROP NOT NULL"
+}
+
+func (p *PGDropNotNullColumnAction) WriteTo(w io.Writer) (int64, error) {
+	return writeSingleBytes(w, []byte("DROP NOT NULL"))
 }
 
 type RemoveColumnTableAction struct {
@@ -794,11 +946,13 @@ func (r *RemoveColumnTableAction) End() sqltoken.Pos {
 }
 
 func (r *RemoveColumnTableAction) ToSQLString() string {
-	var cascade string
-	if r.Cascade {
-		cascade += " CASCADE"
-	}
-	return fmt.Sprintf("DROP COLUMN %s%s", r.Name.ToSQLString(), cascade)
+	return toSQLString(r)
+}
+
+func (r *RemoveColumnTableAction) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("DROP COLUMN ")).Node(r.Name).If(r.Cascade, []byte(" CASCADE"))
+	return sw.End()
 }
 
 type AddConstraintTableAction struct {
@@ -816,7 +970,11 @@ func (a *AddConstraintTableAction) End() sqltoken.Pos {
 }
 
 func (a *AddConstraintTableAction) ToSQLString() string {
-	return fmt.Sprintf("ADD %s", a.Constraint.ToSQLString())
+	return toSQLString(a)
+}
+
+func (a *AddConstraintTableAction) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).Bytes([]byte("ADD ")).Node(a.Constraint).End()
 }
 
 type DropConstraintTableAction struct {
@@ -840,11 +998,13 @@ func (d *DropConstraintTableAction) End() sqltoken.Pos {
 }
 
 func (d *DropConstraintTableAction) ToSQLString() string {
-	var cascade string
-	if d.Cascade {
-		cascade += " CASCADE"
-	}
-	return fmt.Sprintf("DROP CONSTRAINT %s%s", d.Name.ToSQLString(), cascade)
+	return toSQLString(d)
+}
+
+func (d *DropConstraintTableAction) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("DROP CONSTRAINT ")).Node(d.Name).If(d.Cascade, []byte(" CASCADE"))
+	return sw.End()
 }
 
 type DropTableStmt struct {
@@ -869,17 +1029,18 @@ func (d *DropTableStmt) End() sqltoken.Pos {
 }
 
 func (d *DropTableStmt) ToSQLString() string {
-	var ifexists string
-	if d.IfExists {
-		ifexists = "IF EXISTS "
-	}
+	return toSQLString(d)
+}
 
-	var cascade string
-	if d.Cascade {
-		cascade = " CASCADE"
+func (d *DropTableStmt) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("DROP TABLE "))
+	sw.If(d.IfExists, []byte("IF EXISTS "))
+	for i, table := range d.TableNames {
+		sw.JoinComma(i, table)
 	}
-
-	return fmt.Sprintf("DROP TABLE %s%s%s", ifexists, commaSeparatedString(d.TableNames), cascade)
+	sw.If(d.Cascade, []byte(" CASCADE"))
+	return sw.End()
 }
 
 type CreateIndexStmt struct {
@@ -907,29 +1068,24 @@ func (c *CreateIndexStmt) End() sqltoken.Pos {
 }
 
 func (c *CreateIndexStmt) ToSQLString() string {
-	var uniqueStr string
-	if c.IsUnique {
-		uniqueStr = "UNIQUE "
-	}
-	str := fmt.Sprintf("CREATE %sINDEX", uniqueStr)
+	return toSQLString(c)
+}
 
+func (c *CreateIndexStmt) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("CREATE ")).If(c.IsUnique, []byte("UNIQUE ")).Bytes([]byte("INDEX"))
 	if c.IndexName != nil {
-		str = fmt.Sprintf("%s %s ON %s", str, c.IndexName.ToSQLString(), c.TableName.ToSQLString())
-	} else {
-		str = fmt.Sprintf("%s ON %s", str, c.TableName.ToSQLString())
+		sw.Space().Node(c.IndexName)
 	}
-
+	sw.Bytes([]byte(" ON ")).Node(c.TableName)
 	if c.MethodName != nil {
-		str = fmt.Sprintf("%s USING %s", str, c.MethodName.ToSQLString())
+		sw.Bytes([]byte(" USING ")).Node(c.MethodName)
 	}
-
-	str = fmt.Sprintf("%s (%s)", str, commaSeparatedString(c.ColumnNames))
-
+	sw.Space().LParen().Idents(c.ColumnNames, []byte(", ")).RParen()
 	if c.Selection != nil {
-		str = fmt.Sprintf("%s WHERE %s", str, c.Selection.ToSQLString())
+		sw.Bytes([]byte(" WHERE ")).Node(c.Selection)
 	}
-
-	return str
+	return sw.End()
 }
 
 type DropIndexStmt struct {
@@ -947,7 +1103,13 @@ func (d *DropIndexStmt) End() sqltoken.Pos {
 }
 
 func (d *DropIndexStmt) ToSQLString() string {
-	return fmt.Sprintf("DROP INDEX %s", commaSeparatedString(d.IndexNames))
+	return toSQLString(d)
+}
+
+func (d *DropIndexStmt) WriteTo(w io.Writer) (int64, error) {
+	sw := newSQLWriter(w)
+	sw.Bytes([]byte("DROP INDEX ")).Idents(d.IndexNames, []byte(", "))
+	return sw.End()
 }
 
 type ExplainStmt struct {
@@ -965,5 +1127,9 @@ func (e *ExplainStmt) End() sqltoken.Pos {
 }
 
 func (e *ExplainStmt) ToSQLString() string {
-	return fmt.Sprintf("EXPLAIN %s", e.Stmt.ToSQLString())
+	return toSQLString(e)
+}
+
+func (e *ExplainStmt) WriteTo(w io.Writer) (int64, error) {
+	return newSQLWriter(w).Bytes([]byte("EXPLAIN ")).Node(e.Stmt).End()
 }
