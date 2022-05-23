@@ -13,7 +13,7 @@ This repo is ported of [sqlparser-rs](https://github.com/andygrove/sqlparser-rs)
 ## Getting Started
 
 ### Prerequisites
-- Go 1.12+
+- Go 1.16+
 
 ### Installing
 ```
