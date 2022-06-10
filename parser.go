@@ -2373,6 +2373,16 @@ func (p *Parser) parsePrefix() (sqlast.Node, error) {
 
 func (p *Parser) parseFunction(name *sqlast.ObjectName) (sqlast.Node, error) {
 	p.expectToken(sqltoken.LParen)
+
+	var filter *sqlast.Ident
+	if ok, _, _ := p.parseKeyword("DISTINCT"); ok {
+		p.prevToken()
+		filter, _ = p.parseIdentifier()
+	} else if ok, _, _ := p.parseKeyword("ALL"); ok {
+		p.prevToken()
+		filter, _ = p.parseIdentifier()
+	}
+
 	args, err := p.parseOptionalArgs()
 	if err != nil {
 		return nil, errors.Errorf("parseOptionalArgs failed: %w", err)
@@ -2434,6 +2444,7 @@ func (p *Parser) parseFunction(name *sqlast.ObjectName) (sqlast.Node, error) {
 		Args:       args,
 		Over:       over,
 		ArgsRParen: r.To,
+		Filter:     filter,
 	}, nil
 }
 
