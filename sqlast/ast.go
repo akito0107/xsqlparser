@@ -405,6 +405,7 @@ func (s *UnaryExpr) WriteTo(w io.Writer) (int64, error) {
 type Function struct {
 	Name       *ObjectName // Function Name
 	Args       []Node
+	Filter     *Ident
 	ArgsRParen sqltoken.Pos // function args RParen position
 	Over       *WindowSpec
 	OverRparen sqltoken.Pos // Over RParen position (if Over is not nil)

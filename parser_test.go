@@ -908,6 +908,56 @@ FROM user WHERE id BETWEEN 1 AND 2`,
 					},
 				},
 			},
+			{
+				name: "count distinct",
+				in:   "SELECT COUNT(DISTINCT email) FROM user",
+				out: &sqlast.QueryStmt{
+					Body: &sqlast.SQLSelect{
+						Select: sqltoken.NewPos(1, 1),
+						Projection: []sqlast.SQLSelectItem{
+							&sqlast.UnnamedSelectItem{
+								Node: &sqlast.Function{
+									Name: &sqlast.ObjectName{
+										Idents: []*sqlast.Ident{
+											{
+												Value: "COUNT",
+												From:  sqltoken.NewPos(1, 8),
+												To:    sqltoken.NewPos(1, 13),
+											},
+										},
+									},
+									Args: []sqlast.Node{
+										&sqlast.Ident{
+											Value: "email",
+											From:  sqltoken.NewPos(1, 23),
+											To:    sqltoken.NewPos(1, 28),
+										},
+									},
+									Filter: &sqlast.Ident{
+										Value: "DISTINCT",
+										From:  sqltoken.NewPos(1, 14),
+										To:    sqltoken.NewPos(1, 22),
+									},
+									ArgsRParen: sqltoken.NewPos(1, 29),
+								},
+							},
+						},
+						FromClause: []sqlast.TableReference{
+							&sqlast.Table{
+								Name: &sqlast.ObjectName{
+									Idents: []*sqlast.Ident{
+										{
+											Value: "user",
+											From:  sqltoken.NewPos(1, 35),
+											To:    sqltoken.NewPos(1, 39),
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 		}
 
 		for _, c := range cases {
